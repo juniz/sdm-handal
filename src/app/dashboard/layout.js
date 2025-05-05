@@ -1,0 +1,140 @@
+"use client";
+
+import { useState } from "react";
+import { Menu, X, Home, User, Calendar, FileText, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { LogoutConfirmationModal } from "@/components/LogoutConfirmationModal";
+import { Suspense } from "react";
+import { UserProfile } from "@/components/UserProfile";
+import { BottomNavigation } from "@/components/BottomNavigation";
+
+const menuItems = [
+	{ icon: Home, label: "Dashboard", href: "/dashboard" },
+	{ icon: User, label: "Profil", href: "/dashboard/profile" },
+	{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
+	{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
+];
+
+// Loading fallback untuk UserProfile
+function UserProfileSkeleton() {
+	return (
+		<div className="flex items-center space-x-4">
+			<div className="w-24 h-4 bg-gray-200 rounded animate-pulse"></div>
+			<div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+		</div>
+	);
+}
+
+export default function DashboardLayout({ children }) {
+	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+	const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+	const pathname = usePathname();
+	const router = useRouter();
+
+	const handleLogout = async () => {
+		try {
+			const response = await fetch("/api/auth/logout", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error("Logout failed");
+			}
+
+			router.replace("/");
+			router.refresh();
+		} catch (error) {
+			console.error("Error during logout:", error);
+		}
+	};
+
+	return (
+		<div className="min-h-screen bg-gray-100">
+			{/* Sidebar - hidden on mobile */}
+			<aside
+				className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform hidden md:block ${
+					isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+				}`}
+			>
+				<div className="h-full px-3 py-4 overflow-y-auto bg-blue-600">
+					<div className="flex items-center justify-between mb-6 px-2">
+						<h2 className="text-2xl font-semibold text-white">SDM Handal</h2>
+						<button
+							onClick={() => setIsSidebarOpen(false)}
+							className="lg:hidden text-white"
+						>
+							<X className="h-6 w-6" />
+						</button>
+					</div>
+					<ul className="space-y-2">
+						{menuItems.map((item) => {
+							const Icon = item.icon;
+							const isActive = pathname === item.href;
+							return (
+								<li key={item.href}>
+									<Link
+										href={item.href}
+										className={`flex items-center p-2 rounded-lg hover:bg-blue-700 group ${
+											isActive ? "bg-blue-700" : ""
+										}`}
+									>
+										<Icon className="w-5 h-5 text-white transition duration-75" />
+										<span className="ml-3 text-white">{item.label}</span>
+									</Link>
+								</li>
+							);
+						})}
+						<li>
+							<button
+								onClick={() => setIsLogoutModalOpen(true)}
+								className="flex w-full items-center p-2 rounded-lg text-white hover:bg-blue-700 group"
+							>
+								<LogOut className="w-5 h-5 transition duration-75" />
+								<span className="ml-3">Keluar</span>
+							</button>
+						</li>
+					</ul>
+				</div>
+			</aside>
+
+			{/* Main content - adjusted padding for mobile */}
+			<div
+				className={`p-4 ${
+					isSidebarOpen ? "md:ml-64" : ""
+				} transition-margin duration-300 pb-20 md:pb-4`}
+			>
+				{/* Top bar - hidden on mobile */}
+				<div className="hidden md:block mb-4 bg-white p-4 rounded-lg shadow-sm">
+					<div className="flex justify-between items-center">
+						<button
+							onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+							className="text-gray-600 hover:text-gray-900"
+						>
+							<Menu className="h-6 w-6" />
+						</button>
+						<Suspense fallback={<UserProfileSkeleton />}>
+							<UserProfile />
+						</Suspense>
+					</div>
+				</div>
+
+				{/* Page content */}
+				<main className="bg-white rounded-lg shadow-sm p-4">{children}</main>
+			</div>
+
+			{/* Bottom Navigation - visible only on mobile */}
+			<BottomNavigation />
+
+			{/* Logout Confirmation Modal */}
+			<LogoutConfirmationModal
+				isOpen={isLogoutModalOpen}
+				onClose={() => setIsLogoutModalOpen(false)}
+				onConfirm={handleLogout}
+			/>
+		</div>
+	);
+}
