@@ -1,9 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
-		domains: [
-			"simrs.rsbhayangkaranganjuk.com",
-			"webapps.rsbhayangkaranganjuk.com",
+		remotePatterns: [
+			{
+				hostname: "simrs.rsbhayangkaranganjuk.com",
+			},
+			{
+				hostname: "webapps.rsbhayangkaranganjuk.com",
+			},
 		],
 	},
 	experimental: {
