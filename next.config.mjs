@@ -11,6 +11,9 @@ const nextConfig = {
 			{
 				hostname: "localhost",
 			},
+			{
+				hostname: "webhook.itbhayangkara.id",
+			},
 		],
 	},
 	experimental: {
