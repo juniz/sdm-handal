@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AttendanceCamera } from "@/components/AttendanceCamera";
 import LocationMap from "@/components/LocationMap";
 import moment from "moment";
+import "moment/locale/id";
 import {
 	Clock,
 	MapPin,
@@ -27,39 +28,44 @@ export default function AttendancePage() {
 	const [status, setStatus] = useState(null);
 	const { formattedTime, formattedDate, momentInstance } = useRealTime();
 	const [jadwal, setJadwal] = useState(null);
-	const [tanggal, setTanggal] = useState(null);
+	const [tanggal, setTanggal] = useState(moment().format("D"));
 	const [shift, setShift] = useState(null);
 	const alertRef = useRef(null);
 	const [todayAttendance, setTodayAttendance] = useState(null);
 	const [isCheckingOut, setIsCheckingOut] = useState(false);
 	const [jamPulang, setJamPulang] = useState(null);
 
-	useEffect(() => {
-		const fetchShift = async () => {
-			const response = await fetch(`/api/attendance`);
+	const fetchShift = async () => {
+		const response = await fetch(`/api/attendance`);
+		const data = await response.json();
+		setJadwal(data.data[0]);
+	};
+
+	const fetchTodayAttendance = async () => {
+		try {
+			const response = await fetch("/api/attendance/today");
 			const data = await response.json();
-			setJadwal(data.data[0]);
-		};
-
-		const fetchTodayAttendance = async () => {
-			try {
-				const response = await fetch("/api/attendance/today");
-				const data = await response.json();
-				if (data.data) {
-					setTodayAttendance(data.data);
-					setJamPulang(data.jam_pulang);
-				}
-			} catch (error) {
-				console.error("Error fetching today attendance:", error);
+			if (data.data) {
+				setTodayAttendance(data.data);
+				setJamPulang(data.jam_pulang);
 			}
-		};
+		} catch (error) {
+			console.error("Error fetching today attendance:", error);
+		}
+	};
 
+	useEffect(() => {
 		// Gunakan moment untuk mendapatkan tanggal
-		const day = moment().format("DD");
-		setTanggal(day);
+		// const day = moment().format("D");
+		// setTanggal(day);
 		fetchShift();
 		fetchTodayAttendance();
 	}, []);
+
+	// Tambahkan useEffect baru untuk memantau perubahan tanggal
+	useEffect(() => {
+		console.log("Nilai tanggal berubah:", tanggal);
+	}, [tanggal]);
 
 	// Efek terpisah untuk menghitung status checkout
 	useEffect(() => {
@@ -132,8 +138,6 @@ export default function AttendancePage() {
 	};
 
 	const handleCheckOut = async () => {
-		if (!photo || !isLocationValid) return;
-
 		setIsSubmitting(true);
 		try {
 			// Dapatkan lokasi terkini

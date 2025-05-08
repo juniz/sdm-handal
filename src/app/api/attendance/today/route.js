@@ -21,10 +21,11 @@ export async function GET(request) {
 		);
 
 		const idPegawai = verified.payload.id;
+		console.log("pegawai " + idPegawai ?? "tidak ada");
 		const today = moment().format("YYYY-MM-DD");
 
 		// Ambil data presensi hari ini menggunakan operator LIKE
-		const todayAttendance = await selectFirst({
+		let todayAttendance = await selectFirst({
 			table: "temporary_presensi",
 			where: {
 				id: idPegawai,
@@ -35,17 +36,33 @@ export async function GET(request) {
 			},
 		});
 
+		if (!todayAttendance) {
+			const rekapPresensi = await selectFirst({
+				table: "rekap_presensi",
+				where: {
+					id: idPegawai,
+					jam_datang: {
+						operator: "LIKE",
+						value: `${today}%`,
+					},
+				},
+			});
+
+			if (rekapPresensi) {
+				todayAttendance = rekapPresensi;
+			}
+		}
+
 		const jam = await selectFirst({
 			table: "jam_masuk",
 			where: {
 				shift: {
 					operator: "=",
-					value: todayAttendance.shift,
+					value: todayAttendance?.shift,
 				},
 			},
 			fields: ["jam_pulang"],
 		});
-		console.log(jam.jam_pulang);
 		return NextResponse.json({
 			status: 200,
 			message: "Data presensi hari ini berhasil diambil",

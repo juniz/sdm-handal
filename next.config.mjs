@@ -8,10 +8,15 @@ const nextConfig = {
 			{
 				hostname: "webapps.rsbhayangkaranganjuk.com",
 			},
+			{
+				hostname: "localhost",
+			},
 		],
 	},
 	experimental: {
-		serverActions: true,
+		serverActions: {
+			bodySizeLimit: "10mb",
+		},
 	},
 };
 

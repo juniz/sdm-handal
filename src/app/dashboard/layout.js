@@ -13,6 +13,7 @@ const menuItems = [
 	{ icon: Home, label: "Dashboard", href: "/dashboard" },
 	{ icon: User, label: "Profil", href: "/dashboard/profile" },
 	{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
+	{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
 	{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
 ];
 

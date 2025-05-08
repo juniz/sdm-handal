@@ -3,38 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Users, Calendar, FileCheck } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
-
-const stats = [
-	{
-		title: "Total Presensi Bulan Ini",
-		value: "21/22",
-		icon: Clock,
-		description: "95.5% Kehadiran",
-		trend: "up",
-	},
-	{
-		title: "Pegawai Aktif",
-		value: "150",
-		icon: Users,
-		description: "Dari 155 Total Pegawai",
-		trend: "neutral",
-	},
-	{
-		title: "Cuti Tersedia",
-		value: "12",
-		icon: Calendar,
-		description: "Hari Cuti Tersisa",
-		trend: "down",
-	},
-	{
-		title: "Laporan Pending",
-		value: "3",
-		icon: FileCheck,
-		description: "Menunggu Persetujuan",
-		trend: "up",
-	},
-];
-
+import { AttendanceStats } from "@/components/AttendanceStats";
 const activities = [
 	{
 		time: "08:00",
@@ -58,32 +27,39 @@ const activities = [
 
 export default function DashboardPage() {
 	return (
-		<div className="space-y-6">
-			{/* Kartu Pegawai */}
-			<div className="w-full max-w-md flex justify-center">
+		<div className="max-w-lg mx-auto space-y-4">
+			{/* Profile dan Statistik */}
+			<div className="space-y-4">
+				{/* Kartu Pegawai */}
 				<EmployeeCard />
+
+				{/* Statistik Presensi */}
+				<AttendanceStats />
 			</div>
 
-			{/* Aktivitas Hari Ini */}
-			<div className="grid gap-6 md:grid-cols-2">
+			{/* Aktivitas dan Pengumuman */}
+			<div className="space-y-4">
+				{/* Aktivitas Hari Ini */}
 				<Card>
-					<CardHeader>
-						<CardTitle>Aktivitas Hari Ini</CardTitle>
+					<CardHeader className="pb-3">
+						<CardTitle className="text-lg font-bold text-gray-900">
+							Aktivitas Hari Ini
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-8">
+						<div className="space-y-4">
 							{activities.map((activity, index) => (
 								<div key={index} className="flex items-center">
 									<div className="space-y-1">
 										<p className="text-sm font-medium leading-none">
 											{activity.event}
 										</p>
-										<p className="text-sm text-muted-foreground">
+										<p className="text-xs text-gray-500">
 											{activity.time} - {activity.date}
 										</p>
 									</div>
 									<div
-										className={`ml-auto flex h-2 w-2 rounded-full ${
+										className={`ml-auto flex h-2.5 w-2.5 rounded-full ${
 											activity.status === "success"
 												? "bg-green-500"
 												: activity.status === "ongoing"
@@ -97,13 +73,15 @@ export default function DashboardPage() {
 					</CardContent>
 				</Card>
 
-				{/* Pengumuman atau Informasi Penting */}
+				{/* Pengumuman */}
 				<Card className="bg-blue-50">
-					<CardHeader>
-						<CardTitle className="text-blue-800">Pengumuman</CardTitle>
+					<CardHeader className="pb-3">
+						<CardTitle className="text-lg font-bold text-blue-900">
+							Pengumuman
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<p className="text-blue-600">
+						<p className="text-sm text-blue-700">
 							Rapat koordinasi bulanan akan diadakan pada tanggal 25 Juli 2024
 							pukul 09:00 WIB di Ruang Rapat Utama.
 						</p>

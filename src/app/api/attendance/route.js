@@ -5,7 +5,7 @@ import fs from "fs/promises";
 import path from "path";
 import moment from "moment-timezone";
 import "moment/locale/id";
-import { select, selectFirst, insert, update } from "@/lib/db-helper";
+import { select, selectFirst, insert, update, delete_ } from "@/lib/db-helper";
 
 // Set locale ke Indonesia dan default timezone
 moment.locale("id");
@@ -120,19 +120,19 @@ export async function POST(request) {
 		);
 		const idPegawai = verified.payload.id;
 
-		// Upload foto dan dapatkan URL
-		const photoUrl = await saveBase64Image(photo, idPegawai);
-
 		if (isCheckingOut) {
 			// Update data presensi yang sudah ada dengan jam pulang
 			const today = moment().format("YYYY-MM-DD");
-			const currentTime = moment().format("HH:mm:ss");
+			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
 
 			const existingAttendance = await selectFirst({
 				table: "temporary_presensi",
 				where: {
 					id: idPegawai,
-					DATE: today,
+					jam_datang: {
+						operator: "LIKE",
+						value: `${today}%`,
+					},
 				},
 			});
 
@@ -143,16 +143,59 @@ export async function POST(request) {
 				);
 			}
 
+			const durasiPresensi = moment(currentTime).diff(
+				existingAttendance.jam_datang
+			);
+
+			// Format durasi ke HH:mm:ss
+			const durasi = moment.utc(durasiPresensi).format("HH:mm:ss");
+
 			// Update data presensi dengan jam pulang
 			const updateResult = await update({
 				table: "temporary_presensi",
 				data: {
 					jam_pulang: currentTime,
-					photo_pulang: photoUrl,
+					durasi: durasi,
 				},
 				where: {
 					id: idPegawai,
-					DATE: today,
+					jam_datang: {
+						operator: "LIKE",
+						value: `${today}%`,
+					},
+				},
+			});
+
+			const insertRekapPresensi = await insert({
+				table: "rekap_presensi",
+				data: {
+					id: idPegawai,
+					shift: existingAttendance.shift,
+					jam_datang: existingAttendance.jam_datang,
+					jam_pulang: currentTime,
+					durasi: durasi,
+					status: existingAttendance.status,
+					keterlambatan: existingAttendance.keterlambatan,
+					keterangan: "-",
+					photo: existingAttendance.photo,
+				},
+			});
+
+			if (!insertRekapPresensi) {
+				return NextResponse.json(
+					{ message: "Gagal menyimpan rekap presensi" },
+					{ status: 400 }
+				);
+			}
+
+			const hapusTemporaryPresensi = await delete_({
+				table: "temporary_presensi",
+				where: {
+					id: idPegawai,
+					jam_datang: {
+						operator: "LIKE",
+						value: `${today}%`,
+					},
 				},
 			});
 
@@ -161,10 +204,13 @@ export async function POST(request) {
 				data: {
 					...existingAttendance,
 					jam_pulang: currentTime,
-					photo_pulang: photoUrl,
+					photo_pulang: existingAttendance.photo,
 				},
 			});
 		} else {
+			// Upload foto dan dapatkan URL
+			const photoUrl = await saveBase64Image(photo, idPegawai);
+
 			// Dapatkan jadwal shift dan jam masuk menggunakan helper
 			const schedule = await selectFirst({
 				table: "jadwal_pegawai",
@@ -178,7 +224,7 @@ export async function POST(request) {
 			const shift = await selectFirst({
 				table: "jam_masuk",
 				where: {
-					shift: schedule[`h${moment().format("DD")}`],
+					shift: schedule[`h${moment().format("D")}`],
 				},
 			});
 
@@ -203,7 +249,7 @@ export async function POST(request) {
 				table: "temporary_presensi",
 				data: {
 					id: idPegawai,
-					shift: schedule[`h${moment().format("DD")}`],
+					shift: schedule[`h${moment().format("D")}`],
 					jam_datang: mysqlTimestamp,
 					status: status,
 					keterlambatan: keterlambatan,
@@ -262,10 +308,7 @@ export async function GET(request) {
 			where: {
 				id: idPegawai,
 				tahun: moment().year(),
-				bulan: {
-					operator: "=",
-					value: padZero(moment().month() + 1),
-				},
+				bulan: padZero(moment().month() + 1),
 			},
 		});
 
