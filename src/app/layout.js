@@ -1,37 +1,46 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Viewport } from "next";
 import "./globals.css";
 
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
 	title: "SDM Handal",
-	description: "Sistem Informasi Kepegawaian RS Bhayangkara TK.III Nganjuk ",
+	description: "Aplikasi Manajemen SDM RS Bhayangkara Nganjuk",
+	manifest: "/manifest.json",
+	icons: [
+		{
+			rel: "apple-touch-icon",
+			url: "/icons/icon-192x192.png",
+		},
+		{
+			rel: "icon",
+			url: "/icons/icon-192x192.png",
+		},
+	],
 };
 
 export const viewport = {
-	initialScale: 1,
-	maximumScale: 1,
+	themeColor: "#2563eb",
 	width: "device-width",
-	userScalable: false,
+	initialScale: 1,
+	minimumScale: 1,
+	viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {
 	return (
-		<html lang="en">
-			<body
-				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-			>
-				{children}
-			</body>
+		<html lang="id">
+			<head>
+				<link rel="manifest" href="/manifest.json" />
+				<link rel="apple-touch-icon" href="/icons/icon-192x192.png"></link>
+				<meta name="theme-color" content="#2563eb" />
+				<meta
+					name="apple-mobile-web-app-status-bar-style"
+					content="black-translucent"
+				/>
+			</head>
+			<body className={inter.className}>{children}</body>
 		</html>
 	);
 }

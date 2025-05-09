@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { cookies } from "next/headers";
-import { sign } from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+import { createToken, setServerCookie } from "@/lib/auth";
 
 export async function POST(request) {
 	try {
@@ -63,7 +61,7 @@ export async function POST(request) {
 			);
 		}
 
-		// Create JWT token
+		// Create JWT token dengan payload
 		const tokenPayload = {
 			id: user.id,
 			username: user.username.toString(),
@@ -80,20 +78,9 @@ export async function POST(request) {
 			password: "[REDACTED]",
 		});
 
-		const token = sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
-
+		const token = await createToken(tokenPayload);
 		const cookieStore = cookies();
-		const cookieOptions = {
-			httpOnly: false,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "strict",
-			path: "/",
-			maxAge: 7 * 24 * 60 * 60,
-		};
-
-		console.log("Setting cookie with options:", cookieOptions);
-
-		await cookieStore.set("auth_token", token, cookieOptions);
+		setServerCookie(cookieStore, token);
 
 		// Hapus password dari response
 		delete user.password;

@@ -84,8 +84,7 @@ export default function NotFound() {
 						Oops! Halaman Tidak Ditemukan
 					</h2>
 					<p className="text-gray-600 max-w-md mx-auto">
-						Maaf, halaman yang Anda cari tidak dapat ditemukan. Halaman mungkin
-						telah dipindahkan atau dihapus.
+						Maaf, halaman yang Anda cari tidak dapat ditemukan.
 					</p>
 
 					{/* Tombol kembali */}

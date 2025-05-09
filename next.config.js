@@ -1,3 +1,9 @@
+const withPWA = require("next-pwa")({
+	dest: "public",
+	register: true,
+	skipWaiting: false,
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
 	images: {
@@ -12,15 +18,14 @@ const nextConfig = {
 				hostname: "localhost",
 			},
 			{
-				hostname: "webhook.itbhayangkara.id",
+				protocol: "https",
+				hostname: "**.itbhayangkara.id",
 			},
 		],
 	},
 	experimental: {
-		serverActions: {
-			bodySizeLimit: "10mb",
-		},
+		serverActions: true,
 	},
 };
 
-export default nextConfig;
+module.exports = withPWA(nextConfig);

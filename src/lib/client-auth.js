@@ -6,6 +6,7 @@ export function setClientToken(token) {
 		expires: 7, // 7 hari
 		secure: process.env.NODE_ENV === "production",
 		sameSite: "strict",
+		path: "/",
 	});
 }
 
@@ -18,5 +19,7 @@ export function getClientToken() {
 export function removeClientToken() {
 	Cookies.remove("auth_token", {
 		path: "/",
+		secure: process.env.NODE_ENV === "production",
+		sameSite: "strict",
 	});
 }

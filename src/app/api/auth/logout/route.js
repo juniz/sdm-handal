@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { removeServerCookie } from "@/lib/auth";
 
 export async function POST() {
 	try {
 		const cookieStore = cookies();
-
-		// Hapus cookie auth_token
-		cookieStore.delete("auth_token");
+		removeServerCookie(cookieStore);
 
 		return NextResponse.json({
 			status: 200,

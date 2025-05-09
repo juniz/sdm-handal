@@ -1,4 +1,4 @@
-import { jwtVerify } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -20,10 +20,21 @@ export async function getUser() {
 	}
 }
 
+// Fungsi untuk membuat JWT token
+export async function createToken(payload) {
+	const secret = new TextEncoder().encode(JWT_SECRET);
+	const token = await new SignJWT(payload)
+		.setProtectedHeader({ alg: "HS256" })
+		.setIssuedAt()
+		.setExpirationTime("7d") // 7 hari
+		.sign(secret);
+	return token;
+}
+
 // Fungsi untuk mengatur cookie di server-side
 export function setServerCookie(cookieStore, token) {
 	cookieStore.set("auth_token", token, {
-		httpOnly: false,
+		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
 		sameSite: "strict",
 		path: "/",
@@ -33,5 +44,9 @@ export function setServerCookie(cookieStore, token) {
 
 // Fungsi untuk menghapus cookie di server-side
 export function removeServerCookie(cookieStore) {
-	cookieStore.delete("auth_token");
+	cookieStore.delete("auth_token", {
+		path: "/",
+		secure: process.env.NODE_ENV === "production",
+		sameSite: "strict",
+	});
 }
