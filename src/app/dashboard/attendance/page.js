@@ -34,6 +34,7 @@ export default function AttendancePage() {
 	const [todayAttendance, setTodayAttendance] = useState(null);
 	const [isCheckingOut, setIsCheckingOut] = useState(false);
 	const [jamPulang, setJamPulang] = useState(null);
+	const [mapPresensi, setMapPresensi] = useState(process.env.MAP_PRESENSI);
 
 	const fetchShift = async () => {
 		const response = await fetch(`/api/attendance`);

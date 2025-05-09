@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import { Viewport } from "next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,6 +15,13 @@ const geistMono = Geist_Mono({
 export const metadata = {
 	title: "SDM Handal",
 	description: "Sistem Informasi Kepegawaian RS Bhayangkara TK.III Nganjuk ",
+};
+
+export const viewport = {
+	initialScale: 1,
+	maximumScale: 1,
+	width: "device-width",
+	userScalable: false,
 };
 
 export default function RootLayout({ children }) {

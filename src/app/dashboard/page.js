@@ -36,58 +36,6 @@ export default function DashboardPage() {
 				{/* Statistik Presensi */}
 				<AttendanceStats />
 			</div>
-
-			{/* Aktivitas dan Pengumuman */}
-			<div className="space-y-4">
-				{/* Aktivitas Hari Ini */}
-				<Card>
-					<CardHeader className="pb-3">
-						<CardTitle className="text-lg font-bold text-gray-900">
-							Aktivitas Hari Ini
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-4">
-							{activities.map((activity, index) => (
-								<div key={index} className="flex items-center">
-									<div className="space-y-1">
-										<p className="text-sm font-medium leading-none">
-											{activity.event}
-										</p>
-										<p className="text-xs text-gray-500">
-											{activity.time} - {activity.date}
-										</p>
-									</div>
-									<div
-										className={`ml-auto flex h-2.5 w-2.5 rounded-full ${
-											activity.status === "success"
-												? "bg-green-500"
-												: activity.status === "ongoing"
-												? "bg-blue-500"
-												: "bg-yellow-500"
-										}`}
-									/>
-								</div>
-							))}
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Pengumuman */}
-				<Card className="bg-blue-50">
-					<CardHeader className="pb-3">
-						<CardTitle className="text-lg font-bold text-blue-900">
-							Pengumuman
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p className="text-sm text-blue-700">
-							Rapat koordinasi bulanan akan diadakan pada tanggal 25 Juli 2024
-							pukul 09:00 WIB di Ruang Rapat Utama.
-						</p>
-					</CardContent>
-				</Card>
-			</div>
 		</div>
 	);
 }
