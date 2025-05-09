@@ -8,6 +8,7 @@ import { LogoutConfirmationModal } from "@/components/LogoutConfirmationModal";
 import { Suspense } from "react";
 import { UserProfile } from "@/components/UserProfile";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import { removeClientToken } from "@/lib/client-auth";
 
 const menuItems = [
 	{ icon: Home, label: "Dashboard", href: "/dashboard" },
@@ -46,6 +47,7 @@ export default function DashboardLayout({ children }) {
 				throw new Error("Logout failed");
 			}
 
+			removeClientToken();
 			router.replace("/");
 			router.refresh();
 		} catch (error) {

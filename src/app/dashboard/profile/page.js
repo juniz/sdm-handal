@@ -17,6 +17,7 @@ import {
 	LogOut,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { removeClientToken } from "@/lib/client-auth";
 
 // Komponen untuk menampilkan foto profil dengan error handling
 const ProfileImage = ({ photoUrl, name }) => {
@@ -182,6 +183,7 @@ export default function ProfilePage() {
 			});
 
 			if (response.ok) {
+				removeClientToken();
 				router.push("/");
 			} else {
 				throw new Error("Gagal logout");

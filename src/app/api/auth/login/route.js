@@ -80,14 +80,15 @@ export async function POST(request) {
 			password: "[REDACTED]",
 		});
 
-		const token = sign(tokenPayload, JWT_SECRET, { expiresIn: "1d" });
+		const token = sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
 
 		const cookieStore = cookies();
 		const cookieOptions = {
-			httpOnly: true,
+			httpOnly: false,
 			secure: process.env.NODE_ENV === "production",
 			sameSite: "strict",
 			path: "/",
+			maxAge: 7 * 24 * 60 * 60,
 		};
 
 		console.log("Setting cookie with options:", cookieOptions);

@@ -6,7 +6,7 @@ export async function middleware(request) {
 
 	// Skip middleware untuk rute login dan API
 	if (
-		request.nextUrl.pathname === "/login" ||
+		request.nextUrl.pathname === "/" ||
 		request.nextUrl.pathname.startsWith("/api/")
 	) {
 		console.log("Skipping middleware for login/api route");
@@ -22,14 +22,14 @@ export async function middleware(request) {
 
 		if (!tokenValue) {
 			console.log("No token found, redirecting to login");
-			return NextResponse.redirect(new URL("/login", request.url));
+			return NextResponse.redirect(new URL("/", request.url));
 		}
 
 		console.log("Token valid, proceeding to next middleware");
 		return NextResponse.next();
 	} catch (error) {
 		console.error("Error in middleware:", error);
-		return NextResponse.redirect(new URL("/login", request.url));
+		return NextResponse.redirect(new URL("/", request.url));
 	}
 }
 

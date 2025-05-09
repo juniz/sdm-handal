@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Clock, UserCircle, Menu, Calendar } from "lucide-react";
+import {
+	Home,
+	Clock,
+	UserCircle,
+	Menu,
+	Calendar,
+	History,
+	Camera,
+} from "lucide-react";
 
 const menuItems = [
 	{
@@ -12,8 +20,13 @@ const menuItems = [
 	},
 	{
 		href: "/dashboard/attendance",
-		icon: Clock,
+		icon: Camera,
 		label: "Presensi",
+	},
+	{
+		href: "/dashboard/attendance/history",
+		icon: History,
+		label: "Riwayat Presensi",
 	},
 	{
 		href: "/dashboard/schedule",

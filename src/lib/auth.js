@@ -19,3 +19,19 @@ export async function getUser() {
 		return null;
 	}
 }
+
+// Fungsi untuk mengatur cookie di server-side
+export function setServerCookie(cookieStore, token) {
+	cookieStore.set("auth_token", token, {
+		httpOnly: false,
+		secure: process.env.NODE_ENV === "production",
+		sameSite: "strict",
+		path: "/",
+		maxAge: 7 * 24 * 60 * 60, // 7 hari dalam detik
+	});
+}
+
+// Fungsi untuk menghapus cookie di server-side
+export function removeServerCookie(cookieStore) {
+	cookieStore.delete("auth_token");
+}

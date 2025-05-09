@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserRound, KeyRound } from "lucide-react";
 import { useState } from "react";
+import { setClientToken } from "@/lib/client-auth";
 
 export default function LoginPage() {
 	const [formData, setFormData] = useState({
@@ -43,8 +44,14 @@ export default function LoginPage() {
 				throw new Error(data.message || "Login gagal");
 			}
 
-			// Periksa cookie setelah login
-			console.log("Cookies setelah login:", document.cookie);
+			// Simpan token di client-side
+			const cookies = response.headers.get("set-cookie");
+			if (cookies) {
+				const tokenMatch = cookies.match(/auth_token=([^;]+)/);
+				if (tokenMatch) {
+					setClientToken(tokenMatch[1]);
+				}
+			}
 
 			// Redirect ke dashboard jika berhasil
 			window.location.href = "/dashboard";
