@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Check, Clock, AlertCircle, Calendar, Loader2 } from "lucide-react";
 
 const DayStatus = ({ day, status }) => {
-	const getStatusConfig = (status) => {
+	const statusConfig = useMemo(() => {
 		switch (status) {
 			case "hadir":
 				return {
@@ -33,15 +33,14 @@ const DayStatus = ({ day, status }) => {
 					color: "bg-gray-300",
 				};
 		}
-	};
+	}, [status]);
 
-	const config = getStatusConfig(status);
-	const Icon = config.icon;
+	const Icon = statusConfig.icon;
 
 	return (
 		<div className="flex flex-col items-center">
 			<div
-				className={`w-10 h-10 ${config.color} rounded-full flex items-center justify-center mb-1`}
+				className={`w-10 h-10 ${statusConfig.color} rounded-full flex items-center justify-center mb-1`}
 			>
 				<Icon className="w-5 h-5 text-white" />
 			</div>
@@ -62,21 +61,12 @@ const StatBox = ({
 	</div>
 );
 
-const mapDays = (day) => {
-	switch (day) {
-		case "Mon":
-			return "Senin";
-		case "Tue":
-			return "Selasa";
-		case "Wed":
-			return "Rabu";
-		case "Thu":
-			return "Kamis";
-		case "Fri":
-			return "Jumat";
-		default:
-			return day;
-	}
+const days = {
+	Mon: "Senin",
+	Tue: "Selasa",
+	Wed: "Rabu",
+	Thu: "Kamis",
+	Fri: "Jumat",
 };
 
 export function AttendanceStats() {
@@ -91,6 +81,10 @@ export function AttendanceStats() {
 			leave: 0,
 		},
 	});
+
+	const mapDays = useMemo(() => {
+		return (day) => days[day] || day;
+	}, []);
 
 	useEffect(() => {
 		const fetchStats = async () => {
@@ -113,6 +107,58 @@ export function AttendanceStats() {
 
 		fetchStats();
 	}, []);
+
+	const statsContent = useMemo(() => {
+		if (!stats) return null;
+
+		return (
+			<>
+				<div className="flex items-center justify-between mb-5">
+					<h2 className="text-lg font-bold text-gray-900">
+						Statistik Presensi Minggu Ini
+					</h2>
+					<Calendar className="w-5 h-5 text-gray-400" />
+				</div>
+
+				<div className="flex justify-between mb-6">
+					{stats.daily.map((item, index) => (
+						<DayStatus
+							key={index}
+							day={mapDays(item.day)}
+							status={item.status}
+						/>
+					))}
+				</div>
+
+				<div className="grid grid-cols-2 gap-3">
+					<StatBox
+						label="Total Kehadiran"
+						value={stats.stats.total}
+						bgColor="bg-blue-50"
+						textColor="text-blue-600"
+					/>
+					<StatBox
+						label="Tepat Waktu"
+						value={stats.stats.onTime}
+						bgColor="bg-green-50"
+						textColor="text-green-600"
+					/>
+					<StatBox
+						label="Terlambat"
+						value={stats.stats.late}
+						bgColor="bg-yellow-50"
+						textColor="text-yellow-600"
+					/>
+					<StatBox
+						label="Izin"
+						value={stats.stats.leave}
+						bgColor="bg-red-50"
+						textColor="text-red-600"
+					/>
+				</div>
+			</>
+		);
+	}, [stats, mapDays]);
 
 	if (loading) {
 		return (
@@ -142,47 +188,5 @@ export function AttendanceStats() {
 		);
 	}
 
-	return (
-		<Card className="p-5 bg-white">
-			<div className="flex items-center justify-between mb-5">
-				<h2 className="text-lg font-bold text-gray-900">
-					Statistik Presensi Minggu Ini
-				</h2>
-				<Calendar className="w-5 h-5 text-gray-400" />
-			</div>
-
-			<div className="flex justify-between mb-6">
-				{stats.daily.map((item, index) => (
-					<DayStatus key={index} day={mapDays(item.day)} status={item.status} />
-				))}
-			</div>
-
-			<div className="grid grid-cols-2 gap-3">
-				<StatBox
-					label="Total Kehadiran"
-					value={stats.stats.total}
-					bgColor="bg-blue-50"
-					textColor="text-blue-600"
-				/>
-				<StatBox
-					label="Tepat Waktu"
-					value={stats.stats.onTime}
-					bgColor="bg-green-50"
-					textColor="text-green-600"
-				/>
-				<StatBox
-					label="Terlambat"
-					value={stats.stats.late}
-					bgColor="bg-yellow-50"
-					textColor="text-yellow-600"
-				/>
-				<StatBox
-					label="Izin/Sakit"
-					value={stats.stats.leave}
-					bgColor="bg-red-50"
-					textColor="text-red-600"
-				/>
-			</div>
-		</Card>
-	);
+	return <Card className="p-5 bg-white">{statsContent}</Card>;
 }

@@ -106,7 +106,7 @@ export default function DashboardLayout({ children }) {
 
 			{/* Main content - adjusted padding for mobile */}
 			<div
-				className={`p-4 ${
+				className={`${
 					isSidebarOpen ? "md:ml-64" : ""
 				} transition-margin duration-300 pb-20 md:pb-4`}
 			>

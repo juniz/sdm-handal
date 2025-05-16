@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Building2, Calendar, Home, User } from "lucide-react";
@@ -10,36 +10,10 @@ export function EmployeeCard() {
 	const [imageError, setImageError] = useState(false);
 	const { user, error, isLoading } = useUser();
 
-	if (isLoading) {
-		return (
-			<Card className="p-4">
-				<div className="flex items-center justify-center h-32">
-					<div className="flex flex-col items-center gap-2">
-						<div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-						<p className="text-gray-500">Memuat data pegawai...</p>
-					</div>
-				</div>
-			</Card>
-		);
-	}
+	const userContent = useMemo(() => {
+		if (!user) return null;
 
-	if (error || !user) {
 		return (
-			<Card className="p-4">
-				<div className="flex items-center justify-center h-32">
-					<div className="flex flex-col items-center gap-2 text-center">
-						<User className="w-8 h-8 text-gray-400" />
-						<p className="text-gray-500">
-							{error || "Data pegawai tidak ditemukan"}
-						</p>
-					</div>
-				</div>
-			</Card>
-		);
-	}
-
-	return (
-		<Card className="p-5 bg-white">
 			<div className="flex items-start gap-4">
 				<div className="relative w-20 h-30 items-center justify-center rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
 					{user.photo && !imageError ? (
@@ -82,6 +56,36 @@ export function EmployeeCard() {
 					</div>
 				</div>
 			</div>
-		</Card>
-	);
+		);
+	}, [user, imageError]);
+
+	if (isLoading) {
+		return (
+			<Card className="p-4">
+				<div className="flex items-center justify-center h-32">
+					<div className="flex flex-col items-center gap-2">
+						<div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+						<p className="text-gray-500">Memuat data pegawai...</p>
+					</div>
+				</div>
+			</Card>
+		);
+	}
+
+	if (error || !user) {
+		return (
+			<Card className="p-4">
+				<div className="flex items-center justify-center h-32">
+					<div className="flex flex-col items-center gap-2 text-center">
+						<User className="w-8 h-8 text-gray-400" />
+						<p className="text-gray-500">
+							{error || "Data pegawai tidak ditemukan"}
+						</p>
+					</div>
+				</div>
+			</Card>
+		);
+	}
+
+	return <Card className="p-5 bg-white">{userContent}</Card>;
 }
