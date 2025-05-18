@@ -26,6 +26,9 @@ import { PegawaiCombobox } from "@/components/PegawaiCombobox";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import moment from "moment";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PengajuanIzinForm from "./components/PengajuanIzinForm";
+import DaftarIzin from "./components/DaftarIzin";
 
 const fadeIn = {
 	initial: { opacity: 0, y: 20 },
@@ -41,262 +44,41 @@ const staggerContainer = {
 	},
 };
 
-export default function PengajuanIzinForm() {
-	const router = useRouter();
-	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [form, setForm] = useState({
-		tanggal_awal: "",
-		tanggal_akhir: "",
-		nik_pj: "",
-		urgensi: "Perjalanan Dinas",
-		kepentingan: "",
-		status: "Proses Pengajuan",
-	});
-
-	const [date, setDate] = useState({
-		tanggal_awal: undefined,
-		tanggal_akhir: undefined,
-	});
-
-	const [errors, setErrors] = useState({
-		tanggal_awal: "",
-		tanggal_akhir: "",
-		nik_pj: "",
-		kepentingan: "",
-		urgensi: "",
-	});
-
-	const validateDates = () => {
-		const newErrors = {};
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-
-		if (!date.tanggal_awal) {
-			newErrors.tanggal_awal = "Tanggal awal wajib diisi";
-		} else if (date.tanggal_awal < today) {
-			newErrors.tanggal_awal = "Tanggal awal tidak boleh kurang dari hari ini";
-		}
-
-		if (!date.tanggal_akhir) {
-			newErrors.tanggal_akhir = "Tanggal akhir wajib diisi";
-		} else if (date.tanggal_akhir < date.tanggal_awal) {
-			newErrors.tanggal_akhir =
-				"Tanggal akhir tidak boleh kurang dari tanggal awal";
-		}
-
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
-
-	const handleDateChange = (value, field) => {
-		setDate((prev) => ({ ...prev, [field]: value }));
-		setForm((prev) => ({
-			...prev,
-			[field]: value ? moment(value).format("YYYY-MM-DD") : "",
-		}));
-		setErrors((prev) => ({ ...prev, [field]: "" }));
-	};
-
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setForm({ ...form, [name]: value });
-	};
-
-	const handlePegawaiChange = (value) => {
-		setForm((prev) => ({ ...prev, nik_pj: value }));
-		setErrors((prev) => ({ ...prev, nik_pj: "" }));
-	};
-
-	const validateForm = () => {
-		const newErrors = { ...errors };
-
-		if (!form.nik_pj) {
-			newErrors.nik_pj = "Penanggung jawab wajib dipilih";
-		}
-
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
-
-	const handleSubmit = async (e) => {
-		e.preventDefault();
-		try {
-			setIsSubmitting(true);
-
-			const response = await fetch("/api/izin", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					tanggal_awal: form.tanggal_awal,
-					tanggal_akhir: form.tanggal_akhir,
-					urgensi: form.urgensi,
-					kepentingan: form.kepentingan,
-					nik_pj: form.nik_pj,
-				}),
-			});
-
-			const data = await response.json();
-
-			if (data.status === "success") {
-				toast.success("Pengajuan izin berhasil disimpan");
-				router.push("/dashboard/izin/list"); // Redirect ke halaman list izin
-			} else {
-				throw new Error(data.message || "Terjadi kesalahan");
-			}
-		} catch (error) {
-			console.error("Error submitting form:", error);
-			toast.error(error.message || "Gagal menyimpan pengajuan izin");
-		} finally {
-			setIsSubmitting(false);
-		}
-		// if (validateDates() && validateForm()) {
-
-		// } else {
-		// 	toast.error("Form tidak boleh kosong");
-		// }
-	};
-
+export default function IzinPage() {
 	return (
 		<div className="min-h-[80vh] bg-gradient-to-br from-blue-50 to-indigo-50">
 			<motion.div
 				initial="initial"
 				animate="animate"
 				variants={staggerContainer}
-				className="max-w-2xl mx-auto"
+				className="max-w-6xl mx-auto"
 			>
 				<motion.div variants={fadeIn}>
-					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0 overflow-hidden">
-						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0">
+						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-6">
 							<motion.div
 								initial={{ scale: 0.95 }}
 								animate={{ scale: 1 }}
 								transition={{ duration: 0.3 }}
 							>
-								<CardTitle className="text-2xl font-bold text-center">
-									Form Pengajuan Izin
+								<CardTitle className="text-xl md:text-2xl font-bold text-center">
+									Manajemen Izin
 								</CardTitle>
 							</motion.div>
 						</CardHeader>
-						<CardContent>
-							<form onSubmit={handleSubmit} className="space-y-6 py-4">
-								<motion.div
-									variants={staggerContainer}
-									className="grid grid-cols-1 md:grid-cols-2 gap-6"
-								>
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Tanggal Awal
-										</label>
-										<DatePicker
-											value={date.tanggal_awal}
-											onChange={(value) =>
-												handleDateChange(value, "tanggal_awal")
-											}
-											placeholder="Pilih tanggal awal"
-											error={errors.tanggal_awal}
-											minDate={new Date()}
-										/>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Tanggal Akhir
-										</label>
-										<DatePicker
-											value={date.tanggal_akhir}
-											onChange={(value) =>
-												handleDateChange(value, "tanggal_akhir")
-											}
-											placeholder="Pilih tanggal akhir"
-											error={errors.tanggal_akhir}
-											minDate={
-												date.tanggal_awal
-													? new Date(date.tanggal_awal)
-													: new Date()
-											}
-										/>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Urgensi
-										</label>
-										<Select
-											className="w-full"
-											name="urgensi"
-											value={form.urgensi}
-											onValueChange={(e) => setForm({ ...form, urgensi: e })}
-											required
-										>
-											<SelectTrigger name="urgensi" className="w-full">
-												<SelectValue placeholder="Perjalanan Dinas" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectGroup>
-													<SelectItem value="Perjalanan Dinas">
-														Perjalanan Dinas
-													</SelectItem>
-													<SelectItem value="Lain-lain">Lain-lain</SelectItem>
-												</SelectGroup>
-											</SelectContent>
-										</Select>
-									</motion.div>
-
-									<motion.div
-										variants={fadeIn}
-										className="space-y-2 md:col-span-2"
-									>
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Kepentingan
-										</label>
-										<Textarea
-											name="kepentingan"
-											value={form.kepentingan}
-											onChange={handleChange}
-											required
-											placeholder="Jelaskan kepentingan izin..."
-										/>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Penanggung Jawab
-										</label>
-										<PegawaiCombobox
-											value={form.nik_pj}
-											onValueChange={handlePegawaiChange}
-											error={errors.nik_pj}
-										/>
-									</motion.div>
-								</motion.div>
-
-								<motion.div variants={fadeIn} className="pt-6 flex justify-end">
-									<Button
-										type="submit"
-										className="w-full md:w-auto px-8 py-2 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<>
-												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-												<span>Menyimpan...</span>
-											</>
-										) : (
-											<>
-												<Send className="w-5 h-5" />
-												<span>Ajukan Izin</span>
-											</>
-										)}
-									</Button>
-								</motion.div>
-							</form>
+						<CardContent className="p-4 md:p-6">
+							<Tabs defaultValue="daftar" className="w-full">
+								<TabsList className="w-full justify-start mb-4">
+									<TabsTrigger value="daftar">Daftar Izin</TabsTrigger>
+									<TabsTrigger value="pengajuan">Pengajuan Izin</TabsTrigger>
+								</TabsList>
+								<TabsContent value="daftar">
+									<DaftarIzin />
+								</TabsContent>
+								<TabsContent value="pengajuan">
+									<PengajuanIzinForm />
+								</TabsContent>
+							</Tabs>
 						</CardContent>
 					</Card>
 				</motion.div>

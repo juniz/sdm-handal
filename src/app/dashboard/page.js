@@ -66,7 +66,7 @@ const QuickActions = () => {
 			color: "from-orange-500 to-red-500",
 		},
 		{
-			title: "Buku Akreditasi",
+			title: "Akreditasi",
 			icon: BookOpen,
 			href: "/dashboard/akreditasi",
 			color: "from-rose-500 to-pink-500",
@@ -82,16 +82,13 @@ const QuickActions = () => {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="relative">
-				<div className="flex gap-1.5 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+				<div className="flex gap-1.5 p-2 rounded-md bg-blue-100 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
 					{actions.map((action) => (
 						<button
 							key={action.title}
 							onClick={() => router.push(action.href)}
 							className="flex-none w-[100px] group relative overflow-hidden rounded-lg p-0.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
 						>
-							<div
-								className={`absolute inset-0 bg-gradient-to-r ${action.color} opacity-75 group-hover:opacity-100 transition-opacity`}
-							/>
 							<div className="relative bg-white/90 rounded-[7px] py-2 px-1">
 								<div className="flex flex-col items-center gap-1.5">
 									<div

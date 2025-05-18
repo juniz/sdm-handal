@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import {
 	Table,
 	TableBody,
@@ -11,9 +11,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
 import {
-	Plus,
 	FileText,
 	Clock,
 	Search,
@@ -21,9 +19,7 @@ import {
 	ChevronLeft,
 	ChevronRight,
 	Trash2,
-	ChevronDown,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
@@ -259,8 +255,7 @@ const IzinCard = ({ item, onDelete }) => {
 	);
 };
 
-export default function IzinList() {
-	const router = useRouter();
+export default function DaftarIzin() {
 	const [izin, setIzin] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [filterDate, setFilterDate] = useState({
@@ -374,256 +369,205 @@ export default function IzinList() {
 	};
 
 	return (
-		<div className="min-h-[80vh] bg-gradient-to-br from-blue-50 to-indigo-50">
-			<motion.div
-				initial="initial"
-				animate="animate"
-				variants={staggerContainer}
-				className="max-w-6xl mx-auto"
-			>
-				<motion.div variants={fadeIn}>
-					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0">
-						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-6">
-							<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-								<motion.div
-									initial={{ scale: 0.95 }}
-									animate={{ scale: 1 }}
-									transition={{ duration: 0.3 }}
-								>
-									<CardTitle className="text-xl md:text-2xl font-bold">
-										Daftar Pengajuan Izin
-									</CardTitle>
-								</motion.div>
-								<Button
-									onClick={() => router.push("/dashboard/izin")}
-									className="bg-white/20 hover:bg-white/30 text-white w-full md:w-auto"
-								>
-									<Plus className="w-5 h-5 mr-2" />
-									Ajukan Izin
-								</Button>
+		<div>
+			{/* Filter Section */}
+			<Accordion type="single" collapsible className="w-full md:hidden mb-4">
+				<AccordionItem value="filter">
+					<AccordionTrigger className="hover:no-underline">
+						<div className="flex items-center">
+							<Search className="w-4 h-4 mr-2" />
+							Filter Data
+						</div>
+					</AccordionTrigger>
+					<AccordionContent>
+						<div className="space-y-4">
+							<div>
+								<label className="text-sm font-medium text-gray-700 mb-2 block">
+									Tanggal Awal
+								</label>
+								<DatePicker
+									value={filterDate.start}
+									onChange={(value) => handleDateChange(value, "start")}
+									placeholder="Pilih tanggal awal"
+								/>
 							</div>
-						</CardHeader>
-						<CardContent>
-							{/* Filter Section */}
-							<Accordion
-								type="single"
-								collapsible
-								className="w-full md:hidden mb-4"
+							<div>
+								<label className="text-sm font-medium text-gray-700 mb-2 block">
+									Tanggal Akhir
+								</label>
+								<DatePicker
+									value={filterDate.end}
+									onChange={(value) => handleDateChange(value, "end")}
+									placeholder="Pilih tanggal akhir"
+									minDate={filterDate.start}
+								/>
+							</div>
+							<Button
+								variant="outline"
+								onClick={clearFilters}
+								className="w-full"
 							>
-								<AccordionItem value="filter">
-									<AccordionTrigger className="hover:no-underline">
-										<div className="flex items-center">
-											<Search className="w-4 h-4 mr-2" />
-											Filter Data
-										</div>
-									</AccordionTrigger>
-									<AccordionContent>
-										<div className="space-y-4">
-											<div>
-												<label className="text-sm font-medium text-gray-700 mb-2 block">
-													Tanggal Awal
-												</label>
-												<DatePicker
-													value={filterDate.start}
-													onChange={(value) => handleDateChange(value, "start")}
-													placeholder="Pilih tanggal awal"
-												/>
-											</div>
-											<div>
-												<label className="text-sm font-medium text-gray-700 mb-2 block">
-													Tanggal Akhir
-												</label>
-												<DatePicker
-													value={filterDate.end}
-													onChange={(value) => handleDateChange(value, "end")}
-													placeholder="Pilih tanggal akhir"
-													minDate={filterDate.start}
-												/>
-											</div>
-											<Button
-												variant="outline"
-												onClick={clearFilters}
-												className="w-full"
-											>
-												<X className="w-4 h-4 mr-2" />
-												Reset Filter
-											</Button>
-										</div>
-									</AccordionContent>
-								</AccordionItem>
-							</Accordion>
+								<X className="w-4 h-4 mr-2" />
+								Reset Filter
+							</Button>
+						</div>
+					</AccordionContent>
+				</AccordionItem>
+			</Accordion>
 
-							{/* Desktop Filter */}
-							<div className="hidden md:block mb-6 mt-4">
-								<div className="flex flex-col md:flex-row gap-4 items-end">
-									<div className="w-full md:w-1/3">
-										<label className="text-sm font-medium text-gray-700 mb-2 block">
-											Tanggal Awal
-										</label>
-										<DatePicker
-											value={filterDate.start}
-											onChange={(value) => handleDateChange(value, "start")}
-											placeholder="Pilih tanggal awal"
-										/>
-									</div>
-									<div className="w-full md:w-1/3">
-										<label className="text-sm font-medium text-gray-700 mb-2 block">
-											Tanggal Akhir
-										</label>
-										<DatePicker
-											value={filterDate.end}
-											onChange={(value) => handleDateChange(value, "end")}
-											placeholder="Pilih tanggal akhir"
-											minDate={filterDate.start}
-										/>
-									</div>
-									<div className="flex gap-2">
-										<Button
-											variant="outline"
-											onClick={clearFilters}
-											className="h-12"
-										>
-											<X className="w-4 h-4 mr-2" />
-											Reset
-										</Button>
-									</div>
-								</div>
-							</div>
+			{/* Desktop Filter */}
+			<div className="hidden md:block mb-6">
+				<div className="flex flex-col md:flex-row gap-4 items-end">
+					<div className="w-full md:w-1/3">
+						<label className="text-sm font-medium text-gray-700 mb-2 block">
+							Tanggal Awal
+						</label>
+						<DatePicker
+							value={filterDate.start}
+							onChange={(value) => handleDateChange(value, "start")}
+							placeholder="Pilih tanggal awal"
+						/>
+					</div>
+					<div className="w-full md:w-1/3">
+						<label className="text-sm font-medium text-gray-700 mb-2 block">
+							Tanggal Akhir
+						</label>
+						<DatePicker
+							value={filterDate.end}
+							onChange={(value) => handleDateChange(value, "end")}
+							placeholder="Pilih tanggal akhir"
+							minDate={filterDate.start}
+						/>
+					</div>
+					<div className="flex gap-2">
+						<Button variant="outline" onClick={clearFilters} className="h-12">
+							<X className="w-4 h-4 mr-2" />
+							Reset
+						</Button>
+					</div>
+				</div>
+			</div>
 
-							{/* Mobile View */}
-							<div className="md:hidden">
-								{loading ? (
-									<div className="flex items-center justify-center py-10">
+			{/* Mobile View */}
+			<div className="md:hidden">
+				{loading ? (
+					<div className="flex items-center justify-center py-10">
+						<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+						<span className="ml-2">Memuat data...</span>
+					</div>
+				) : izin.length === 0 ? (
+					<div className="flex flex-col items-center justify-center py-10 text-gray-500">
+						<FileText className="w-12 h-12 mb-2" />
+						<p>Belum ada pengajuan izin</p>
+					</div>
+				) : (
+					<div className="space-y-2">
+						{izin.map((item) => (
+							<IzinCard
+								key={item.no_pengajuan}
+								item={item}
+								onDelete={showDeleteDialog}
+							/>
+						))}
+					</div>
+				)}
+			</div>
+
+			{/* Desktop View */}
+			<div className="hidden md:block">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>No. Pengajuan</TableHead>
+							<TableHead>Tanggal</TableHead>
+							<TableHead>Periode</TableHead>
+							<TableHead>Urgensi</TableHead>
+							<TableHead>Kepentingan</TableHead>
+							<TableHead>Penanggung Jawab</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead>Aksi</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{loading ? (
+							<TableRow>
+								<TableCell colSpan={8} className="text-center py-10">
+									<div className="flex items-center justify-center">
 										<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
 										<span className="ml-2">Memuat data...</span>
 									</div>
-								) : izin.length === 0 ? (
-									<div className="flex flex-col items-center justify-center py-10 text-gray-500">
+								</TableCell>
+							</TableRow>
+						) : izin.length === 0 ? (
+							<TableRow>
+								<TableCell colSpan={8} className="text-center py-10">
+									<div className="flex flex-col items-center justify-center text-gray-500">
 										<FileText className="w-12 h-12 mb-2" />
 										<p>Belum ada pengajuan izin</p>
 									</div>
-								) : (
-									<div className="space-y-2">
-										{izin.map((item) => (
-											<IzinCard
-												key={item.no_pengajuan}
-												item={item}
-												onDelete={showDeleteDialog}
-											/>
-										))}
-									</div>
-								)}
-							</div>
-
-							{/* Desktop View */}
-							<div className="hidden md:block">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>No. Pengajuan</TableHead>
-											<TableHead>Tanggal</TableHead>
-											<TableHead>Periode</TableHead>
-											<TableHead>Urgensi</TableHead>
-											<TableHead>Kepentingan</TableHead>
-											<TableHead>Penanggung Jawab</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead>Aksi</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{loading ? (
-											<TableRow>
-												<TableCell colSpan={8} className="text-center py-10">
-													<div className="flex items-center justify-center">
-														<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-														<span className="ml-2">Memuat data...</span>
-													</div>
-												</TableCell>
-											</TableRow>
-										) : izin.length === 0 ? (
-											<TableRow>
-												<TableCell colSpan={8} className="text-center py-10">
-													<div className="flex flex-col items-center justify-center text-gray-500">
-														<FileText className="w-12 h-12 mb-2" />
-														<p>Belum ada pengajuan izin</p>
-													</div>
-												</TableCell>
-											</TableRow>
-										) : (
-											izin.map((item) => (
-												<TableRow key={item.no_pengajuan}>
-													<TableCell className="font-medium">
-														{item.no_pengajuan}
-													</TableCell>
-													<TableCell>
-														{format(new Date(item.tanggal), "dd MMM yyyy", {
-															locale: id,
-														})}
-													</TableCell>
-													<TableCell>
-														<div className="flex items-center">
-															<Clock className="w-4 h-4 mr-1 text-blue-600" />
-															{format(
-																new Date(item.tanggal_awal),
-																"dd MMM yyyy",
-																{
-																	locale: id,
-																}
-															)}{" "}
-															-{" "}
-															{format(
-																new Date(item.tanggal_akhir),
-																"dd MMM yyyy",
-																{
-																	locale: id,
-																}
-															)}
-															<Badge variant="outline" className="ml-2">
-																{item.jumlah} hari
-															</Badge>
-														</div>
-													</TableCell>
-													<TableCell>{item.urgensi}</TableCell>
-													<TableCell className="max-w-xs truncate">
-														{item.kepentingan}
-													</TableCell>
-													<TableCell>{item.nama_pj}</TableCell>
-													<TableCell>{getStatusBadge(item.status)}</TableCell>
-													<TableCell>
-														{item.status !== "Disetujui" && (
-															<Button
-																variant="ghost"
-																size="icon"
-																className="text-red-500 hover:text-red-600 hover:bg-red-50"
-																onClick={() =>
-																	showDeleteDialog(item.no_pengajuan)
-																}
-															>
-																<Trash2 className="w-4 h-4" />
-															</Button>
-														)}
-													</TableCell>
-												</TableRow>
-											))
+								</TableCell>
+							</TableRow>
+						) : (
+							izin.map((item) => (
+								<TableRow key={item.no_pengajuan}>
+									<TableCell className="font-medium">
+										{item.no_pengajuan}
+									</TableCell>
+									<TableCell>
+										{format(new Date(item.tanggal), "dd MMM yyyy", {
+											locale: id,
+										})}
+									</TableCell>
+									<TableCell>
+										<div className="flex items-center">
+											<Clock className="w-4 h-4 mr-1 text-blue-600" />
+											{format(new Date(item.tanggal_awal), "dd MMM yyyy", {
+												locale: id,
+											})}{" "}
+											-{" "}
+											{format(new Date(item.tanggal_akhir), "dd MMM yyyy", {
+												locale: id,
+											})}
+											<Badge variant="outline" className="ml-2">
+												{item.jumlah} hari
+											</Badge>
+										</div>
+									</TableCell>
+									<TableCell>{item.urgensi}</TableCell>
+									<TableCell className="max-w-xs truncate">
+										{item.kepentingan}
+									</TableCell>
+									<TableCell>{item.nama_pj}</TableCell>
+									<TableCell>{getStatusBadge(item.status)}</TableCell>
+									<TableCell>
+										{item.status !== "Disetujui" && (
+											<Button
+												variant="ghost"
+												size="icon"
+												className="text-red-500 hover:text-red-600 hover:bg-red-50"
+												onClick={() => showDeleteDialog(item.no_pengajuan)}
+											>
+												<Trash2 className="w-4 h-4" />
+											</Button>
 										)}
-									</TableBody>
-								</Table>
-							</div>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</div>
 
-							{/* Pagination */}
-							{!loading && izin.length > 0 && (
-								<div className="mt-4 flex justify-center">
-									<Pagination
-										currentPage={pagination.currentPage}
-										totalPages={pagination.totalPages}
-										onPageChange={handlePageChange}
-									/>
-								</div>
-							)}
-						</CardContent>
-					</Card>
-				</motion.div>
-			</motion.div>
+			{/* Pagination */}
+			{!loading && izin.length > 0 && (
+				<div className="mt-4 flex justify-center">
+					<Pagination
+						currentPage={pagination.currentPage}
+						totalPages={pagination.totalPages}
+						onPageChange={handlePageChange}
+					/>
+				</div>
+			)}
 
 			{/* Delete Confirmation Dialog */}
 			<AlertDialog
