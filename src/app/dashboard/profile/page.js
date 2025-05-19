@@ -15,6 +15,7 @@ import {
 	Building2,
 	Users,
 	LogOut,
+	Lock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { removeClientToken } from "@/lib/client-auth";
@@ -31,7 +32,7 @@ const ProfileImage = ({ photoUrl, name }) => {
 				}
 				alt={`Foto ${name}`}
 				fill
-				className="rounded-full object-cover"
+				className="rounded-md object-cover"
 				onError={() => setImgError(true)}
 				sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 				priority
@@ -105,11 +106,307 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
 	);
 };
 
+// Komponen Modal Ubah Password
+const ChangePasswordModal = ({ isOpen, onClose, onLogout }) => {
+	const [oldPassword, setOldPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [success, setSuccess] = useState(false);
+	const [showOldPassword, setShowOldPassword] = useState(false);
+	const [showNewPassword, setShowNewPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+	const resetForm = () => {
+		setOldPassword("");
+		setNewPassword("");
+		setConfirmPassword("");
+		setError("");
+		setSuccess(false);
+		setShowOldPassword(false);
+		setShowNewPassword(false);
+		setShowConfirmPassword(false);
+	};
+
+	const handleClose = () => {
+		resetForm();
+		onClose();
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setError("");
+		setLoading(true);
+
+		// Validasi
+		if (!oldPassword || !newPassword || !confirmPassword) {
+			setError("Semua field harus diisi");
+			setLoading(false);
+			return;
+		}
+
+		if (newPassword !== confirmPassword) {
+			setError("Password baru dan konfirmasi password tidak sama");
+			setLoading(false);
+			return;
+		}
+
+		try {
+			const response = await fetch("/api/profile/password", {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					oldPassword,
+					newPassword,
+				}),
+			});
+
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error(data.error || "Terjadi kesalahan");
+			}
+
+			setSuccess(true);
+
+			// Tunggu 1.5 detik untuk menampilkan pesan sukses
+			setTimeout(() => {
+				// Tutup modal dan lakukan proses logout
+				handleClose();
+				onLogout();
+			}, 1500);
+		} catch (error) {
+			setError(error.message);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	if (!isOpen) return null;
+
+	return (
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+			<motion.div
+				initial={{ scale: 0.9, opacity: 0 }}
+				animate={{ scale: 1, opacity: 1 }}
+				exit={{ scale: 0.9, opacity: 0 }}
+				className="bg-white rounded-lg p-6 w-full max-w-md"
+			>
+				<h3 className="text-lg font-semibold mb-4">Ubah Password</h3>
+				{success ? (
+					<div className="text-green-600 text-center py-4">
+						Password berhasil diubah!
+					</div>
+				) : (
+					<form onSubmit={handleSubmit}>
+						{error && (
+							<div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+								{error}
+							</div>
+						)}
+						<div className="space-y-4">
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Password Lama
+								</label>
+								<div className="relative">
+									<input
+										type={showOldPassword ? "text" : "password"}
+										value={oldPassword}
+										onChange={(e) => setOldPassword(e.target.value)}
+										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+										placeholder="Masukkan password lama"
+									/>
+									<button
+										type="button"
+										onClick={() => setShowOldPassword(!showOldPassword)}
+										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+									>
+										{showOldPassword ? (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+												/>
+											</svg>
+										) : (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+												/>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+												/>
+											</svg>
+										)}
+									</button>
+								</div>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Password Baru
+								</label>
+								<div className="relative">
+									<input
+										type={showNewPassword ? "text" : "password"}
+										value={newPassword}
+										onChange={(e) => setNewPassword(e.target.value)}
+										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+										placeholder="Masukkan password baru"
+									/>
+									<button
+										type="button"
+										onClick={() => setShowNewPassword(!showNewPassword)}
+										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+									>
+										{showNewPassword ? (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+												/>
+											</svg>
+										) : (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+												/>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+												/>
+											</svg>
+										)}
+									</button>
+								</div>
+							</div>
+							<div>
+								<label className="block text-sm font-medium text-gray-700 mb-1">
+									Konfirmasi Password Baru
+								</label>
+								<div className="relative">
+									<input
+										type={showConfirmPassword ? "text" : "password"}
+										value={confirmPassword}
+										onChange={(e) => setConfirmPassword(e.target.value)}
+										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+										placeholder="Konfirmasi password baru"
+									/>
+									<button
+										type="button"
+										onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+									>
+										{showConfirmPassword ? (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+												/>
+											</svg>
+										) : (
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												strokeWidth={1.5}
+												stroke="currentColor"
+												className="w-5 h-5"
+											>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+												/>
+												<path
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+												/>
+											</svg>
+										)}
+									</button>
+								</div>
+							</div>
+						</div>
+						<div className="flex justify-end gap-3 mt-6">
+							<button
+								type="button"
+								onClick={handleClose}
+								className="px-4 py-2 text-gray-600 hover:text-gray-800"
+								disabled={loading}
+							>
+								Batal
+							</button>
+							<button
+								type="submit"
+								className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300"
+								disabled={loading}
+							>
+								{loading ? "Menyimpan..." : "Simpan"}
+							</button>
+						</div>
+					</form>
+				)}
+			</motion.div>
+		</div>
+	);
+};
+
 export default function ProfilePage() {
 	const router = useRouter();
 	const [profile, setProfile] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [showLogoutModal, setShowLogoutModal] = useState(false);
+	const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
 	useEffect(() => {
 		const fetchProfile = async () => {
@@ -196,40 +493,49 @@ export default function ProfilePage() {
 
 	return (
 		<div className="max-w-4xl mx-auto px-4 py-6">
-			{/* Header Profile with Logout Button */}
+			{/* Header Profile with Action Buttons */}
 			<motion.div
 				initial={{ opacity: 0, y: -20 }}
 				animate={{ opacity: 1, y: 0 }}
-				transition={{ duration: 0.5 }}
-				className="bg-white rounded-xl p-6 mb-8 shadow-sm relative"
+				className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4"
 			>
-				<button
-					onClick={() => setShowLogoutModal(true)}
-					className="absolute top-4 right-4 p-2 text-gray-500 hover:text-red-500 transition-colors"
-					title="Logout"
-				>
-					<LogOut className="w-6 h-6" />
-				</button>
-				<div className="flex flex-col md:flex-row items-center gap-6">
+				<div className="flex items-center gap-6">
 					<ProfileImage
 						photoUrl={getPhotoUrl(profile.photo)}
 						name={profile.nama}
 					/>
 					<div className="text-center md:text-left">
-						<h1 className="text-2xl font-bold">{profile.nama}</h1>
-						<p className="text-gray-500 mt-1">{profile.nik}</p>
+						<h1 className="text-xl font-bold">{profile.nama}</h1>
 						<div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
 							<span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm">
 								{profile.departemen}
 							</span>
 							<span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-sm">
-								{profile.jnj_jabatan}
+								{profile.jbtn}
 							</span>
 							<span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-sm">
 								{profile.stts_aktif}
 							</span>
 						</div>
 					</div>
+				</div>
+				<div className="flex gap-2">
+					<button
+						onClick={() => setShowChangePasswordModal(true)}
+						className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+						title="Ubah Password"
+					>
+						<Lock className="w-4 h-4" />
+						<span className="text-sm">Ubah Password</span>
+					</button>
+					<button
+						onClick={() => setShowLogoutModal(true)}
+						className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+						title="Logout"
+					>
+						<LogOut className="w-4 h-4" />
+						<span className="text-sm">Logout</span>
+					</button>
 				</div>
 			</motion.div>
 
@@ -323,6 +629,12 @@ export default function ProfilePage() {
 				isOpen={showLogoutModal}
 				onClose={() => setShowLogoutModal(false)}
 				onConfirm={handleLogout}
+			/>
+
+			<ChangePasswordModal
+				isOpen={showChangePasswordModal}
+				onClose={() => setShowChangePasswordModal(false)}
+				onLogout={handleLogout}
 			/>
 		</div>
 	);

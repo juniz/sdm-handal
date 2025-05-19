@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, Maximize2, X } from "lucide-react";
+import { MapPin, Maximize, X } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 // Koordinat kantor dengan nilai default
@@ -89,22 +89,22 @@ export default function LocationMap({ onLocationVerified }) {
 		<div className="relative">
 			<button
 				onClick={() => setIsMapExpanded(true)}
-				className="absolute top-2 right-2 z-10 bg-white p-2 rounded-lg shadow-md hover:bg-gray-100"
+				className="absolute top-2 right-2 z-0 bg-white p-2 rounded-lg shadow-md hover:bg-gray-100"
 				title="Perbesar peta"
 			>
-				<Maximize2 className="w-5 h-5" />
+				<Maximize className="w-5 h-5" />
 			</button>
 
-			<Map
+			{/* <Map
 				userLocation={userLocation}
 				officeLocation={OFFICE_LOCATION}
 				allowedRadius={ALLOWED_RADIUS}
 				className="h-[400px] w-full rounded-lg"
 				zoom={16}
-			/>
+			/> */}
 
 			{distance !== null && (
-				<div className="p-4 bg-blue-100 rounded-lg">
+				<div className="p-5 bg-blue-100 rounded-lg">
 					<p className="text-blue-800">
 						Jarak Anda dari kantor: {(distance / 1000).toFixed(2)} km
 					</p>

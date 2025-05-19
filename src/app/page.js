@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { UserRound, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { setClientToken } from "@/lib/client-auth";
+import Image from "next/image";
 
 export default function LoginPage() {
 	const [formData, setFormData] = useState({
@@ -64,81 +65,112 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-white p-4">
-			<Card className="w-full max-w-md animate-in slide-in-from-bottom duration-500 shadow-lg bg-white/70 backdrop-blur-sm">
-				<CardHeader className="space-y-2">
-					<CardTitle className="text-2xl font-bold text-center text-blue-800">
-						SDM Handal
-					</CardTitle>
-					<CardDescription className="text-center text-blue-600">
-						Masuk ke akun Anda untuk melanjutkan
-					</CardDescription>
-				</CardHeader>
-				<form onSubmit={handleSubmit}>
-					<CardContent className="space-y-4">
-						{error && (
-							<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-								{error}
+		<div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-white p-4 relative overflow-hidden">
+			{/* Decorative Elements */}
+			<div className="absolute top-0 left-0 w-full h-64 bg-blue-500 rounded-b-[100px] opacity-10 transform -skew-y-6"></div>
+			<div className="absolute bottom-0 right-0 w-full h-64 bg-blue-600 rounded-t-[100px] opacity-10 transform skew-y-6"></div>
+
+			<div className="w-full max-w-md z-10">
+				{/* Logo dan Header */}
+				<div className="flex flex-col items-center mb-8">
+					<div className="w-24 h-24 relative mb-4">
+						<Image
+							src="/logo.png"
+							alt="SDM Handal Logo"
+							width={96}
+							height={96}
+							className="drop-shadow-xl"
+						/>
+					</div>
+					<h1 className="text-3xl font-bold text-blue-800 mb-2">SDM Handal</h1>
+					<p className="text-blue-600 text-center max-w-xs">
+						Sistem Informasi Manajemen SDM Terintegrasi
+					</p>
+				</div>
+
+				<Card className="w-full backdrop-blur-md bg-white/80 border-0 shadow-2xl">
+					<form onSubmit={handleSubmit}>
+						<CardContent className="space-y-6 pt-6">
+							{error && (
+								<div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+									<div className="flex">
+										<div className="flex-shrink-0">
+											<svg
+												className="h-5 w-5 text-red-400"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+											>
+												<path
+													fillRule="evenodd"
+													d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+													clipRule="evenodd"
+												/>
+											</svg>
+										</div>
+										<div className="ml-3">
+											<p className="text-sm text-red-700">{error}</p>
+										</div>
+									</div>
+								</div>
+							)}
+
+							<div className="space-y-2">
+								<div className="relative">
+									<Input
+										id="nip"
+										type="text"
+										placeholder="Masukkan NIP"
+										value={formData.nip}
+										onChange={(e) =>
+											setFormData({ ...formData, nip: e.target.value })
+										}
+										className="pl-12 h-12 text-lg bg-white/50 focus:bg-white transition-colors"
+										disabled={loading}
+									/>
+									<UserRound className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+								</div>
 							</div>
-						)}
-						<div className="space-y-2">
-							<label
-								htmlFor="nip"
-								className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-blue-700 flex items-center gap-2"
+
+							<div className="space-y-2">
+								<div className="relative">
+									<Input
+										id="password"
+										type="password"
+										placeholder="Masukkan Password"
+										value={formData.password}
+										onChange={(e) =>
+											setFormData({ ...formData, password: e.target.value })
+										}
+										className="pl-12 h-12 text-lg bg-white/50 focus:bg-white transition-colors"
+										disabled={loading}
+									/>
+									<KeyRound className="absolute left-4 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
+								</div>
+							</div>
+
+							<Button
+								type="submit"
+								className="w-full h-12 text-lg font-medium bg-blue-600 hover:bg-blue-700 transition-all duration-200 hover:scale-[1.02] disabled:hover:scale-100"
+								disabled={loading}
 							>
-								<UserRound className="h-4 w-4" />
-								NIP
-							</label>
-							<div className="relative">
-								<UserRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
-								<Input
-									id="nip"
-									type="text"
-									placeholder="Masukkan NIP Anda"
-									value={formData.nip}
-									onChange={(e) =>
-										setFormData({ ...formData, nip: e.target.value })
-									}
-									className="animate-in fade-in duration-300 bg-white/50 focus:bg-white pl-10"
-									disabled={loading}
-								/>
-							</div>
-						</div>
-						<div className="space-y-2">
-							<label
-								htmlFor="password"
-								className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-blue-700 flex items-center gap-2"
-							>
-								<KeyRound className="h-4 w-4" />
-								Password
-							</label>
-							<div className="relative">
-								<KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 h-5 w-5" />
-								<Input
-									id="password"
-									type="password"
-									placeholder="Masukkan password Anda"
-									value={formData.password}
-									onChange={(e) =>
-										setFormData({ ...formData, password: e.target.value })
-									}
-									className="animate-in fade-in duration-300 bg-white/50 focus:bg-white pl-10"
-									disabled={loading}
-								/>
-							</div>
-						</div>
-					</CardContent>
-					<CardFooter>
-						<Button
-							type="submit"
-							className="w-full my-5 animate-in fade-in duration-500 hover:scale-105 transition-transform bg-blue-600 hover:bg-blue-700"
-							disabled={loading}
-						>
-							{loading ? "Memproses..." : "Masuk"}
-						</Button>
-					</CardFooter>
-				</form>
-			</Card>
+								{loading ? (
+									<div className="flex items-center justify-center">
+										<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+										<span>Memproses...</span>
+									</div>
+								) : (
+									"Masuk"
+								)}
+							</Button>
+						</CardContent>
+					</form>
+				</Card>
+
+				{/* Footer */}
+				<p className="text-center text-sm text-blue-600/80 mt-6">
+					© 2024 SDM Handal. All rights reserved.
+				</p>
+			</div>
 		</div>
 	);
 }

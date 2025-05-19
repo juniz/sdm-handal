@@ -72,10 +72,10 @@ export async function GET(request) {
 		const dataQueryParams = [...queryParams];
 
 		if (startDate) {
-			dataQuery += ` AND c.tanggal >= ?`;
+			dataQuery += ` AND c.tanggal_awal >= ?`;
 		}
 		if (endDate) {
-			dataQuery += ` AND c.tanggal <= ?`;
+			dataQuery += ` AND c.tanggal_akhir <= ?`;
 		}
 
 		// Tambahkan ordering dan limit
@@ -135,10 +135,12 @@ export async function POST(request) {
 		} = body;
 
 		// Generate no_pengajuan
-		const today = new Date();
+		const today = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+		);
 		const year = today.getFullYear();
 		const month = String(today.getMonth() + 1).padStart(2, "0");
-
+		const day = String(today.getDate()).padStart(2, "0");
 		// Get last number
 		const lastCuti = await rawQuery(
 			"SELECT no_pengajuan FROM pengajuan_cuti WHERE YEAR(tanggal) = ? ORDER BY no_pengajuan DESC LIMIT 1",
@@ -151,7 +153,7 @@ export async function POST(request) {
 			sequence = lastNumber + 1;
 		}
 
-		const no_pengajuan = `PC${year}${month}${String(sequence).padStart(
+		const no_pengajuan = `PC${year}${month}${day}${String(sequence).padStart(
 			3,
 			"0"
 		)}`;

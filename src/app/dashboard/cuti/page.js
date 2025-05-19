@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { Calendar, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { DatePicker } from "@/components/DatePicker";
 import {
 	Select,
@@ -18,6 +18,8 @@ import { PegawaiCombobox } from "@/components/PegawaiCombobox";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import moment from "moment";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import CutiList from "./list/page";
 
 const fadeIn = {
 	initial: { opacity: 0, y: 20 },
@@ -33,7 +35,7 @@ const staggerContainer = {
 	},
 };
 
-export default function PengajuanCutiForm() {
+function PengajuanCutiForm() {
 	const router = useRouter();
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [form, setForm] = useState({
@@ -148,7 +150,20 @@ export default function PengajuanCutiForm() {
 
 			if (data.status === "success") {
 				toast.success("Pengajuan cuti berhasil disimpan");
-				router.push("/dashboard/cuti/list");
+				// Reset form
+				setForm({
+					tanggal_awal: "",
+					tanggal_akhir: "",
+					nik_pj: "",
+					urgensi: "Tahunan",
+					kepentingan: "",
+					alamat: "",
+					status: "Proses Pengajuan",
+				});
+				setDate({
+					tanggal_awal: undefined,
+					tanggal_akhir: undefined,
+				});
 			} else {
 				throw new Error(data.message || "Terjadi kesalahan");
 			}
@@ -161,170 +176,171 @@ export default function PengajuanCutiForm() {
 	};
 
 	return (
+		<form onSubmit={handleSubmit} className="space-y-6">
+			<motion.div
+				variants={staggerContainer}
+				className="grid grid-cols-1 md:grid-cols-2 gap-6"
+			>
+				<motion.div variants={fadeIn} className="space-y-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Tanggal Awal
+					</label>
+					<DatePicker
+						value={date.tanggal_awal}
+						onChange={(value) => handleDateChange(value, "tanggal_awal")}
+						placeholder="Pilih tanggal awal"
+						error={errors.tanggal_awal}
+						minDate={new Date()}
+					/>
+				</motion.div>
+
+				<motion.div variants={fadeIn} className="space-y-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Tanggal Akhir
+					</label>
+					<DatePicker
+						value={date.tanggal_akhir}
+						onChange={(value) => handleDateChange(value, "tanggal_akhir")}
+						placeholder="Pilih tanggal akhir"
+						error={errors.tanggal_akhir}
+						minDate={date.tanggal_awal}
+					/>
+				</motion.div>
+
+				<motion.div variants={fadeIn} className="space-y-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Jenis Cuti
+					</label>
+					<Select
+						name="urgensi"
+						value={form.urgensi}
+						onValueChange={(value) => setForm({ ...form, urgensi: value })}
+						required
+					>
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder="Pilih jenis cuti" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								<SelectItem value="Tahunan">Cuti Tahunan</SelectItem>
+								<SelectItem value="Sakit">Cuti Sakit</SelectItem>
+								<SelectItem value="Istimewa">Cuti Istimewa</SelectItem>
+								<SelectItem value="Ibadah Keagamaan">
+									Cuti Ibadah Keagamaan
+								</SelectItem>
+								<SelectItem value="Melahirkan">Cuti Melahirkan</SelectItem>
+								<SelectItem value="Di Luar Tanggungan">
+									Cuti Di Luar Tanggungan
+								</SelectItem>
+							</SelectGroup>
+						</SelectContent>
+					</Select>
+				</motion.div>
+
+				<motion.div variants={fadeIn} className="space-y-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Penanggung Jawab
+					</label>
+					<PegawaiCombobox
+						value={form.nik_pj}
+						onValueChange={handlePegawaiChange}
+						error={errors.nik_pj}
+					/>
+				</motion.div>
+
+				<motion.div variants={fadeIn} className="space-y-2 md:col-span-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Kepentingan
+					</label>
+					<Textarea
+						name="kepentingan"
+						value={form.kepentingan}
+						onChange={handleChange}
+						required
+						placeholder="Jelaskan kepentingan cuti..."
+						error={errors.kepentingan}
+					/>
+				</motion.div>
+
+				<motion.div variants={fadeIn} className="space-y-2 md:col-span-2">
+					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+						<span className="text-red-500">*</span>
+						Alamat Selama Cuti
+					</label>
+					<Textarea
+						name="alamat"
+						value={form.alamat}
+						onChange={handleChange}
+						required
+						placeholder="Masukkan alamat lengkap selama cuti..."
+						error={errors.alamat}
+					/>
+				</motion.div>
+			</motion.div>
+
+			<motion.div variants={fadeIn} className="pt-6 flex justify-end">
+				<Button
+					type="submit"
+					className="w-full md:w-auto px-8 py-2 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+					disabled={isSubmitting}
+				>
+					{isSubmitting ? (
+						<>
+							<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+							<span>Menyimpan...</span>
+						</>
+					) : (
+						<>
+							<Send className="w-5 h-5" />
+							<span>Ajukan Cuti</span>
+						</>
+					)}
+				</Button>
+			</motion.div>
+		</form>
+	);
+}
+
+export default function CutiPage() {
+	return (
 		<div className="min-h-[80vh] bg-gradient-to-br from-blue-50 to-indigo-50">
 			<motion.div
 				initial="initial"
 				animate="animate"
 				variants={staggerContainer}
-				className="max-w-2xl mx-auto"
+				className="max-w-6xl mx-auto"
 			>
 				<motion.div variants={fadeIn}>
-					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0 overflow-hidden">
-						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6">
+					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0">
+						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-6">
 							<motion.div
 								initial={{ scale: 0.95 }}
 								animate={{ scale: 1 }}
 								transition={{ duration: 0.3 }}
 							>
-								<CardTitle className="text-2xl font-bold text-center">
-									Form Pengajuan Cuti
+								<CardTitle className="text-xl md:text-2xl font-bold text-center">
+									Manajemen Cuti
 								</CardTitle>
 							</motion.div>
 						</CardHeader>
-						<CardContent>
-							<form onSubmit={handleSubmit} className="space-y-6 py-4">
-								<motion.div
-									variants={staggerContainer}
-									className="grid grid-cols-1 md:grid-cols-2 gap-6"
-								>
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Tanggal Awal
-										</label>
-										<DatePicker
-											value={date.tanggal_awal}
-											onChange={(value) =>
-												handleDateChange(value, "tanggal_awal")
-											}
-											placeholder="Pilih tanggal awal"
-											error={errors.tanggal_awal}
-											minDate={new Date()}
-										/>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Tanggal Akhir
-										</label>
-										<DatePicker
-											value={date.tanggal_akhir}
-											onChange={(value) =>
-												handleDateChange(value, "tanggal_akhir")
-											}
-											placeholder="Pilih tanggal akhir"
-											error={errors.tanggal_akhir}
-											minDate={date.tanggal_awal}
-										/>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Jenis Cuti
-										</label>
-										<Select
-											name="urgensi"
-											value={form.urgensi}
-											onValueChange={(value) =>
-												setForm({ ...form, urgensi: value })
-											}
-											required
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih jenis cuti" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectGroup>
-													<SelectItem value="Tahunan">Cuti Tahunan</SelectItem>
-													<SelectItem value="Sakit">Cuti Sakit</SelectItem>
-													<SelectItem value="Istimewa">
-														Cuti Istimewa
-													</SelectItem>
-													<SelectItem value="Ibadah Keagamaan">
-														Cuti Ibadah Keagamaan
-													</SelectItem>
-													<SelectItem value="Melahirkan">
-														Cuti Melahirkan
-													</SelectItem>
-													<SelectItem value="Di Luar Tanggungan">
-														Cuti Di Luar Tanggungan
-													</SelectItem>
-												</SelectGroup>
-											</SelectContent>
-										</Select>
-									</motion.div>
-
-									<motion.div variants={fadeIn} className="space-y-2">
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Penanggung Jawab
-										</label>
-										<PegawaiCombobox
-											value={form.nik_pj}
-											onValueChange={handlePegawaiChange}
-											error={errors.nik_pj}
-										/>
-									</motion.div>
-
-									<motion.div
-										variants={fadeIn}
-										className="space-y-2 md:col-span-2"
-									>
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Kepentingan
-										</label>
-										<Textarea
-											name="kepentingan"
-											value={form.kepentingan}
-											onChange={handleChange}
-											required
-											placeholder="Jelaskan kepentingan cuti..."
-											error={errors.kepentingan}
-										/>
-									</motion.div>
-
-									<motion.div
-										variants={fadeIn}
-										className="space-y-2 md:col-span-2"
-									>
-										<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-											<span className="text-red-500">*</span>
-											Alamat Selama Cuti
-										</label>
-										<Textarea
-											name="alamat"
-											value={form.alamat}
-											onChange={handleChange}
-											required
-											placeholder="Masukkan alamat lengkap selama cuti..."
-											error={errors.alamat}
-										/>
-									</motion.div>
-								</motion.div>
-
-								<motion.div variants={fadeIn} className="pt-6 flex justify-end">
-									<Button
-										type="submit"
-										className="w-full md:w-auto px-8 py-2 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
-										disabled={isSubmitting}
-									>
-										{isSubmitting ? (
-											<>
-												<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-												<span>Menyimpan...</span>
-											</>
-										) : (
-											<>
-												<Send className="w-5 h-5" />
-												<span>Ajukan Cuti</span>
-											</>
-										)}
-									</Button>
-								</motion.div>
-							</form>
+						<CardContent className="p-4 md:p-6">
+							<Tabs defaultValue="daftar" className="w-full">
+								<TabsList className="w-full justify-start mb-4">
+									<TabsTrigger value="daftar">Daftar Cuti</TabsTrigger>
+									<TabsTrigger value="pengajuan">Pengajuan Cuti</TabsTrigger>
+								</TabsList>
+								<TabsContent value="daftar">
+									<CutiList />
+								</TabsContent>
+								<TabsContent value="pengajuan">
+									<PengajuanCutiForm />
+								</TabsContent>
+							</Tabs>
 						</CardContent>
 					</Card>
 				</motion.div>

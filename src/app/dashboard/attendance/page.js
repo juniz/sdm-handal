@@ -168,7 +168,8 @@ export default function AttendancePage() {
 
 			// Update todayAttendance setelah berhasil presensi
 			if (data.data) {
-				setTodayAttendance(data.data);
+				window.location.reload();
+				// setTodayAttendance(data.data);
 			}
 
 			// Scroll ke alert dan fokuskan

@@ -30,12 +30,40 @@ export async function GET(request) {
 		const idPegawai = verified.payload.id;
 
 		// Ambil data profil pegawai
-		const profile = await selectFirst({
+		let profile = await selectFirst({
 			table: "pegawai",
 			where: {
 				id: idPegawai,
 			},
 		});
+
+		const kelompok = await selectFirst({
+			table: "kelompok_jabatan",
+			where: {
+				kode_kelompok: profile.kode_kelompok,
+			},
+			fields: ["nama_kelompok"],
+		});
+
+		const departemen = await selectFirst({
+			table: "departemen",
+			where: {
+				dep_id: profile.departemen,
+			},
+			select: ["nama"],
+		});
+
+		const sttsKerja = await selectFirst({
+			table: "stts_kerja",
+			where: {
+				stts: profile.stts_kerja,
+			},
+			select: ["ktg"],
+		});
+
+		profile.kode_kelompok = kelompok?.nama_kelompok;
+		profile.departemen = departemen?.nama;
+		profile.stts_kerja = sttsKerja?.ktg;
 
 		if (!profile) {
 			return NextResponse.json(

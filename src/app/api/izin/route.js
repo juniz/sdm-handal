@@ -44,11 +44,11 @@ export async function GET(request) {
 
 		// Tambahkan filter tanggal ke query params
 		if (startDate) {
-			countQuery += ` AND i.tanggal >= ?`;
+			countQuery += ` AND i.tanggal_awal >= ?`;
 			queryParams.push(startDate);
 		}
 		if (endDate) {
-			countQuery += ` AND i.tanggal <= ?`;
+			countQuery += ` AND i.tanggal_akhir <= ?`;
 			queryParams.push(endDate);
 		}
 
@@ -128,7 +128,10 @@ export async function POST(request) {
 		const { tanggal_awal, tanggal_akhir, urgensi, kepentingan, nik_pj } = body;
 
 		// Generate no_pengajuan
-		const today = new Date();
+		const today = new Date(
+			new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+		);
+		const day = String(today.getDate()).padStart(2, "0");
 		const year = today.getFullYear();
 		const month = String(today.getMonth() + 1).padStart(2, "0");
 
@@ -144,7 +147,7 @@ export async function POST(request) {
 			sequence = lastNumber + 1;
 		}
 
-		const no_pengajuan = `PI${year}${month}${String(sequence).padStart(
+		const no_pengajuan = `PI${year}${month}${day}${String(sequence).padStart(
 			3,
 			"0"
 		)}`;
