@@ -28,6 +28,20 @@ const padZero = (num) => {
 	return String(num).padStart(2, "0");
 };
 
+// Fungsi helper untuk mengkonversi menit ke format HH:mm:ss
+const formatMinutesToTime = (minutes) => {
+	const hours = Math.floor(minutes / 60);
+	const remainingMinutes = minutes % 60;
+	const seconds = 0; // Karena input dalam menit, detik selalu 0
+
+	// Format dengan leading zero
+	const formattedHours = hours.toString().padStart(2, "0");
+	const formattedMinutes = remainingMinutes.toString().padStart(2, "0");
+	const formattedSeconds = seconds.toString().padStart(2, "0");
+
+	return `${formattedHours}:${formattedMinutes}:${formattedSeconds}`;
+};
+
 function calculateStatus(jamMasuk, currentTime) {
 	// Konversi waktu ke zona Jakarta
 	const jakartaTime = moment(currentTime);
@@ -48,21 +62,21 @@ function calculateStatus(jamMasuk, currentTime) {
 
 	// Tentukan status berdasarkan selisih waktu
 	if (diffInMinutes <= toleransi) {
-		return { status: "Tepat Waktu", keterlambatan: "0" };
+		return { status: "Tepat Waktu", keterlambatan: "00:00:00" };
 	} else if (diffInMinutes <= terlambat1) {
 		return {
 			status: "Terlambat Toleransi",
-			keterlambatan: diffInMinutes.toString(),
+			keterlambatan: formatMinutesToTime(diffInMinutes),
 		};
 	} else if (diffInMinutes <= terlambat2) {
 		return {
 			status: "Terlambat I",
-			keterlambatan: diffInMinutes.toString(),
+			keterlambatan: formatMinutesToTime(diffInMinutes),
 		};
 	} else {
 		return {
 			status: "Terlambat II",
-			keterlambatan: diffInMinutes.toString(),
+			keterlambatan: formatMinutesToTime(diffInMinutes),
 		};
 	}
 }
