@@ -1,17 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Clock,
-	Users,
-	Calendar,
-	FileText,
-	Plus,
-	ListFilter,
-	Briefcase,
-	MenuIcon,
-	BookOpen,
-} from "lucide-react";
+import { Plus, NotebookPen, Briefcase, MenuIcon, BookOpen } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
 import { Button } from "@/components/ui/button";
@@ -43,27 +33,15 @@ const QuickActions = () => {
 	const actions = [
 		{
 			title: "Ajukan Izin",
-			icon: Plus,
+			icon: NotebookPen,
 			href: "/dashboard/izin",
 			color: "from-blue-500 to-indigo-500",
-		},
-		{
-			title: "Daftar Izin",
-			icon: ListFilter,
-			href: "/dashboard/izin/list",
-			color: "from-emerald-500 to-teal-500",
 		},
 		{
 			title: "Ajukan Cuti",
 			icon: Briefcase,
 			href: "/dashboard/cuti",
 			color: "from-purple-500 to-pink-500",
-		},
-		{
-			title: "Daftar Cuti",
-			icon: Calendar,
-			href: "/dashboard/cuti/list",
-			color: "from-orange-500 to-red-500",
 		},
 		{
 			title: "Akreditasi",
