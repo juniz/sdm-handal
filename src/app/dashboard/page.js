@@ -1,7 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, NotebookPen, Briefcase, MenuIcon, BookOpen } from "lucide-react";
+import {
+	Plus,
+	NotebookPen,
+	Briefcase,
+	MenuIcon,
+	BookOpen,
+	Users,
+} from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
 import { Button } from "@/components/ui/button";
@@ -42,6 +49,12 @@ const QuickActions = () => {
 			icon: Briefcase,
 			href: "/dashboard/cuti",
 			color: "from-purple-500 to-pink-500",
+		},
+		{
+			title: "Rapat",
+			icon: Users,
+			href: "/dashboard/rapat",
+			color: "from-green-500 to-emerald-500",
 		},
 		{
 			title: "Akreditasi",

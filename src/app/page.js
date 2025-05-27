@@ -67,8 +67,8 @@ export default function LoginPage() {
 	return (
 		<div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-white p-4 relative overflow-hidden">
 			{/* Decorative Elements */}
-			<div className="absolute top-0 left-0 w-full h-64 bg-blue-500 rounded-b-[100px] opacity-10 transform -skew-y-6"></div>
-			<div className="absolute bottom-0 right-0 w-full h-64 bg-blue-600 rounded-t-[100px] opacity-10 transform skew-y-6"></div>
+			{/* <div className="absolute top-0 left-0 w-full h-64 bg-blue-500 rounded-b-[100px] opacity-10 transform -skew-y-6"></div>
+			<div className="absolute bottom-0 right-0 w-full h-64 bg-blue-600 rounded-t-[100px] opacity-10 transform skew-y-6"></div> */}
 
 			<div className="w-full max-w-md z-10">
 				{/* Logo dan Header */}
@@ -168,7 +168,7 @@ export default function LoginPage() {
 
 				{/* Footer */}
 				<p className="text-center text-sm text-blue-600/80 mt-6">
-					© 2024 SDM Handal. All rights reserved.
+					© {new Date().getFullYear()} IT Bhayangkara Nganjuk.
 				</p>
 			</div>
 		</div>
