@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { BookOpen, Download } from "lucide-react";
@@ -26,6 +26,8 @@ const fadeIn = {
 
 export default function AkreditasiPage() {
 	const [currentPage, setCurrentPage] = useState(0);
+	const [isLoading, setIsLoading] = useState(true);
+	const [error, setError] = useState(null);
 
 	// Inisialisasi plugin
 	const pageNavigationPluginInstance = pageNavigationPlugin();
@@ -46,6 +48,17 @@ export default function AkreditasiPage() {
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
+	};
+
+	const handleDocumentLoad = () => {
+		setIsLoading(false);
+		setError(null);
+	};
+
+	const handleDocumentError = (error) => {
+		setIsLoading(false);
+		setError("Gagal memuat dokumen PDF");
+		console.error("PDF Error:", error);
 	};
 
 	return (
@@ -76,10 +89,29 @@ export default function AkreditasiPage() {
 						</div>
 					</CardHeader>
 					<CardContent className="!p-0">
-						<div className="min-h-[80vh] bg-gray-100 rounded-lg overflow-hidden">
-							<Worker
-								workerUrl={`https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js`}
-							>
+						<div className="min-h-[80vh] bg-gray-100 rounded-lg overflow-hidden relative">
+							{isLoading && (
+								<div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+									<div className="text-center">
+										<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
+										<p className="text-gray-600">Memuat dokumen PDF...</p>
+									</div>
+								</div>
+							)}
+							{error && (
+								<div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+									<div className="text-center">
+										<p className="text-red-600 mb-4">{error}</p>
+										<Button
+											onClick={() => window.location.reload()}
+											variant="outline"
+										>
+											Muat Ulang
+										</Button>
+									</div>
+								</div>
+							)}
+							<Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
 								<Viewer
 									fileUrl="/documents/akreditasi.pdf"
 									plugins={[
@@ -92,6 +124,8 @@ export default function AkreditasiPage() {
 									theme={{
 										theme: "auto",
 									}}
+									onDocumentLoad={handleDocumentLoad}
+									onDocumentLoadError={handleDocumentError}
 									onPageChange={(e) => setCurrentPage(e.currentPage)}
 									renderPage={(props) => (
 										<div style={{ margin: "8px auto", maxWidth: "100%" }}>
