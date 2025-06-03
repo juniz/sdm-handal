@@ -62,21 +62,21 @@ export default function IzinPage() {
 								transition={{ duration: 0.3 }}
 							>
 								<CardTitle className="text-xl md:text-2xl font-bold text-center">
-									Manajemen Izin
+									Pengajuan Izin
 								</CardTitle>
 							</motion.div>
 						</CardHeader>
 						<CardContent className="p-4 md:p-6">
-							<Tabs defaultValue="daftar" className="w-full">
-								<TabsList className="w-full justify-start mb-4">
-									<TabsTrigger value="daftar">Daftar Izin</TabsTrigger>
+							<Tabs defaultValue="pengajuan" className="w-full">
+								<TabsList className="w-full justify-start my-4">
 									<TabsTrigger value="pengajuan">Pengajuan Izin</TabsTrigger>
+									<TabsTrigger value="daftar">Daftar Izin</TabsTrigger>
 								</TabsList>
-								<TabsContent value="daftar">
-									<DaftarIzin />
-								</TabsContent>
 								<TabsContent value="pengajuan">
 									<PengajuanIzinForm />
+								</TabsContent>
+								<TabsContent value="daftar">
+									<DaftarIzin />
 								</TabsContent>
 							</Tabs>
 						</CardContent>

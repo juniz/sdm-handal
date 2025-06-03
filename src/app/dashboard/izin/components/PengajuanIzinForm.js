@@ -49,13 +49,7 @@ export default function PengajuanIzinForm() {
 		tanggal_akhir: undefined,
 	});
 
-	const [errors, setErrors] = useState({
-		tanggal_awal: "",
-		tanggal_akhir: "",
-		nik_pj: "",
-		kepentingan: "",
-		urgensi: "",
-	});
+	const [errors, setErrors] = useState({});
 
 	const validateDates = () => {
 		const newErrors = {};
@@ -63,14 +57,18 @@ export default function PengajuanIzinForm() {
 		today.setHours(0, 0, 0, 0);
 
 		if (!date.tanggal_awal) {
+			toast.error("Tanggal awal wajib diisi");
 			newErrors.tanggal_awal = "Tanggal awal wajib diisi";
 		} else if (date.tanggal_awal < today) {
+			toast.error("Tanggal awal tidak boleh kurang dari hari ini");
 			newErrors.tanggal_awal = "Tanggal awal tidak boleh kurang dari hari ini";
 		}
 
 		if (!date.tanggal_akhir) {
+			toast.error("Tanggal akhir wajib diisi");
 			newErrors.tanggal_akhir = "Tanggal akhir wajib diisi";
 		} else if (date.tanggal_akhir < date.tanggal_awal) {
+			toast.error("Tanggal akhir tidak boleh kurang dari tanggal awal");
 			newErrors.tanggal_akhir =
 				"Tanggal akhir tidak boleh kurang dari tanggal awal";
 		}
@@ -111,53 +109,59 @@ export default function PengajuanIzinForm() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (validateDates() && validateForm()) {
-			try {
-				setIsSubmitting(true);
+		// if (validateDates() && validateForm()) {
+		try {
+			setIsSubmitting(true);
 
-				const response = await fetch("/api/izin", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						tanggal_awal: form.tanggal_awal,
-						tanggal_akhir: form.tanggal_akhir,
-						urgensi: form.urgensi,
-						kepentingan: form.kepentingan,
-						nik_pj: form.nik_pj,
-					}),
+			const response = await fetch("/api/izin", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					tanggal_awal: form.tanggal_awal,
+					tanggal_akhir: form.tanggal_akhir,
+					urgensi: form.urgensi,
+					kepentingan: form.kepentingan,
+					nik_pj: form.nik_pj,
+				}),
+			});
+
+			const data = await response.json();
+
+			if (data.status === "success") {
+				toast.success("Pengajuan izin berhasil disimpan");
+				// Reset form
+				setForm({
+					tanggal_awal: "",
+					tanggal_akhir: "",
+					nik_pj: "",
+					urgensi: "Perjalanan Dinas",
+					kepentingan: "",
+					status: "Proses Pengajuan",
 				});
-
-				const data = await response.json();
-
-				if (data.status === "success") {
-					toast.success("Pengajuan izin berhasil disimpan");
-					// Reset form
-					setForm({
-						tanggal_awal: "",
-						tanggal_akhir: "",
-						nik_pj: "",
-						urgensi: "Perjalanan Dinas",
-						kepentingan: "",
-						status: "Proses Pengajuan",
-					});
-					setDate({
-						tanggal_awal: undefined,
-						tanggal_akhir: undefined,
-					});
-				} else {
-					throw new Error(data.message || "Terjadi kesalahan");
-				}
-			} catch (error) {
-				console.error("Error submitting form:", error);
-				toast.error(error.message || "Gagal menyimpan pengajuan izin");
-			} finally {
-				setIsSubmitting(false);
+				setDate({
+					tanggal_awal: undefined,
+					tanggal_akhir: undefined,
+				});
+			} else {
+				throw new Error(data.message || "Terjadi kesalahan");
 			}
-		} else {
-			toast.error("Form tidak boleh kosong");
+		} catch (error) {
+			console.error("Error submitting form:", error);
+			toast.error(error.message || "Gagal menyimpan pengajuan izin");
+		} finally {
+			setIsSubmitting(false);
 		}
+		// } else {
+		// 	toast.error(
+		// 		"Form tidak boleh kosong " +
+		// 			Object.keys(errors).map(
+		// 				(key, index) =>
+		// 					errors[key] + (index < Object.keys(errors).length - 1 ? ", " : "")
+		// 			)
+		// 	);
+		// }
 	};
 
 	return (

@@ -324,21 +324,21 @@ export default function CutiPage() {
 								transition={{ duration: 0.3 }}
 							>
 								<CardTitle className="text-xl md:text-2xl font-bold text-center">
-									Manajemen Cuti
+									Pengajuan Cuti
 								</CardTitle>
 							</motion.div>
 						</CardHeader>
 						<CardContent className="p-4 md:p-6">
-							<Tabs defaultValue="daftar" className="w-full">
-								<TabsList className="w-full justify-start mb-4">
-									<TabsTrigger value="daftar">Daftar Cuti</TabsTrigger>
+							<Tabs defaultValue="pengajuan" className="w-full">
+								<TabsList className="w-full justify-start my-4">
 									<TabsTrigger value="pengajuan">Pengajuan Cuti</TabsTrigger>
+									<TabsTrigger value="daftar">Daftar Cuti</TabsTrigger>
 								</TabsList>
-								<TabsContent value="daftar">
-									<CutiList />
-								</TabsContent>
 								<TabsContent value="pengajuan">
 									<PengajuanCutiForm />
+								</TabsContent>
+								<TabsContent value="daftar">
+									<CutiList />
 								</TabsContent>
 							</Tabs>
 						</CardContent>
