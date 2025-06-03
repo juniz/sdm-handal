@@ -15,13 +15,13 @@ export function EmployeeCard() {
 
 		return (
 			<div className="flex items-start gap-4">
-				<div className="relative w-20 h-30 items-center justify-center rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+				<div className="relative mt-4 w-20 h-25 items-center justify-center rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
 					{user.photo && !imageError ? (
 						<Image
 							src={user.photo}
 							alt={user.nama}
 							fill
-							className="object-cover"
+							className="object-cover object-center"
 							onError={() => setImageError(true)}
 							sizes="80px"
 							priority
@@ -33,25 +33,25 @@ export function EmployeeCard() {
 					)}
 				</div>
 				<div className="flex-1 min-w-0">
-					<h2 className="text-lg font-bold text-gray-900 leading-tight mb-1">
+					<h2 className="text-sm font-bold text-gray-900 leading-tight mb-1">
 						{user.nama}
 					</h2>
-					<p className="text-gray-600 mb-3">{user.departemen}</p>
-					<div className="space-y-2">
+					<p className="text-gray-600 text-sm mb-3">{user.departemen}</p>
+					<div className="space-y-1">
 						<div className="flex items-center text-sm text-gray-600">
 							<Building2 className="w-4 h-4 mr-2 flex-shrink-0 text-gray-400" />
-							<span>NIP: {user.username}</span>
+							<span className="text-xs">NIP: {user.username}</span>
 						</div>
 						<div className="flex items-center text-sm text-gray-600">
 							<Calendar className="w-4 h-4 mr-2 flex-shrink-0 text-gray-400" />
-							<span>
+							<span className="text-xs">
 								{user.tmp_lahir}
 								{user.formattedBirthDate && `, ${user.formattedBirthDate}`}
 							</span>
 						</div>
 						<div className="flex items-center text-sm text-gray-600">
 							<Home className="w-4 h-4 mr-2 flex-shrink-0 text-gray-400" />
-							<span className="truncate">{user.alamat}</span>
+							<span className="truncate text-xs">{user.alamat}</span>
 						</div>
 					</div>
 				</div>

@@ -1,13 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X, Home, User, Calendar, FileText, LogOut } from "lucide-react";
+import {
+	Menu,
+	X,
+	Home,
+	User,
+	Calendar,
+	FileText,
+	LogOut,
+	Ticket,
+	UserCheck,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogoutConfirmationModal } from "@/components/LogoutConfirmationModal";
 import { Suspense } from "react";
 import { UserProfile } from "@/components/UserProfile";
 import { BottomNavigation } from "@/components/BottomNavigation";
+import {
+	NotificationBell,
+	FloatingNotification,
+} from "@/components/notifications";
 import { removeClientToken } from "@/lib/client-auth";
 
 const menuItems = [
@@ -15,6 +29,12 @@ const menuItems = [
 	{ icon: User, label: "Profil", href: "/dashboard/profile" },
 	{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
 	{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
+	{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
+	{
+		icon: UserCheck,
+		label: "Assignment IT",
+		href: "/dashboard/ticket-assignment",
+	},
 	{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
 ];
 
@@ -57,6 +77,9 @@ export default function DashboardLayout({ children }) {
 
 	return (
 		<div className="min-h-screen bg-gray-100">
+			{/* Floating Notification for Mobile */}
+			<FloatingNotification />
+
 			{/* Sidebar - hidden on mobile */}
 			<aside
 				className={`fixed top-0 left-0 z-40 w-64 h-screen transition-transform hidden md:block ${
@@ -119,14 +142,19 @@ export default function DashboardLayout({ children }) {
 						>
 							<Menu className="h-6 w-6" />
 						</button>
-						<Suspense fallback={<UserProfileSkeleton />}>
-							<UserProfile />
-						</Suspense>
+						<div className="flex items-center gap-4">
+							<NotificationBell />
+							<Suspense fallback={<UserProfileSkeleton />}>
+								<UserProfile />
+							</Suspense>
+						</div>
 					</div>
 				</div>
 
 				{/* Page content */}
-				<main className="bg-white rounded-lg shadow-sm p-4">{children}</main>
+				<main className="bg-white rounded-lg shadow-sm p-4 mt-0 md:mt-0">
+					{children}
+				</main>
 			</div>
 
 			{/* Bottom Navigation - visible only on mobile */}

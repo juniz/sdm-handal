@@ -8,6 +8,7 @@ import {
 	History,
 	CameraIcon,
 	CalendarRange,
+	Ticket,
 } from "lucide-react";
 
 // Menu items untuk bottom navigation
@@ -29,9 +30,9 @@ const menuItems = [
 		isMain: true,
 	},
 	{
-		href: "/dashboard/attendance/history",
-		icon: History,
-		label: "Riwayat",
+		href: "/dashboard/ticket",
+		icon: Ticket,
+		label: "Ticket",
 	},
 	{
 		href: "/dashboard/profile",

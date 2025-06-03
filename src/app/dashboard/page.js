@@ -12,6 +12,7 @@ import {
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
 import { Button } from "@/components/ui/button";
+import { NotificationAlert } from "@/components/notifications";
 import { useRouter } from "next/navigation";
 
 const activities = [
@@ -103,6 +104,9 @@ const QuickActions = () => {
 export default function DashboardPage() {
 	return (
 		<div className="max-w-lg mx-auto space-y-4">
+			{/* Notifikasi Assignment Urgent */}
+			<NotificationAlert />
+
 			{/* Profile dan Statistik */}
 			<div className="space-y-4">
 				{/* Kartu Pegawai */}
