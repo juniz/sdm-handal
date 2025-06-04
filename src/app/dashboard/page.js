@@ -58,10 +58,16 @@ const QuickActions = () => {
 			color: "from-rose-500 to-pink-500",
 		},
 		{
-			title: "Ticket",
+			title: "Perbaikan IT",
 			icon: Ticket,
 			href: "/dashboard/ticket",
 			color: "from-indigo-500 to-blue-500",
+		},
+		{
+			title: "Penugasan IT",
+			icon: Users,
+			href: "/dashboard/ticket-assignment",
+			color: "from-green-500 to-emerald-500",
 		},
 		{
 			title: "Rapat",
