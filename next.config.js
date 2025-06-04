@@ -15,6 +15,9 @@ const nextConfig = {
 				hostname: "webapps.rsbhayangkaranganjuk.com",
 			},
 			{
+				hostname: "presensi.itbhayangkara.id",
+			},
+			{
 				hostname: "localhost",
 			},
 			{
