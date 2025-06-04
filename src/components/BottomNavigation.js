@@ -30,9 +30,9 @@ const menuItems = [
 		isMain: true,
 	},
 	{
-		href: "/dashboard/ticket",
-		icon: Ticket,
-		label: "Ticket",
+		href: "/dashboard/attendance/history",
+		icon: History,
+		label: "Riwayat",
 	},
 	{
 		href: "/dashboard/profile",

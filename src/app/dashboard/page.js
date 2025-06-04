@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Plus,
+	Ticket,
 	NotebookPen,
 	Briefcase,
 	MenuIcon,
@@ -52,16 +52,22 @@ const QuickActions = () => {
 			color: "from-purple-500 to-pink-500",
 		},
 		{
-			title: "Rapat",
-			icon: Users,
-			href: "/dashboard/rapat",
-			color: "from-green-500 to-emerald-500",
-		},
-		{
 			title: "Akreditasi",
 			icon: BookOpen,
 			href: "/dashboard/akreditasi",
 			color: "from-rose-500 to-pink-500",
+		},
+		{
+			title: "Ticket",
+			icon: Ticket,
+			href: "/dashboard/ticket",
+			color: "from-indigo-500 to-blue-500",
+		},
+		{
+			title: "Rapat",
+			icon: Users,
+			href: "/dashboard/rapat",
+			color: "from-green-500 to-emerald-500",
 		},
 	];
 
@@ -112,11 +118,11 @@ export default function DashboardPage() {
 				{/* Kartu Pegawai */}
 				<EmployeeCard />
 
-				{/* Statistik Presensi */}
-				<AttendanceStats />
-
 				{/* Aksi Cepat */}
 				<QuickActions />
+
+				{/* Statistik Presensi */}
+				<AttendanceStats />
 			</div>
 		</div>
 	);
