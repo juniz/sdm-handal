@@ -34,7 +34,7 @@ export async function createToken(payload) {
 // Fungsi untuk mengatur cookie di server-side
 export function setServerCookie(cookieStore, token) {
 	cookieStore.set("auth_token", token, {
-		httpOnly: true,
+		httpOnly: false,
 		secure: process.env.NODE_ENV === "production",
 		sameSite: "strict",
 		path: "/",
