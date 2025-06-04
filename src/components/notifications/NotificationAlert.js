@@ -8,9 +8,16 @@ import {
 	ExternalLink,
 } from "lucide-react";
 import useNotifications from "@/hooks/useNotifications";
+import { useUser } from "@/hooks/useUser";
 
 const NotificationAlert = () => {
 	const { notifications, markAsRead } = useNotifications();
+	const { user } = useUser();
+
+	// Hanya tampilkan notifikasi jika user adalah departemen IT
+	if (!user || user.departemen !== "IT") {
+		return null;
+	}
 
 	// Filter notifications untuk yang urgent dan belum dibaca
 	const urgentNotifications = notifications.filter(

@@ -12,6 +12,7 @@ import {
 	User,
 } from "lucide-react";
 import useNotifications from "@/hooks/useNotifications";
+import { useUser } from "@/hooks/useUser";
 
 const getPriorityColor = (priority) => {
 	switch (priority?.toLowerCase()) {
@@ -36,7 +37,13 @@ const NotificationBell = () => {
 		markAsRead,
 		markAllAsRead,
 	} = useNotifications();
+	const { user } = useUser();
 	const [isOpen, setIsOpen] = useState(false);
+
+	// Hanya tampilkan notifikasi jika user adalah departemen IT
+	if (!user || user.departemen !== "IT") {
+		return null;
+	}
 
 	const handleNotificationClick = async (notification) => {
 		if (!notification.is_read) {

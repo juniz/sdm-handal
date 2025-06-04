@@ -1,13 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
+import { useUser } from "@/hooks/useUser";
 
 const useNotifications = () => {
 	const [notifications, setNotifications] = useState([]);
 	const [unreadCount, setUnreadCount] = useState(0);
 	const [loading, setLoading] = useState(false);
+	const { user } = useUser();
 
 	// Fetch notifications
 	const fetchNotifications = useCallback(
 		async (unreadOnly = false, limit = 10) => {
+			// Hanya fetch jika user adalah departemen IT
+			if (!user || user.departemen !== "IT") {
+				setNotifications([]);
+				setUnreadCount(0);
+				return;
+			}
 			setLoading(true);
 			try {
 				const params = new URLSearchParams({
@@ -32,11 +40,16 @@ const useNotifications = () => {
 				setLoading(false);
 			}
 		},
-		[]
+		[user]
 	);
 
 	// Mark notification as read
 	const markAsRead = async (assignmentId) => {
+		// Hanya mark as read jika user adalah departemen IT
+		if (!user || user.departemen !== "IT") {
+			return { success: false, error: "Akses ditolak" };
+		}
+
 		try {
 			const response = await fetch("/api/notifications/assignments", {
 				method: "PUT",
@@ -74,6 +87,11 @@ const useNotifications = () => {
 
 	// Mark all notifications as read
 	const markAllAsRead = async () => {
+		// Hanya mark all read jika user adalah departemen IT
+		if (!user || user.departemen !== "IT") {
+			return { success: false, error: "Akses ditolak" };
+		}
+
 		try {
 			const response = await fetch("/api/notifications/assignments", {
 				method: "PUT",
@@ -107,16 +125,20 @@ const useNotifications = () => {
 
 	// Auto refresh notifications every 30 seconds
 	useEffect(() => {
-		// Initial fetch
-		fetchNotifications();
-
-		// Set up auto refresh
-		const interval = setInterval(() => {
+		// Initial fetch hanya jika user sudah terload
+		if (user !== null) {
 			fetchNotifications();
-		}, 30000); // 30 seconds
 
-		return () => clearInterval(interval);
-	}, [fetchNotifications]);
+			// Set up auto refresh hanya jika user adalah departemen IT
+			if (user && user.departemen === "IT") {
+				const interval = setInterval(() => {
+					fetchNotifications();
+				}, 30000); // 30 seconds
+
+				return () => clearInterval(interval);
+			}
+		}
+	}, [fetchNotifications, user]);
 
 	return {
 		notifications,
