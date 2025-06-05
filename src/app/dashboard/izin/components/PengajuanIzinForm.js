@@ -180,7 +180,7 @@ export default function PengajuanIzinForm() {
 						onChange={(value) => handleDateChange(value, "tanggal_awal")}
 						placeholder="Pilih tanggal awal"
 						error={errors.tanggal_awal}
-						minDate={new Date()}
+						// minDate={new Date()}
 					/>
 				</motion.div>
 
@@ -194,9 +194,9 @@ export default function PengajuanIzinForm() {
 						onChange={(value) => handleDateChange(value, "tanggal_akhir")}
 						placeholder="Pilih tanggal akhir"
 						error={errors.tanggal_akhir}
-						minDate={
-							date.tanggal_awal ? new Date(date.tanggal_awal) : new Date()
-						}
+						// minDate={
+						// 	date.tanggal_awal ? new Date(date.tanggal_awal) : new Date()
+						// }
 					/>
 				</motion.div>
 
