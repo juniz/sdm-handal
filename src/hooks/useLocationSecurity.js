@@ -33,7 +33,7 @@ const useLocationSecurity = (options = {}) => {
 	const OFFICE_COORDS = {
 		latitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LAT || "-7.9797"),
 		longitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LNG || "112.6304"),
-		radius: parseFloat(process.env.NEXT_PUBLIC_OFFICE_RADIUS || "100"), // meters
+		radius: parseFloat(process.env.NEXT_PUBLIC_ALLOWED_RADIUS || "500"), // meters
 	};
 
 	// Calculate distance between two coordinates
