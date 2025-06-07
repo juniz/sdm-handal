@@ -319,21 +319,21 @@ export async function POST(request) {
 			// OPTIMIZED: Gunakan transaction untuk konsistensi data
 			try {
 				// Simpan security log untuk checkout
-				await insert({
-					table: "security_logs",
-					data: {
-						id_pegawai: idPegawai,
-						tanggal: moment().format("YYYY-MM-DD"),
-						action_type: "CHECKOUT",
-						confidence_level: securityValidation.confidence,
-						risk_level: securityValidation.riskLevel,
-						warnings: JSON.stringify(securityData.warnings || []),
-						gps_accuracy: securityData.accuracy || null,
-						latitude: latitude,
-						longitude: longitude,
-						created_at: currentTime,
-					},
-				});
+				// await insert({
+				// 	table: "security_logs",
+				// 	data: {
+				// 		id_pegawai: idPegawai,
+				// 		tanggal: moment().format("YYYY-MM-DD"),
+				// 		action_type: "CHECKOUT",
+				// 		confidence_level: securityValidation.confidence,
+				// 		risk_level: securityValidation.riskLevel,
+				// 		warnings: JSON.stringify(securityData.warnings || []),
+				// 		gps_accuracy: securityData.accuracy || null,
+				// 		latitude: latitude,
+				// 		longitude: longitude,
+				// 		created_at: currentTime,
+				// 	},
+				// });
 
 				// Update temporary_presensi dengan jam pulang
 				await update({
@@ -428,21 +428,21 @@ export async function POST(request) {
 			// OPTIMIZED: Batch insert operations untuk konsistensi
 			try {
 				// Simpan security log
-				await insert({
-					table: "security_logs",
-					data: {
-						id_pegawai: idPegawai,
-						tanggal: moment().format("YYYY-MM-DD"),
-						action_type: "CHECKIN",
-						confidence_level: securityValidation.confidence,
-						risk_level: securityValidation.riskLevel,
-						warnings: JSON.stringify(securityData.warnings || []),
-						gps_accuracy: securityData.accuracy || null,
-						latitude: latitude,
-						longitude: longitude,
-						created_at: currentTime,
-					},
-				});
+				// await insert({
+				// 	table: "security_logs",
+				// 	data: {
+				// 		id_pegawai: idPegawai,
+				// 		tanggal: moment().format("YYYY-MM-DD"),
+				// 		action_type: "CHECKIN",
+				// 		confidence_level: securityValidation.confidence,
+				// 		risk_level: securityValidation.riskLevel,
+				// 		warnings: JSON.stringify(securityData.warnings || []),
+				// 		gps_accuracy: securityData.accuracy || null,
+				// 		latitude: latitude,
+				// 		longitude: longitude,
+				// 		created_at: currentTime,
+				// 	},
+				// });
 
 				// Simpan data presensi
 				const presensiResult = await insert({
