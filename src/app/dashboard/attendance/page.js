@@ -72,6 +72,11 @@ export default function AttendancePage() {
 	const [todayAttendance, setTodayAttendance] = useState(null);
 	const [isCheckingOut, setIsCheckingOut] = useState(false);
 	const [jamPulang, setJamPulang] = useState(null);
+	const [attendanceStatus, setAttendanceStatus] = useState({
+		hasCheckedIn: false,
+		hasCheckedOut: false,
+		isCompleted: false,
+	});
 	const [mapPresensi, setMapPresensi] = useState(process.env.MAP_PRESENSI);
 	const [securityStatus, setSecurityStatus] = useState({
 		confidence: 0,
@@ -195,9 +200,26 @@ export default function AttendancePage() {
 		}
 	};
 
+	const fetchAttendanceStatus = async () => {
+		try {
+			const response = await fetch("/api/attendance/status");
+			const data = await response.json();
+			if (data.data) {
+				setAttendanceStatus(data.data);
+				// Update todayAttendance dengan data terbaru
+				if (data.data.attendance) {
+					setTodayAttendance(data.data.attendance);
+				}
+			}
+		} catch (error) {
+			console.error("Error fetching attendance status:", error);
+		}
+	};
+
 	useEffect(() => {
 		fetchShift();
 		fetchTodayAttendance();
+		fetchAttendanceStatus();
 	}, []);
 
 	// Tambahkan useEffect baru untuk memantau perubahan tanggal
@@ -281,10 +303,9 @@ export default function AttendancePage() {
 			setStatus("success");
 			setPhoto(capturedPhoto); // Set photo for display
 
-			// Update todayAttendance setelah berhasil presensi
-			if (data.data) {
-				setTodayAttendance(data.data);
-			}
+			// Update status presensi setelah berhasil checkin
+			await fetchAttendanceStatus();
+			await fetchTodayAttendance();
 
 			// Scroll ke alert dan fokuskan
 			setTimeout(() => {
@@ -349,10 +370,13 @@ export default function AttendancePage() {
 			const data = await response.json();
 			setStatus("success");
 
-			// Update todayAttendance setelah berhasil presensi
-			if (data.data) {
+			// Update status presensi setelah berhasil checkout
+			await fetchAttendanceStatus();
+
+			// Refresh halaman setelah delay
+			setTimeout(() => {
 				window.location.reload();
-			}
+			}, 2000);
 
 			// Scroll ke alert dan fokuskan
 			setTimeout(() => {
@@ -571,7 +595,7 @@ export default function AttendancePage() {
 				)} */}
 
 				{/* Data Presensi Hari Ini */}
-				{todayAttendance && (
+				{(todayAttendance || attendanceStatus.checkout) && (
 					<div className="mb-6 bg-blue-50 p-4 rounded-lg">
 						<h2 className="text-lg font-semibold text-blue-800 mb-3">
 							Data Presensi Hari Ini
@@ -580,29 +604,49 @@ export default function AttendancePage() {
 							<div className="flex justify-between">
 								<span className="text-blue-600">Jam Masuk:</span>
 								<span className="font-medium">
-									{formatTime(todayAttendance.jam_datang)}
+									{formatTime(
+										todayAttendance?.jam_datang ||
+											attendanceStatus.checkout?.jam_datang
+									)}
 								</span>
 							</div>
-							{todayAttendance.jam_pulang && (
+							{(attendanceStatus.isCompleted ||
+								attendanceStatus.checkout?.jam_pulang) && (
 								<div className="flex justify-between">
 									<span className="text-blue-600">Jam Pulang:</span>
 									<span className="font-medium">
-										{formatTime(todayAttendance.jam_pulang)}
+										{formatTime(attendanceStatus.checkout.jam_pulang)}
 									</span>
 								</div>
 							)}
+							{attendanceStatus.isCompleted &&
+								attendanceStatus.checkout?.durasi && (
+									<div className="flex justify-between">
+										<span className="text-blue-600">Durasi Kerja:</span>
+										<span className="font-medium">
+											{attendanceStatus.checkout.durasi}
+										</span>
+									</div>
+								)}
 							<div className="flex justify-between">
 								<span className="text-blue-600">Status:</span>
-								<span className="font-medium">{todayAttendance.status}</span>
+								<span className="font-medium">
+									{attendanceStatus.isCompleted
+										? attendanceStatus.checkout?.status || "Selesai"
+										: todayAttendance?.status}
+								</span>
 							</div>
-							{todayAttendance.photo && (
+							{(todayAttendance?.photo || attendanceStatus.checkout?.photo) && (
 								<div className="mt-4">
 									<span className="text-blue-600 block mb-2 text-center">
 										Foto Presensi Masuk
 									</span>
 									<div className="flex justify-center">
 										<Image
-											src={todayAttendance.photo}
+											src={
+												todayAttendance?.photo ||
+												attendanceStatus.checkout?.photo
+											}
 											alt="Foto Presensi Masuk"
 											width={200}
 											height={200}
@@ -611,28 +655,26 @@ export default function AttendancePage() {
 									</div>
 								</div>
 							)}
-							{todayAttendance.photo_pulang && (
-								<div className="mt-4">
-									<span className="text-blue-600 block mb-2 text-center">
-										Foto Presensi Pulang
-									</span>
-									<div className="flex justify-center">
-										<Image
-											src={todayAttendance.photo_pulang}
-											alt="Foto Presensi Pulang"
-											width={200}
-											height={200}
-											className="rounded-lg"
-										/>
+							{attendanceStatus.isCompleted && (
+								<div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+									<div className="flex items-center gap-2 text-green-700">
+										<CheckCircle className="w-5 h-5" />
+										<span className="font-medium">
+											Presensi Hari Ini Telah Selesai
+										</span>
 									</div>
+									<p className="text-sm text-green-600 mt-1">
+										Anda telah menyelesaikan presensi masuk dan pulang untuk
+										hari ini.
+									</p>
 								</div>
 							)}
 						</div>
 					</div>
 				)}
 
-				{/* Form Presensi Masuk - Hanya tampilkan jika belum presensi */}
-				{!todayAttendance && (
+				{/* Form Presensi Masuk - Hanya tampilkan jika belum presensi dan belum selesai */}
+				{!todayAttendance && !attendanceStatus.isCompleted && (
 					<>
 						{/* Waktu dan Tanggal */}
 						<div className="mb-6 bg-gray-50 p-4 rounded-lg">
@@ -743,8 +785,8 @@ export default function AttendancePage() {
 					</>
 				)}
 
-				{/* Form Presensi Pulang - Hanya tampilkan jika sudah presensi masuk tapi belum pulang */}
-				{todayAttendance && !todayAttendance.jam_pulang && (
+				{/* Form Presensi Pulang - Hanya tampilkan jika sudah presensi masuk tapi belum pulang dan belum selesai */}
+				{todayAttendance && !attendanceStatus.isCompleted && (
 					<>
 						{/* Info Presensi Pulang - Tanpa Kamera */}
 						<div className="mb-6 bg-orange-50 p-4 rounded-lg">

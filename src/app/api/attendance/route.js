@@ -251,6 +251,25 @@ async function getTodayAttendance(idPegawai, targetDate = null) {
 	return result[0] || null;
 }
 
+// Fungsi untuk cek presensi pulang dari rekap_presensi
+async function getTodayCheckout(idPegawai, targetDate = null) {
+	const dateStr = targetDate
+		? moment(targetDate).format("YYYY-MM-DD")
+		: moment().format("YYYY-MM-DD");
+
+	const query = `
+		SELECT *
+		FROM rekap_presensi 
+		WHERE id = ? 
+		AND DATE(jam_datang) = ?
+		AND jam_pulang IS NOT NULL
+		LIMIT 1
+	`;
+
+	const result = await rawQuery(query, [idPegawai, dateStr]);
+	return result[0] || null;
+}
+
 export async function POST(request) {
 	try {
 		const {
@@ -344,17 +363,17 @@ export async function POST(request) {
 				});
 
 				// Update temporary_presensi dengan jam pulang
-				await update({
-					table: "temporary_presensi",
-					data: {
-						jam_pulang: currentTime,
-						durasi: durasi,
-					},
-					where: {
-						id: idPegawai,
-						jam_datang: existingAttendance.jam_datang,
-					},
-				});
+				// await update({
+				// 	table: "temporary_presensi",
+				// 	data: {
+				// 		jam_pulang: currentTime,
+				// 		durasi: durasi,
+				// 	},
+				// 	where: {
+				// 		id: idPegawai,
+				// 		jam_datang: existingAttendance.jam_datang,
+				// 	},
+				// });
 
 				// Insert ke rekap_presensi
 				await insert({
