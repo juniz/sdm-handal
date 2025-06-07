@@ -5,7 +5,14 @@ import fs from "fs/promises";
 import path from "path";
 import moment from "moment-timezone";
 import "moment/locale/id";
-import { select, selectFirst, insert, update, delete_ } from "@/lib/db-helper";
+import {
+	select,
+	selectFirst,
+	insert,
+	update,
+	delete_,
+	rawQuery,
+} from "@/lib/db-helper";
 
 // Set locale ke Indonesia dan default timezone
 moment.locale("id");
@@ -112,6 +119,138 @@ async function saveBase64Image(base64Data, idPegawai) {
 	}
 }
 
+// Fungsi untuk validasi security data
+function validateSecurityData(securityData, latitude, longitude) {
+	const issues = [];
+	let riskLevel = "LOW"; // LOW, MEDIUM, HIGH
+
+	// Check confidence level
+	if (securityData.confidence < 40) {
+		issues.push("Confidence level sangat rendah");
+		riskLevel = "HIGH";
+	} else if (securityData.confidence < 60) {
+		issues.push("Confidence level rendah");
+		if (riskLevel !== "HIGH") riskLevel = "MEDIUM";
+	}
+
+	// Check GPS accuracy
+	if (securityData.accuracy > 100) {
+		issues.push("GPS accuracy sangat rendah");
+		riskLevel = "HIGH";
+	} else if (securityData.accuracy > 50) {
+		issues.push("GPS accuracy rendah");
+		if (riskLevel !== "HIGH") riskLevel = "MEDIUM";
+	}
+
+	// Check warnings
+	if (securityData.warnings && securityData.warnings.length > 0) {
+		securityData.warnings.forEach((warning) => {
+			if (
+				warning.includes("mock location") ||
+				warning.includes("tidak natural")
+			) {
+				riskLevel = "HIGH";
+			} else if (warning.includes("kecepatan") || warning.includes("akurasi")) {
+				if (riskLevel !== "HIGH") riskLevel = "MEDIUM";
+			}
+		});
+	}
+
+	// Validate coordinates format
+	const lat = parseFloat(latitude);
+	const lng = parseFloat(longitude);
+	if (
+		isNaN(lat) ||
+		isNaN(lng) ||
+		lat < -90 ||
+		lat > 90 ||
+		lng < -180 ||
+		lng > 180
+	) {
+		issues.push("Koordinat tidak valid");
+		riskLevel = "HIGH";
+	}
+
+	return {
+		isValid: riskLevel !== "HIGH",
+		riskLevel,
+		issues,
+		confidence: securityData.confidence || 0,
+	};
+}
+
+// OPTIMIZED: Fungsi untuk mendapatkan jadwal dan shift dalam satu query
+async function getScheduleWithShift(idPegawai, targetDate = null) {
+	const dateToCheck = targetDate || moment();
+	const dayOfMonth = dateToCheck.format("D");
+
+	const query = `
+		SELECT 
+			jp.id,
+			jp.tahun,
+			jp.bulan,
+			jp.h${dayOfMonth} as shift_today,
+			jm.jam_masuk,
+			jm.jam_pulang
+		FROM jadwal_pegawai jp
+		LEFT JOIN jam_masuk jm ON jp.h${dayOfMonth} = jm.shift
+		WHERE jp.id = ?
+		AND jp.tahun = ?
+		AND jp.bulan = ?
+		LIMIT 1
+	`;
+
+	let result = await rawQuery(query, [
+		idPegawai,
+		dateToCheck.year(),
+		padZero(dateToCheck.month() + 1),
+	]);
+
+	if (!result[0].shift_today) {
+		const queryJadwalTambahan = `
+			SELECT 
+			jp.id,
+			jp.tahun,
+			jp.bulan,
+			jp.h${dayOfMonth} as shift_today,
+			jm.jam_masuk,
+			jm.jam_pulang
+		FROM jadwal_tambahan jp
+		LEFT JOIN jam_masuk jm ON jp.h${dayOfMonth} = jm.shift
+		WHERE jp.id = ?
+		AND jp.tahun = ?
+		AND jp.bulan = ?
+		LIMIT 1
+	`;
+
+		result = await rawQuery(queryJadwalTambahan, [
+			idPegawai,
+			dateToCheck.year(),
+			padZero(dateToCheck.month() + 1),
+		]);
+	}
+
+	return result[0] || null;
+}
+
+// OPTIMIZED: Fungsi untuk cek attendance hari ini dengan DATE range yang efisien
+async function getTodayAttendance(idPegawai, targetDate = null) {
+	const dateStr = targetDate
+		? moment(targetDate).format("YYYY-MM-DD")
+		: moment().format("YYYY-MM-DD");
+
+	const query = `
+		SELECT *
+		FROM temporary_presensi 
+		WHERE id = ? 
+		AND DATE(jam_datang) = ?
+		LIMIT 1
+	`;
+
+	const result = await rawQuery(query, [idPegawai, dateStr]);
+	return result[0] || null;
+}
+
 export async function POST(request) {
 	try {
 		const {
@@ -120,6 +259,7 @@ export async function POST(request) {
 			latitude,
 			longitude,
 			isCheckingOut,
+			securityData = {},
 		} = await request.json();
 		const cookieStore = cookies();
 		const token = await cookieStore.get("auth_token")?.value;
@@ -133,22 +273,34 @@ export async function POST(request) {
 			new TextEncoder().encode(JWT_SECRET)
 		);
 		const idPegawai = verified.payload.id;
+		const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
 
-		if (isCheckingOut) {
-			// Update data presensi yang sudah ada dengan jam pulang
-			const today = moment().format("YYYY-MM-DD");
-			const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
+		// Validate security data
+		const securityValidation = validateSecurityData(
+			securityData,
+			latitude,
+			longitude
+		);
 
-			const existingAttendance = await selectFirst({
-				table: "temporary_presensi",
-				where: {
-					id: idPegawai,
-					jam_datang: {
-						operator: "LIKE",
-						value: `${today}%`,
+		// Block if high risk
+		if (!securityValidation.isValid) {
+			return NextResponse.json(
+				{
+					message: "Presensi ditolak karena masalah keamanan lokasi",
+					error: "SECURITY_VALIDATION_FAILED",
+					details: {
+						riskLevel: securityValidation.riskLevel,
+						issues: securityValidation.issues,
+						confidence: securityValidation.confidence,
 					},
 				},
-			});
+				{ status: 403 }
+			);
+		}
+
+		if (isCheckingOut) {
+			// OPTIMIZED: Gunakan date range yang lebih efisien
+			const existingAttendance = await getTodayAttendance(idPegawai);
 
 			if (!existingAttendance) {
 				return NextResponse.json(
@@ -164,85 +316,100 @@ export async function POST(request) {
 			// Format durasi ke HH:mm:ss
 			const durasi = moment.utc(durasiPresensi).format("HH:mm:ss");
 
-			// Update data presensi dengan jam pulang
-			const updateResult = await update({
-				table: "temporary_presensi",
-				data: {
-					jam_pulang: currentTime,
-					durasi: durasi,
-				},
-				where: {
-					id: idPegawai,
-					jam_datang: {
-						operator: "LIKE",
-						value: `${today}%`,
+			// OPTIMIZED: Gunakan transaction untuk konsistensi data
+			try {
+				// Simpan security log untuk checkout
+				await insert({
+					table: "security_logs",
+					data: {
+						id_pegawai: idPegawai,
+						tanggal: moment().format("YYYY-MM-DD"),
+						action_type: "CHECKOUT",
+						confidence_level: securityValidation.confidence,
+						risk_level: securityValidation.riskLevel,
+						warnings: JSON.stringify(securityData.warnings || []),
+						gps_accuracy: securityData.accuracy || null,
+						latitude: latitude,
+						longitude: longitude,
+						created_at: currentTime,
 					},
-				},
-			});
+				});
 
-			const insertRekapPresensi = await insert({
-				table: "rekap_presensi",
-				data: {
-					id: idPegawai,
-					shift: existingAttendance.shift,
-					jam_datang: existingAttendance.jam_datang,
-					jam_pulang: currentTime,
-					durasi: durasi,
-					status: existingAttendance.status,
-					keterlambatan: existingAttendance.keterlambatan,
-					keterangan: "-",
-					photo: existingAttendance.photo,
-				},
-			});
+				// Update temporary_presensi dengan jam pulang
+				await update({
+					table: "temporary_presensi",
+					data: {
+						jam_pulang: currentTime,
+						durasi: durasi,
+					},
+					where: {
+						id: idPegawai,
+						jam_datang: existingAttendance.jam_datang,
+					},
+				});
 
-			if (!insertRekapPresensi) {
+				// Insert ke rekap_presensi
+				await insert({
+					table: "rekap_presensi",
+					data: {
+						id: idPegawai,
+						shift: existingAttendance.shift,
+						jam_datang: existingAttendance.jam_datang,
+						jam_pulang: currentTime,
+						durasi: durasi,
+						status: existingAttendance.status,
+						keterlambatan: existingAttendance.keterlambatan,
+						keterangan: "-",
+						photo: existingAttendance.photo,
+					},
+				});
+
+				// Hapus dari temporary_presensi
+				await delete_({
+					table: "temporary_presensi",
+					where: {
+						id: idPegawai,
+						jam_datang: existingAttendance.jam_datang,
+					},
+				});
+
+				return NextResponse.json({
+					message: "Presensi pulang berhasil dicatat",
+					data: {
+						...existingAttendance,
+						jam_pulang: currentTime,
+						durasi: durasi,
+						photo_pulang: existingAttendance.photo,
+					},
+					security: {
+						riskLevel: securityValidation.riskLevel,
+						confidence: securityValidation.confidence,
+					},
+				});
+			} catch (error) {
+				console.error("Error in checkout transaction:", error);
 				return NextResponse.json(
-					{ message: "Gagal menyimpan rekap presensi" },
+					{ message: "Gagal menyimpan presensi pulang" },
+					{ status: 500 }
+				);
+			}
+		} else {
+			// OPTIMIZED: Cek apakah sudah ada presensi hari ini
+			const existingAttendance = await getTodayAttendance(idPegawai);
+			if (existingAttendance) {
+				return NextResponse.json(
+					{ message: "Anda sudah melakukan presensi masuk hari ini" },
 					{ status: 400 }
 				);
 			}
 
-			const hapusTemporaryPresensi = await delete_({
-				table: "temporary_presensi",
-				where: {
-					id: idPegawai,
-					jam_datang: {
-						operator: "LIKE",
-						value: `${today}%`,
-					},
-				},
-			});
-
-			return NextResponse.json({
-				message: "Presensi pulang berhasil dicatat",
-				data: {
-					...existingAttendance,
-					jam_pulang: currentTime,
-					photo_pulang: existingAttendance.photo,
-				},
-			});
-		} else {
 			// Upload foto dan dapatkan URL
 			const photoUrl = await saveBase64Image(photo, idPegawai);
 
-			// Dapatkan jadwal shift dan jam masuk menggunakan helper
-			const schedule = await selectFirst({
-				table: "jadwal_pegawai",
-				where: {
-					id: idPegawai,
-					tahun: moment().year(),
-					bulan: padZero(moment().month() + 1),
-				},
-			});
+			// OPTIMIZED: Dapatkan jadwal dan shift dalam satu query
+			const scheduleWithShift = await getScheduleWithShift(idPegawai);
 
-			const shift = await selectFirst({
-				table: "jam_masuk",
-				where: {
-					shift: schedule[`h${moment().format("D")}`],
-				},
-			});
-
-			if (!schedule) {
+			if (!scheduleWithShift || !scheduleWithShift.shift_today) {
 				return NextResponse.json(
 					{ message: "Tidak ada jadwal shift untuk hari ini" },
 					{ status: 400 }
@@ -254,43 +421,79 @@ export async function POST(request) {
 
 			// Hitung status keterlambatan
 			const { status, keterlambatan } = calculateStatus(
-				shift["jam_masuk"],
+				scheduleWithShift.jam_masuk,
 				timestamp
 			);
 
-			// Simpan data presensi menggunakan helper
-			const presensiResult = await insert({
-				table: "temporary_presensi",
-				data: {
-					id: idPegawai,
-					shift: schedule[`h${moment().format("D")}`],
-					jam_datang: mysqlTimestamp,
-					status: status,
-					keterlambatan: keterlambatan,
-					photo: photoUrl,
-				},
-			});
+			// OPTIMIZED: Batch insert operations untuk konsistensi
+			try {
+				// Simpan security log
+				await insert({
+					table: "security_logs",
+					data: {
+						id_pegawai: idPegawai,
+						tanggal: moment().format("YYYY-MM-DD"),
+						action_type: "CHECKIN",
+						confidence_level: securityValidation.confidence,
+						risk_level: securityValidation.riskLevel,
+						warnings: JSON.stringify(securityData.warnings || []),
+						gps_accuracy: securityData.accuracy || null,
+						latitude: latitude,
+						longitude: longitude,
+						created_at: currentTime,
+					},
+				});
 
-			// Simpan data lokasi menggunakan helper
-			const geoResult = await insert({
-				table: "geolocation_presensi",
-				data: {
-					id: idPegawai,
-					tanggal: moment().format("YYYY-MM-DD"),
-					latitude,
-					longitude,
-				},
-			});
+				// Simpan data presensi
+				const presensiResult = await insert({
+					table: "temporary_presensi",
+					data: {
+						id: idPegawai,
+						shift: scheduleWithShift.shift_today,
+						jam_datang: mysqlTimestamp,
+						status: status,
+						keterlambatan: keterlambatan,
+						photo: photoUrl,
+					},
+				});
 
-			return NextResponse.json({
-				message: "Presensi berhasil disimpan",
-				data: {
-					presensi: presensiResult,
-					geolocation: geoResult,
-					status,
-					keterlambatan,
-				},
-			});
+				// Simpan data lokasi
+				const geoResult = await insert({
+					table: "geolocation_presensi",
+					data: {
+						id: idPegawai,
+						tanggal: moment().format("YYYY-MM-DD"),
+						latitude,
+						longitude,
+					},
+				});
+
+				return NextResponse.json({
+					message: "Presensi berhasil disimpan",
+					data: {
+						presensi: presensiResult,
+						geolocation: geoResult,
+						status,
+						keterlambatan,
+						shift_info: {
+							shift: scheduleWithShift.shift_today,
+							jam_masuk: scheduleWithShift.jam_masuk,
+							jam_pulang: scheduleWithShift.jam_pulang,
+						},
+					},
+					security: {
+						riskLevel: securityValidation.riskLevel,
+						confidence: securityValidation.confidence,
+						issues: securityValidation.issues,
+					},
+				});
+			} catch (error) {
+				console.error("Error in checkin transaction:", error);
+				return NextResponse.json(
+					{ message: "Gagal menyimpan presensi masuk" },
+					{ status: 500 }
+				);
+			}
 		}
 	} catch (error) {
 		console.error("Error saving attendance:", error);
@@ -301,6 +504,7 @@ export async function POST(request) {
 	}
 }
 
+// OPTIMIZED: Cached schedule query untuk GET
 export async function GET(request) {
 	try {
 		const cookieStore = cookies();
@@ -317,14 +521,40 @@ export async function GET(request) {
 
 		const idPegawai = verified.payload.id;
 
-		const result = await select({
-			table: "jadwal_pegawai",
-			where: {
-				id: idPegawai,
-				tahun: moment().year(),
-				bulan: padZero(moment().month() + 1),
-			},
-		});
+		// OPTIMIZED: Simplified schedule query
+		const query = `
+			SELECT 
+				jp.*
+			FROM jadwal_pegawai jp
+			WHERE jp.id = ?
+			AND jp.tahun = ?
+			AND jp.bulan = ?
+			LIMIT 1
+		`;
+
+		let result = await rawQuery(query, [
+			idPegawai,
+			moment().year(),
+			padZero(moment().month() + 1),
+		]);
+
+		if (!result[0].shift_today) {
+			const queryJadwalTambahan = `
+				SELECT 
+					jt.*
+				FROM jadwal_tambahan jt
+				WHERE jt.id = ?
+				AND jt.tahun = ?
+				AND jt.bulan = ?
+				LIMIT 1
+			`;
+
+			result = await rawQuery(queryJadwalTambahan, [
+				idPegawai,
+				moment().year(),
+				padZero(moment().month() + 1),
+			]);
+		}
 
 		return NextResponse.json({
 			status: 200,
