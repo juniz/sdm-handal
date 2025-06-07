@@ -261,6 +261,14 @@ export async function POST(request) {
 			isCheckingOut,
 			securityData = {},
 		} = await request.json();
+
+		// Validasi photo hanya untuk check-in
+		if (!isCheckingOut && !photo) {
+			return NextResponse.json(
+				{ message: "Foto diperlukan untuk presensi masuk" },
+				{ status: 400 }
+			);
+		}
 		const cookieStore = cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
@@ -379,7 +387,6 @@ export async function POST(request) {
 						...existingAttendance,
 						jam_pulang: currentTime,
 						durasi: durasi,
-						photo_pulang: existingAttendance.photo,
 					},
 					security: {
 						riskLevel: securityValidation.riskLevel,
@@ -403,7 +410,7 @@ export async function POST(request) {
 				);
 			}
 
-			// Upload foto dan dapatkan URL
+			// Upload foto dan dapatkan URL (hanya untuk check-in)
 			const photoUrl = await saveBase64Image(photo, idPegawai);
 
 			// OPTIMIZED: Dapatkan jadwal dan shift dalam satu query

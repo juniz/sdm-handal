@@ -315,20 +315,10 @@ export default function AttendancePage() {
 			return;
 		}
 
-		// Check if camera is ready for checkout (if photo is required)
-		if (!cameraRef.current?.isReady()) {
-			setStatus("camera_error");
-			setTimeout(() => {
-				alertRef.current?.scrollIntoView({ behavior: "smooth" });
-				alertRef.current?.focus();
-			}, 100);
-			return;
-		}
-
 		setIsSubmitting(true);
 		try {
-			// Capture photo automatically for checkout
-			const capturedPhoto = cameraRef.current?.capturePhoto();
+			// No photo required for checkout
+			const capturedPhoto = null;
 
 			// Dapatkan lokasi terkini
 			const position = await new Promise((resolve, reject) => {
@@ -672,7 +662,7 @@ export default function AttendancePage() {
 							</div>
 							<AttendanceCamera ref={cameraRef} onCapture={setPhoto} />
 							<p className="text-xs text-gray-500 mt-2 text-center">
-								Foto akan diambil otomatis saat tombol presensi ditekan
+								Foto akan diambil otomatis saat tombol presensi masuk ditekan
 							</p>
 						</div>
 
@@ -756,15 +746,15 @@ export default function AttendancePage() {
 				{/* Form Presensi Pulang - Hanya tampilkan jika sudah presensi masuk tapi belum pulang */}
 				{todayAttendance && !todayAttendance.jam_pulang && (
 					<>
-						{/* Kamera untuk Checkout */}
-						<div className="mb-6">
-							<div className="flex items-center gap-2 text-gray-600 mb-2">
-								<Camera className="w-5 h-5" />
-								<span>Kamera Presensi Pulang</span>
+						{/* Info Presensi Pulang - Tanpa Kamera */}
+						<div className="mb-6 bg-orange-50 p-4 rounded-lg">
+							<div className="flex items-center gap-2 text-orange-700 mb-2">
+								<Clock className="w-5 h-5" />
+								<span className="font-medium">Presensi Pulang</span>
 							</div>
-							<AttendanceCamera ref={cameraRef} onCapture={setPhoto} />
-							<p className="text-xs text-gray-500 mt-2 text-center">
-								Foto akan diambil otomatis saat tombol presensi pulang ditekan
+							<p className="text-sm text-orange-600">
+								Presensi pulang tidak memerlukan foto. Cukup verifikasi lokasi
+								dan klik tombol presensi pulang.
 							</p>
 						</div>
 
@@ -800,15 +790,13 @@ export default function AttendancePage() {
 								!isCheckingOut ||
 								!isLocationValid ||
 								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60 ||
-								!cameraRef.current?.isReady()
+								securityStatus.confidence < 60
 							}
 							className={`w-full py-3 rounded-lg font-medium transition-all ${
 								!isCheckingOut ||
 								!isLocationValid ||
 								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60 ||
-								!cameraRef.current?.isReady()
+								securityStatus.confidence < 60
 									? "bg-gray-100 text-gray-400 cursor-not-allowed"
 									: "bg-orange-500 text-white hover:bg-orange-600"
 							}`}
@@ -826,12 +814,10 @@ export default function AttendancePage() {
 								"Lokasi terdeteksi palsu"
 							) : securityStatus.confidence < 60 ? (
 								"Confidence level terlalu rendah"
-							) : !cameraRef.current?.isReady() ? (
-								"Kamera belum siap"
 							) : (
 								<div className="flex items-center justify-center gap-2">
-									<Camera className="w-5 h-5" />
-									<span>Ambil Foto & Presensi Pulang</span>
+									<Clock className="w-5 h-5" />
+									<span>Presensi Pulang</span>
 								</div>
 							)}
 						</button>
