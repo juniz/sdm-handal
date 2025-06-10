@@ -28,6 +28,26 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		maxWidth: 800,
 		maxHeight: 600,
 	});
+	const [isMobile, setIsMobile] = useState(false);
+
+	// Detect mobile device
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			const checkMobile = () => {
+				const isMobileDevice =
+					window.innerWidth < 640 ||
+					/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+						navigator.userAgent
+					);
+				setIsMobile(isMobileDevice);
+			};
+
+			checkMobile();
+			window.addEventListener("resize", checkMobile);
+
+			return () => window.removeEventListener("resize", checkMobile);
+		}
+	}, []);
 
 	// Get optimal settings hanya di client-side
 	useEffect(() => {
@@ -36,6 +56,25 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 			setOptimalSettings(settings);
 		}
 	}, []);
+
+	// Get video constraints based on device
+	const getVideoConstraints = () => {
+		if (isMobile) {
+			return {
+				facingMode: "user",
+				width: { ideal: 720, min: 480, max: 1280 },
+				height: { ideal: 720, min: 480, max: 720 },
+				aspectRatio: { ideal: 1, min: 0.75, max: 1.333 },
+			};
+		} else {
+			return {
+				facingMode: "user",
+				width: { ideal: 1280, min: 640, max: 1920 },
+				height: { ideal: 720, min: 480, max: 1080 },
+				aspectRatio: { ideal: 16 / 9, min: 4 / 3, max: 16 / 9 },
+			};
+		}
+	};
 
 	// Check camera access
 	useEffect(() => {
@@ -47,11 +86,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 
 				// Test camera access
 				const stream = await navigator.mediaDevices.getUserMedia({
-					video: {
-						facingMode: "user",
-						width: { ideal: 720, min: 480 },
-						height: { ideal: 480, min: 360 },
-					},
+					video: getVideoConstraints(),
 				});
 
 				// Stop stream immediately after test
@@ -88,7 +123,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		} else {
 			setIsLoading(false);
 		}
-	}, []);
+	}, [isMobile]);
 
 	// Convert dataURL to blob for optimization
 	const dataURLToBlob = (dataURL) => {
@@ -187,7 +222,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+			<div className="relative w-full bg-gray-100 rounded-lg flex items-center justify-center mobile-camera-container">
 				<div className="text-center">
 					<Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
 					<p className="text-sm text-gray-600">Memuat kamera...</p>
@@ -199,7 +234,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	// Error state
 	if (cameraError) {
 		return (
-			<div className="relative w-full h-64 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+			<div className="relative w-full bg-red-50 border border-red-200 rounded-lg flex items-center justify-center mobile-camera-container">
 				<div className="text-center p-4">
 					<AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
 					<p className="text-red-700 font-medium mb-2">Masalah Kamera</p>
@@ -222,20 +257,11 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				ref={webcamRef}
 				screenshotFormat="image/jpeg"
 				screenshotQuality={0.95}
-				className="w-full rounded-lg"
+				className="w-full rounded-lg mobile-webcam"
 				mirrored={true}
-				videoConstraints={{
-					facingMode: "user",
-					width: { ideal: 1280, min: 640 },
-					height: { ideal: 720, min: 480 },
-				}}
+				videoConstraints={getVideoConstraints()}
 				onUserMedia={handleWebcamUserMedia}
 				onUserMediaError={handleWebcamError}
-				style={{
-					width: "100%",
-					height: "auto",
-					aspectRatio: "16/9",
-				}}
 			/>
 
 			{/* Status indicator */}

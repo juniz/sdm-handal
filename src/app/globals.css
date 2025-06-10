@@ -142,3 +142,125 @@
 		transform: rotateY(180deg);
 	}
 }
+
+/* Mobile Webcam Styles */
+.mobile-camera-container {
+	min-height: 280px;
+	height: 280px;
+}
+
+.mobile-webcam {
+	min-height: 280px;
+	max-height: 400px;
+	object-fit: cover;
+	width: 100% !important;
+	height: auto !important;
+}
+
+/* Mobile breakpoints */
+@media (max-width: 640px) {
+	.mobile-camera-container {
+		min-height: 320px;
+		height: 320px;
+	}
+
+	.mobile-webcam {
+		min-height: 320px;
+		max-height: 450px;
+		aspect-ratio: 4/3;
+	}
+}
+
+@media (max-width: 480px) {
+	.mobile-camera-container {
+		min-height: 360px;
+		height: 360px;
+	}
+
+	.mobile-webcam {
+		min-height: 360px;
+		max-height: 500px;
+		aspect-ratio: 4/3;
+	}
+}
+
+@media (max-width: 375px) {
+	.mobile-camera-container {
+		min-height: 320px;
+		height: 320px;
+	}
+
+	.mobile-webcam {
+		min-height: 320px;
+		max-height: 450px;
+		aspect-ratio: 1/1;
+	}
+}
+
+/* iOS Safari fixes */
+@media screen and (-webkit-min-device-pixel-ratio: 2) {
+	.mobile-webcam {
+		-webkit-backface-visibility: hidden;
+		-webkit-transform: translate3d(0, 0, 0);
+	}
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 768px) {
+	.mobile-webcam video {
+		transform: scaleX(-1); /* Mirror effect */
+	}
+}
+
+/* Touch and performance optimizations */
+@media (max-width: 640px) {
+	/* Prevent zoom on double tap */
+	.mobile-webcam {
+		touch-action: manipulation;
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+	}
+
+	/* Improve performance on mobile */
+	.mobile-webcam video {
+		will-change: transform;
+		-webkit-backface-visibility: hidden;
+		backface-visibility: hidden;
+	}
+
+	/* Ensure proper stacking */
+	.mobile-camera-container {
+		position: relative;
+		z-index: 1;
+	}
+}
+
+/* Ultra-wide mobile screens */
+@media (max-width: 640px) and (orientation: landscape) {
+	.mobile-camera-container {
+		min-height: 240px;
+		height: 240px;
+	}
+
+	.mobile-webcam {
+		min-height: 240px;
+		max-height: 320px;
+		aspect-ratio: 16/9;
+	}
+}
+
+/* Small mobile screens in portrait */
+@media (max-width: 320px) and (orientation: portrait) {
+	.mobile-camera-container {
+		min-height: 280px;
+		height: 280px;
+	}
+
+	.mobile-webcam {
+		min-height: 280px;
+		max-height: 400px;
+		aspect-ratio: 1/1;
+	}
+}
