@@ -141,11 +141,23 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	// Optimize captured photo
 	const optimizePhoto = async (dataURL) => {
 		try {
+			console.log("optimizePhoto input:", {
+				type: typeof dataURL,
+				length: dataURL?.length,
+				startsWith: dataURL?.substring(0, 50),
+			});
+
 			// Convert to blob
 			const blob = dataURLToBlob(dataURL);
+			console.log("Blob created:", { size: blob.size, type: blob.type });
 
 			// Create file object for optimization
 			const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+			console.log("File created:", {
+				size: file.size,
+				type: file.type,
+				name: file.name,
+			});
 
 			// Optimize dengan settings optimal
 			const optimizedBase64 = await fileToOptimizedBase64(file, {
@@ -155,10 +167,17 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				outputFormat: "image/jpeg",
 			});
 
+			console.log("Optimization complete:", {
+				type: typeof optimizedBase64,
+				length: optimizedBase64?.length,
+				startsWith: optimizedBase64?.substring(0, 50),
+			});
+
 			return optimizedBase64;
 		} catch (error) {
 			console.error("Error optimizing photo:", error);
 			// Fallback to original if optimization fails
+			console.log("Falling back to original dataURL");
 			return dataURL;
 		}
 	};
@@ -173,6 +192,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 
 			try {
 				setIsCapturing(true);
+				console.log("Starting photo capture...");
 
 				// Capture photo
 				const imageSrc = webcamRef.current.getScreenshot({
@@ -182,12 +202,25 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 					screenshotQuality: 0.95,
 				});
 
+				console.log("Raw capture result:", {
+					type: typeof imageSrc,
+					length: imageSrc?.length,
+					startsWith: imageSrc?.substring(0, 30),
+				});
+
 				if (!imageSrc) {
 					throw new Error("Failed to capture photo");
 				}
 
 				// Optimize captured photo
+				console.log("Starting photo optimization...");
 				const optimizedPhoto = await optimizePhoto(imageSrc);
+
+				console.log("Optimized photo result:", {
+					type: typeof optimizedPhoto,
+					length: optimizedPhoto?.length,
+					startsWith: optimizedPhoto?.substring(0, 30),
+				});
 
 				if (onCapture) {
 					onCapture(optimizedPhoto);

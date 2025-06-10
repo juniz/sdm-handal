@@ -269,10 +269,17 @@ export default function AttendancePage() {
 		setIsSubmitting(true);
 		try {
 			// Capture photo automatically
-			const capturedPhoto = cameraRef.current?.capturePhoto();
+			const capturedPhoto = await cameraRef.current?.capturePhoto();
 			if (!capturedPhoto) {
 				throw new Error("Gagal mengambil foto");
 			}
+
+			// Debug logging
+			console.log("Captured photo info:", {
+				type: typeof capturedPhoto,
+				length: capturedPhoto?.length,
+				startsWith: capturedPhoto?.substring(0, 30),
+			});
 
 			// Dapatkan lokasi terkini
 			const position = await new Promise((resolve, reject) => {

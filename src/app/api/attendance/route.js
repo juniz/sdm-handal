@@ -91,9 +91,25 @@ function calculateStatus(jamMasuk, currentTime) {
 // Fungsi untuk menyimpan file base64 ke folder public
 async function saveBase64Image(base64Data, idPegawai) {
 	try {
+		// Validasi input
+		if (!base64Data || typeof base64Data !== "string") {
+			throw new Error("Data foto tidak valid atau kosong");
+		}
+
 		// Hapus header base64 jika ada
 		const base64Image = base64Data.replace(/^data:image\/\w+;base64,/, "");
+
+		// Validasi base64 string
+		if (!base64Image || base64Image.length === 0) {
+			throw new Error("Data base64 tidak valid");
+		}
+
 		const buffer = Buffer.from(base64Image, "base64");
+
+		// Validasi buffer
+		if (buffer.length === 0) {
+			throw new Error("Buffer foto kosong");
+		}
 
 		// Buat nama file unik dengan timestamp
 		const timestamp = new Date().getTime();
@@ -115,7 +131,7 @@ async function saveBase64Image(base64Data, idPegawai) {
 		return process.env.NEXT_PUBLIC_URL + `/photos/${fileName}`;
 	} catch (error) {
 		console.error("Error saving image:", error);
-		throw new Error("Gagal menyimpan foto");
+		throw new Error("Gagal menyimpan foto: " + error.message);
 	}
 }
 
@@ -281,6 +297,19 @@ export async function POST(request) {
 			securityData = {},
 		} = await request.json();
 
+		// Debug logging
+		console.log("POST attendance request:", {
+			hasPhoto: !!photo,
+			photoType: typeof photo,
+			photoLength: photo ? photo.length : 0,
+			photoStart: photo ? photo.substring(0, 50) : "N/A",
+			timestamp,
+			latitude,
+			longitude,
+			isCheckingOut,
+			securityData: Object.keys(securityData),
+		});
+
 		// Validasi photo hanya untuk check-in
 		if (!isCheckingOut && !photo) {
 			return NextResponse.json(
@@ -430,7 +459,23 @@ export async function POST(request) {
 			}
 
 			// Upload foto dan dapatkan URL (hanya untuk check-in)
-			const photoUrl = await saveBase64Image(photo, idPegawai);
+			let photoUrl = null;
+			try {
+				if (photo) {
+					photoUrl = await saveBase64Image(photo, idPegawai);
+				} else {
+					return NextResponse.json(
+						{ message: "Foto diperlukan untuk presensi masuk" },
+						{ status: 400 }
+					);
+				}
+			} catch (photoError) {
+				console.error("Error saving photo:", photoError);
+				return NextResponse.json(
+					{ message: "Gagal menyimpan foto: " + photoError.message },
+					{ status: 400 }
+				);
+			}
 
 			// OPTIMIZED: Dapatkan jadwal dan shift dalam satu query
 			const scheduleWithShift = await getScheduleWithShift(idPegawai);
