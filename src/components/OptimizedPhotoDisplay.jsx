@@ -208,7 +208,7 @@ const OptimizedPhotoDisplay = ({
 				alt={alt}
 				width={width}
 				height={height}
-				className="rounded-lg object-cover"
+				className="rounded-lg object-fit object-center"
 				onLoad={handleImageLoad}
 				onError={handleImageError}
 				priority={priority}
@@ -220,7 +220,7 @@ const OptimizedPhotoDisplay = ({
 				sizes={`${width}px`}
 				style={{
 					width: "100%",
-					height: "auto",
+					height: "100%",
 					maxWidth: width,
 					maxHeight: height,
 				}}
