@@ -1,22 +1,35 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-	Shield,
-	ShieldAlert,
-	ShieldCheck,
-	ShieldX,
-	AlertTriangle,
-	MapPin,
-	Calendar,
-	Users,
-	TrendingUp,
 	Eye,
-	Download,
+	Shield,
+	AlertTriangle,
+	CheckCircle,
+	XCircle,
+	Activity,
+	Users,
+	MapPin,
+	Clock,
 	RefreshCw,
+	Download,
 	Filter,
-	Search,
 } from "lucide-react";
+
+// Simple toast hook
+const useToast = () => {
+	const toast = ({ title, description, variant }) => {
+		if (variant === "destructive") {
+			alert(`Error: ${title}\n${description}`);
+		} else {
+			alert(`${title}\n${description}`);
+		}
+	};
+	return { toast };
+};
 
 export default function SecurityMonitoringPage() {
 	const [securityLogs, setSecurityLogs] = useState([]);

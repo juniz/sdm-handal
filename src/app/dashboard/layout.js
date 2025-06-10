@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
 	Menu,
 	X,
@@ -11,6 +11,7 @@ import {
 	LogOut,
 	Ticket,
 	UserCheck,
+	AlertTriangle,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,20 +25,6 @@ import {
 } from "@/components/notifications";
 import { removeClientToken } from "@/lib/client-auth";
 
-const menuItems = [
-	{ icon: Home, label: "Dashboard", href: "/dashboard" },
-	{ icon: User, label: "Profil", href: "/dashboard/profile" },
-	{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
-	{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
-	{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
-	{
-		icon: UserCheck,
-		label: "Assignment IT",
-		href: "/dashboard/ticket-assignment",
-	},
-	{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
-];
-
 // Loading fallback untuk UserProfile
 function UserProfileSkeleton() {
 	return (
@@ -49,10 +36,56 @@ function UserProfileSkeleton() {
 }
 
 export default function DashboardLayout({ children }) {
-	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+	const [userRole, setUserRole] = useState(null);
 	const pathname = usePathname();
 	const router = useRouter();
+
+	// Check user role
+	useEffect(() => {
+		const checkUserRole = async () => {
+			try {
+				const response = await fetch("/api/auth/me");
+				if (response.ok) {
+					const userData = await response.json();
+					setUserRole(userData.jabatan);
+				}
+			} catch (error) {
+				console.error("Error checking user role:", error);
+			}
+		};
+		checkUserRole();
+	}, []);
+
+	// Base menu items untuk semua user
+	const baseMenuItems = [
+		{ icon: Home, label: "Dashboard", href: "/dashboard" },
+		{ icon: User, label: "Profil", href: "/dashboard/profile" },
+		{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
+		{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
+		{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
+		{
+			icon: UserCheck,
+			label: "Assignment IT",
+			href: "/dashboard/ticket-assignment",
+		},
+		{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
+	];
+
+	// Admin menu items
+	const adminMenuItems = [
+		{
+			icon: AlertTriangle,
+			label: "Error Logs",
+			href: "/dashboard/admin/error-logs",
+		},
+	];
+
+	// Combine menu items berdasarkan role
+	const menuItems = userRole?.includes("Admin")
+		? [...baseMenuItems, ...adminMenuItems]
+		: baseMenuItems;
 
 	const handleLogout = async () => {
 		try {

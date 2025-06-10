@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Ticket,
@@ -8,6 +9,12 @@ import {
 	MenuIcon,
 	BookOpen,
 	Users,
+	AlertTriangle,
+	Settings,
+	Shield,
+	Database,
+	MapPin,
+	Eye,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -113,7 +120,127 @@ const QuickActions = () => {
 	);
 };
 
+const AdminMenu = () => {
+	const router = useRouter();
+	const adminActions = [
+		{
+			title: "Error Logs",
+			description: "Monitor error aplikasi",
+			icon: AlertTriangle,
+			href: "/dashboard/admin/error-logs",
+			color: "from-red-500 to-orange-500",
+		},
+		{
+			title: "Location Settings",
+			description: "Konfigurasi lokasi presensi",
+			icon: MapPin,
+			href: "/dashboard/admin/location-settings",
+			color: "from-green-500 to-emerald-500",
+		},
+		{
+			title: "Security Monitoring",
+			description: "Monitor keamanan sistem",
+			icon: Eye,
+			href: "/dashboard/admin/security-monitoring",
+			color: "from-indigo-500 to-blue-500",
+		},
+		{
+			title: "System Settings",
+			description: "Konfigurasi sistem",
+			icon: Settings,
+			href: "/dashboard/admin/settings",
+			color: "from-gray-500 to-slate-500",
+		},
+		{
+			title: "User Management",
+			description: "Kelola pengguna",
+			icon: Shield,
+			href: "/dashboard/admin/users",
+			color: "from-blue-500 to-indigo-500",
+		},
+		{
+			title: "Database",
+			description: "Database management",
+			icon: Database,
+			href: "/dashboard/admin/database",
+			color: "from-purple-500 to-violet-500",
+		},
+	];
+
+	return (
+		<Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-orange-50">
+			<CardHeader className="pb-2">
+				<CardTitle className="text-lg font-semibold flex items-center gap-2">
+					<Shield className="w-5 h-5 text-red-500" />
+					Admin Panel
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="relative">
+				<div className="grid grid-cols-2 gap-3">
+					{adminActions.map((action) => (
+						<button
+							key={action.title}
+							onClick={() => router.push(action.href)}
+							className="group relative overflow-hidden rounded-lg p-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
+						>
+							<div className="flex flex-col items-center gap-2">
+								<div
+									className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm`}
+								>
+									<action.icon className="w-5 h-5" />
+								</div>
+								<div className="text-center">
+									<span className="font-medium text-gray-900 text-sm block">
+										{action.title}
+									</span>
+								</div>
+							</div>
+						</button>
+					))}
+				</div>
+			</CardContent>
+		</Card>
+	);
+};
+
 export default function DashboardPage() {
+	const [userDepartment, setUserDepartment] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
+
+	// Check user department on component mount
+	useEffect(() => {
+		const checkUserDepartment = async () => {
+			try {
+				const response = await fetch("/api/auth/user");
+				if (response.ok) {
+					const data = await response.json();
+					const userData = data.user;
+
+					console.log("User data:", userData); // Debug log
+
+					// Check if user is from IT department
+					const isIT =
+						userData.jbtn?.toLowerCase().includes("it") ||
+						userData.jbtn?.toLowerCase().includes("teknologi") ||
+						userData.jbtn?.toLowerCase().includes("sistem") ||
+						userData.departemen?.toLowerCase().includes("it") ||
+						userData.departemen?.toLowerCase().includes("teknologi") ||
+						userData.departemen?.toLowerCase().includes("sistem");
+
+					console.log("Is IT department:", isIT, "jbtn:", userData.jbtn); // Debug log
+
+					setUserDepartment(isIT ? "IT" : userData.jbtn || userData.departemen);
+				}
+			} catch (error) {
+				console.error("Error checking user department:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		checkUserDepartment();
+	}, []);
+
 	return (
 		<div className="max-w-lg mx-auto space-y-4">
 			{/* Notifikasi Assignment Urgent */}
@@ -123,6 +250,17 @@ export default function DashboardPage() {
 			<div className="space-y-4">
 				{/* Kartu Pegawai */}
 				<EmployeeCard />
+
+				{/* Admin Menu - Hanya untuk Departemen IT */}
+				{isLoading ? (
+					<div className="flex justify-center items-center py-4">
+						<div className="animate-pulse text-gray-500 text-sm">
+							Mengecek akses admin...
+						</div>
+					</div>
+				) : (
+					userDepartment === "IT" && <AdminMenu />
+				)}
 
 				{/* Aksi Cepat */}
 				<QuickActions />

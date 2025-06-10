@@ -5,6 +5,7 @@ import Image from "next/image";
 import { AttendanceCamera } from "@/components/AttendanceCamera";
 import SecureLocationMap from "@/components/SecureLocationMap";
 import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
+import { useErrorLogger } from "@/hooks/useErrorLogger";
 import moment from "moment";
 import "moment/locale/id";
 import {
@@ -86,6 +87,9 @@ export default function AttendancePage() {
 	});
 	const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 	const [locationPermission, setLocationPermission] = useState("checking"); // checking, granted, denied, prompt
+
+	// Error logging
+	const { logError } = useErrorLogger();
 
 	// Check location permission on component mount
 	useEffect(() => {
@@ -247,6 +251,17 @@ export default function AttendancePage() {
 	const handleCheckIn = async () => {
 		if (!isLocationValid || securityStatus.isLocationSpoofed) {
 			if (securityStatus.isLocationSpoofed) {
+				await logError({
+					error: "Location spoofing detected",
+					errorType: "SecurityError",
+					componentName: "AttendancePage",
+					actionAttempted: "Check-in with location verification",
+					severity: "HIGH",
+					additionalData: {
+						securityStatus,
+						isLocationValid,
+					},
+				});
 				setStatus("security_error");
 				setTimeout(() => {
 					alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -258,6 +273,13 @@ export default function AttendancePage() {
 
 		// Check if camera is ready
 		if (!cameraRef.current?.isReady()) {
+			await logError({
+				error: "Camera not ready when attempting check-in",
+				errorType: "CameraError",
+				componentName: "AttendancePage",
+				actionAttempted: "Pre-flight check for attendance",
+				severity: "MEDIUM",
+			});
 			setStatus("camera_error");
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -271,7 +293,15 @@ export default function AttendancePage() {
 			// Capture photo automatically
 			const capturedPhoto = await cameraRef.current?.capturePhoto();
 			if (!capturedPhoto) {
-				throw new Error("Gagal mengambil foto");
+				const error = new Error("Gagal mengambil foto");
+				await logError({
+					error,
+					errorType: "PhotoCaptureError",
+					componentName: "AttendancePage",
+					actionAttempted: "Capturing photo for check-in",
+					severity: "HIGH",
+				});
+				throw error;
 			}
 
 			// Debug logging
@@ -305,7 +335,24 @@ export default function AttendancePage() {
 				}),
 			});
 
-			if (!response.ok) throw new Error("Gagal melakukan presensi");
+			if (!response.ok) {
+				const errorData = await response.text();
+				const error = new Error(`Gagal melakukan presensi: ${response.status}`);
+				await logError({
+					error,
+					errorType: "AttendanceSubmissionError",
+					componentName: "AttendancePage",
+					actionAttempted: "Submitting check-in data to API",
+					severity: "HIGH",
+					additionalData: {
+						responseStatus: response.status,
+						errorData: errorData,
+						hasPhoto: !!capturedPhoto,
+						securityStatus,
+					},
+				});
+				throw error;
+			}
 
 			const data = await response.json();
 			setStatus("success");
@@ -322,6 +369,26 @@ export default function AttendancePage() {
 			}, 100);
 		} catch (error) {
 			console.error("Error submitting attendance:", error);
+
+			// Log error if not already logged
+			if (
+				!error.message.includes("Gagal mengambil foto") &&
+				!error.message.includes("Gagal melakukan presensi")
+			) {
+				await logError({
+					error,
+					errorType: "UnexpectedCheckInError",
+					componentName: "AttendancePage",
+					actionAttempted: "Check-in process",
+					severity: "HIGH",
+					additionalData: {
+						step: "unknown",
+						securityStatus,
+						isLocationValid,
+					},
+				});
+			}
+
 			setStatus("error");
 
 			// Scroll ke alert dan fokuskan juga saat error

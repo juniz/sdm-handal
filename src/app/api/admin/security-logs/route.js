@@ -54,7 +54,7 @@ export async function GET(request) {
 
 		// Employee search
 		if (searchEmployee) {
-			whereConditions.push("(sl.id_pegawai LIKE ? OR p.nama_lengkap LIKE ?)");
+			whereConditions.push("(sl.id_pegawai LIKE ? OR p.nama LIKE ?)");
 			queryParams.push(`%${searchEmployee}%`, `%${searchEmployee}%`);
 		}
 
@@ -64,7 +64,7 @@ export async function GET(request) {
 		const query = `
 			SELECT 
 				sl.*,
-				p.nama_lengkap,
+				p.nama,
 				p.departemen
 			FROM security_logs sl
 			LEFT JOIN pegawai p ON sl.id_pegawai = p.id

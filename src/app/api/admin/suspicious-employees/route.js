@@ -43,7 +43,7 @@ export async function GET(request) {
 		const suspiciousQuery = `
 			SELECT 
 				sl.id_pegawai,
-				p.nama_lengkap,
+				p.nama,
 				p.departemen,
 				COUNT(*) as total_aktivitas,
 				COUNT(CASE WHEN sl.risk_level = 'HIGH' THEN 1 END) as high_risk_count,
@@ -68,7 +68,7 @@ export async function GET(request) {
 			FROM security_logs sl
 			LEFT JOIN pegawai p ON sl.id_pegawai = p.id
 			WHERE sl.created_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? DAY)
-			GROUP BY sl.id_pegawai, p.nama_lengkap, p.departemen
+			GROUP BY sl.id_pegawai, p.nama, p.departemen
 			HAVING 
 				high_risk_count >= ? 
 				OR avg_confidence <= ?

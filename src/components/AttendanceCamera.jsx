@@ -13,6 +13,7 @@ import {
 	fileToOptimizedBase64,
 	getOptimalImageSettings,
 } from "@/utils/imageOptimizer";
+import { useErrorLogger } from "@/hooks/useErrorLogger";
 
 export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	{ onCapture },
@@ -29,6 +30,9 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		maxHeight: 600,
 	});
 	const [isMobile, setIsMobile] = useState(false);
+
+	// Error logging
+	const { logError } = useErrorLogger();
 
 	// Detect mobile device
 	useEffect(() => {
@@ -81,7 +85,15 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		const checkCameraAccess = async () => {
 			try {
 				if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-					throw new Error("Camera not supported");
+					const error = new Error("Camera not supported");
+					await logError({
+						error,
+						errorType: "CameraNotSupported",
+						componentName: "AttendanceCamera",
+						actionAttempted: "Checking camera support",
+						severity: "HIGH",
+					});
+					throw error;
 				}
 
 				// Test camera access
@@ -108,6 +120,20 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				} else if (error.name === "NotReadableError") {
 					errorMessage = "Kamera sedang digunakan aplikasi lain.";
 				}
+
+				// Log error to server
+				await logError({
+					error,
+					errorType: "CameraAccessError",
+					componentName: "AttendanceCamera",
+					actionAttempted: "Accessing camera for attendance",
+					severity: "HIGH",
+					additionalData: {
+						errorName: error.name,
+						browserSupport: !!navigator.mediaDevices,
+						isMobile: isMobile,
+					},
+				});
 
 				setCameraError(errorMessage);
 				setCameraReady(false);
@@ -186,6 +212,18 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	useImperativeHandle(ref, () => ({
 		capturePhoto: async () => {
 			if (!webcamRef.current || !cameraReady) {
+				const error = new Error("Camera not ready for capture");
+				await logError({
+					error,
+					errorType: "CameraNotReady",
+					componentName: "AttendanceCamera",
+					actionAttempted: "Capturing photo for attendance",
+					severity: "MEDIUM",
+					additionalData: {
+						cameraReady,
+						webcamExists: !!webcamRef.current,
+					},
+				});
 				console.error("Camera not ready for capture");
 				return null;
 			}
@@ -209,7 +247,19 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				});
 
 				if (!imageSrc) {
-					throw new Error("Failed to capture photo");
+					const error = new Error("Failed to capture photo from webcam");
+					await logError({
+						error,
+						errorType: "PhotoCaptureFailure",
+						componentName: "AttendanceCamera",
+						actionAttempted: "Taking screenshot from webcam",
+						severity: "HIGH",
+						additionalData: {
+							webcamReadyState: webcamRef.current?.readyState,
+							isMobile: isMobile,
+						},
+					});
+					throw error;
 				}
 
 				// Optimize captured photo
@@ -229,6 +279,23 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				return optimizedPhoto;
 			} catch (error) {
 				console.error("Error capturing photo:", error);
+
+				// Log error to server
+				await logError({
+					error,
+					errorType: "PhotoCaptureError",
+					componentName: "AttendanceCamera",
+					actionAttempted: "Capturing and optimizing photo",
+					severity: "HIGH",
+					additionalData: {
+						errorStep: error.message.includes("optimization")
+							? "optimization"
+							: "capture",
+						isMobile: isMobile,
+						optimalSettings: optimalSettings,
+					},
+				});
+
 				return null;
 			} finally {
 				setIsCapturing(false);

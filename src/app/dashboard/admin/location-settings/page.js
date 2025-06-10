@@ -1,266 +1,430 @@
 "use client";
 
-import { useState } from "react";
-import RadiusSettings from "@/components/RadiusSettings";
-import { MapPin, Shield, Cog, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	MapPin,
+	Save,
+	RefreshCw,
+	Plus,
+	Trash2,
+	Edit,
+	Globe,
+	Target,
+	Clock,
+} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
-export default function LocationSettingsPage() {
-	const [activeTab, setActiveTab] = useState("radius");
+// Simple Label component
+const Label = ({ htmlFor, children, className = "" }) => (
+	<label
+		htmlFor={htmlFor}
+		className={`text-sm font-medium leading-none ${className}`}
+	>
+		{children}
+	</label>
+);
 
-	const tabs = [
+// Simple toast hook
+const useToast = () => {
+	const toast = ({ title, description, variant }) => {
+		if (variant === "destructive") {
+			alert(`Error: ${title}\n${description}`);
+		} else {
+			alert(`${title}\n${description}`);
+		}
+	};
+	return { toast };
+};
+
+export default function LocationSettings() {
+	const [locations, setLocations] = useState([
 		{
-			id: "radius",
-			label: "Radius Presensi",
-			icon: MapPin,
-			description: "Pengaturan lokasi kantor dan radius yang diperbolehkan",
+			id: 1,
+			name: "Kantor Pusat",
+			address: "Jl. Contoh No. 123, Jakarta",
+			latitude: -6.2088,
+			longitude: 106.8456,
+			radius: 100,
+			status: "active",
 		},
 		{
-			id: "security",
-			label: "Keamanan Lokasi",
-			icon: Shield,
-			description: "Konfigurasi validasi dan deteksi keamanan",
+			id: 2,
+			name: "Kantor Cabang Bandung",
+			address: "Jl. Merdeka No. 45, Bandung",
+			latitude: -6.9175,
+			longitude: 107.6191,
+			radius: 150,
+			status: "active",
 		},
-		{
-			id: "advanced",
-			label: "Advanced",
-			icon: Cog,
-			description: "Pengaturan lanjutan untuk sistem lokasi",
-		},
-	];
+	]);
 
-	const SecuritySettings = () => (
-		<div className="bg-white rounded-lg shadow-sm p-6">
-			<div className="flex items-center gap-3 mb-6">
-				<div className="p-2 bg-red-100 rounded-lg">
-					<Shield className="w-6 h-6 text-red-600" />
-				</div>
-				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Pengaturan Keamanan Lokasi
-					</h2>
-					<p className="text-sm text-gray-600">
-						Konfigurasi sistem deteksi dan validasi keamanan lokasi
-					</p>
-				</div>
-			</div>
+	const [newLocation, setNewLocation] = useState({
+		name: "",
+		address: "",
+		latitude: "",
+		longitude: "",
+		radius: 100,
+	});
 
-			<div className="space-y-6">
-				<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-					<div className="flex items-start gap-3">
-						<Info className="w-5 h-5 text-yellow-600 mt-0.5" />
-						<div>
-							<p className="text-sm text-yellow-800 font-medium">
-								Environment Variables
-							</p>
-							<p className="text-sm text-yellow-700 mt-1">
-								Pengaturan keamanan dikontrol melalui file .env:
-							</p>
-							<div className="mt-3 bg-yellow-100 rounded p-3 font-mono text-sm">
-								<div>ENABLE_LOCATION_CHECK=true</div>
-								<div>ENABLE_SECURITY_VALIDATION=true</div>
-							</div>
-						</div>
-					</div>
-				</div>
+	const [editingLocation, setEditingLocation] = useState(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const { toast } = useToast();
 
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div className="space-y-4">
-						<h3 className="text-lg font-medium text-gray-900">
-							Deteksi Mock Location
-						</h3>
-						<div className="space-y-3">
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">GPS Accuracy Threshold</span>
-								<span className="text-sm text-gray-600">50 meter</span>
-							</div>
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">Speed Threshold</span>
-								<span className="text-sm text-gray-600">120 km/h</span>
-							</div>
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">Mock Location Detection</span>
-								<span className="text-sm text-green-600">Aktif</span>
-							</div>
-						</div>
-					</div>
+	const handleSaveLocation = async () => {
+		if (!newLocation.name || !newLocation.address) {
+			toast({
+				title: "Error",
+				description: "Nama dan alamat lokasi harus diisi",
+				variant: "destructive",
+			});
+			return;
+		}
 
-					<div className="space-y-4">
-						<h3 className="text-lg font-medium text-gray-900">
-							Confidence Level
-						</h3>
-						<div className="space-y-3">
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">Minimum Confidence</span>
-								<span className="text-sm text-gray-600">60%</span>
-							</div>
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">High Security (&gt;80%)</span>
-								<span className="text-sm text-green-600">Aman</span>
-							</div>
-							<div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-								<span className="text-sm">Low Security (&lt;40%)</span>
-								<span className="text-sm text-red-600">Ditolak</span>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
+		setIsLoading(true);
+		try {
+			// Simulate API call
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
-	const AdvancedSettings = () => (
-		<div className="bg-white rounded-lg shadow-sm p-6">
-			<div className="flex items-center gap-3 mb-6">
-				<div className="p-2 bg-purple-100 rounded-lg">
-					<Cog className="w-6 h-6 text-purple-600" />
-				</div>
-				<div>
-					<h2 className="text-xl font-semibold text-gray-900">
-						Pengaturan Advanced
-					</h2>
-					<p className="text-sm text-gray-600">
-						Konfigurasi sistem tingkat lanjut dan monitoring
-					</p>
-				</div>
-			</div>
+			const locationData = {
+				id: Date.now(),
+				...newLocation,
+				latitude: parseFloat(newLocation.latitude) || 0,
+				longitude: parseFloat(newLocation.longitude) || 0,
+				status: "active",
+			};
 
-			<div className="space-y-6">
-				<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-					<h3 className="text-lg font-medium text-blue-900 mb-3">
-						Current Environment
-					</h3>
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-						<div>
-							<div className="font-medium text-blue-800">Lokasi Kantor:</div>
-							<div className="text-blue-700 font-mono">
-								{process.env.NEXT_PUBLIC_OFFICE_LAT},{" "}
-								{process.env.NEXT_PUBLIC_OFFICE_LNG}
-							</div>
-						</div>
-						<div>
-							<div className="font-medium text-blue-800">Radius:</div>
-							<div className="text-blue-700 font-mono">
-								{process.env.NEXT_PUBLIC_ALLOWED_RADIUS} meter
-							</div>
-						</div>
-					</div>
-				</div>
+			setLocations([...locations, locationData]);
+			setNewLocation({
+				name: "",
+				address: "",
+				latitude: "",
+				longitude: "",
+				radius: 100,
+			});
 
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div>
-						<h3 className="text-lg font-medium text-gray-900 mb-3">
-							Monitoring
-						</h3>
-						<div className="space-y-3">
-							<div className="p-3 border border-gray-200 rounded-lg">
-								<div className="text-sm font-medium">Location History</div>
-								<div className="text-xs text-gray-600 mt-1">
-									Menyimpan riwayat 10 lokasi terakhir untuk analisis pola
-								</div>
-							</div>
-							<div className="p-3 border border-gray-200 rounded-lg">
-								<div className="text-sm font-medium">Security Logs</div>
-								<div className="text-xs text-gray-600 mt-1">
-									Log semua aktivitas keamanan dan deteksi anomali
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<div>
-						<h3 className="text-lg font-medium text-gray-900 mb-3">
-							Performance
-						</h3>
-						<div className="space-y-3">
-							<div className="p-3 border border-gray-200 rounded-lg">
-								<div className="text-sm font-medium">Watch Interval</div>
-								<div className="text-xs text-gray-600 mt-1">
-									Update lokasi setiap 5 detik saat monitoring aktif
-								</div>
-							</div>
-							<div className="p-3 border border-gray-200 rounded-lg">
-								<div className="text-sm font-medium">Cache Timeout</div>
-								<div className="text-xs text-gray-600 mt-1">
-									Cache lokasi maksimal 30 detik untuk efisiensi
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-					<h3 className="text-lg font-medium text-gray-900 mb-3">
-						System Information
-					</h3>
-					<div className="text-sm text-gray-600 space-y-1">
-						<div>
-							• Sistem menggunakan Haversine formula untuk kalkulasi jarak
-						</div>
-						<div>• Deteksi mock location menggunakan multiple validation</div>
-						<div>
-							• Confidence level dihitung berdasarkan 6 parameter keamanan
-						</div>
-						<div>
-							• GPS accuracy threshold disesuaikan dengan kondisi Indonesia
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-
-	const renderTabContent = () => {
-		switch (activeTab) {
-			case "radius":
-				return <RadiusSettings />;
-			case "security":
-				return <SecuritySettings />;
-			case "advanced":
-				return <AdvancedSettings />;
-			default:
-				return <RadiusSettings />;
+			toast({
+				title: "Berhasil",
+				description: "Lokasi berhasil ditambahkan",
+			});
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: "Gagal menambahkan lokasi",
+				variant: "destructive",
+			});
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
-	return (
-		<div className="max-w-6xl mx-auto space-y-6">
-			<div className="bg-white rounded-lg shadow-sm p-6">
-				<h1 className="text-2xl font-semibold text-gray-900 mb-2">
-					Pengaturan Lokasi & Keamanan
-				</h1>
-				<p className="text-gray-600">
-					Kelola konfigurasi sistem lokasi, radius presensi, dan pengaturan
-					keamanan.
-				</p>
-			</div>
+	const handleDeleteLocation = async (locationId) => {
+		if (!confirm("Apakah Anda yakin ingin menghapus lokasi ini?")) return;
 
-			{/* Tabs */}
-			<div className="bg-white rounded-lg shadow-sm">
-				<div className="border-b border-gray-200">
-					<nav className="flex space-x-8 px-6">
-						{tabs.map((tab) => {
-							const Icon = tab.icon;
-							return (
-								<button
-									key={tab.id}
-									onClick={() => setActiveTab(tab.id)}
-									className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-										activeTab === tab.id
-											? "border-blue-500 text-blue-600"
-											: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-									}`}
-								>
-									<Icon className="w-4 h-4" />
-									{tab.label}
-								</button>
-							);
-						})}
-					</nav>
+		setIsLoading(true);
+		try {
+			// Simulate API call
+			await new Promise((resolve) => setTimeout(resolve, 500));
+
+			setLocations(locations.filter((loc) => loc.id !== locationId));
+
+			toast({
+				title: "Berhasil",
+				description: "Lokasi berhasil dihapus",
+			});
+		} catch (error) {
+			toast({
+				title: "Error",
+				description: "Gagal menghapus lokasi",
+				variant: "destructive",
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const getCurrentLocation = () => {
+		if (!navigator.geolocation) {
+			toast({
+				title: "Error",
+				description: "Geolocation tidak didukung browser ini",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		setIsLoading(true);
+		navigator.geolocation.getCurrentPosition(
+			(position) => {
+				setNewLocation({
+					...newLocation,
+					latitude: position.coords.latitude.toString(),
+					longitude: position.coords.longitude.toString(),
+				});
+				toast({
+					title: "Berhasil",
+					description: "Koordinat lokasi saat ini berhasil didapatkan",
+				});
+				setIsLoading(false);
+			},
+			(error) => {
+				toast({
+					title: "Error",
+					description: "Gagal mendapatkan koordinat lokasi",
+					variant: "destructive",
+				});
+				setIsLoading(false);
+			}
+		);
+	};
+
+	return (
+		<div className="container mx-auto p-6 space-y-6">
+			<div className="flex items-center gap-3 mb-6">
+				<div className="rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 p-2 text-white">
+					<MapPin className="w-6 h-6" />
+				</div>
+				<div>
+					<h1 className="text-2xl font-bold">Location Settings</h1>
+					<p className="text-gray-600">
+						Kelola pengaturan lokasi untuk presensi karyawan
+					</p>
 				</div>
 			</div>
 
-			{/* Tab Content */}
-			{renderTabContent()}
+			{/* Statistics Cards */}
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+				<Card>
+					<CardContent className="p-6">
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-gray-600">
+									Total Lokasi
+								</p>
+								<p className="text-2xl font-bold">{locations.length}</p>
+							</div>
+							<Globe className="w-8 h-8 text-blue-500" />
+						</div>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardContent className="p-6">
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-gray-600">
+									Lokasi Aktif
+								</p>
+								<p className="text-2xl font-bold text-green-600">
+									{locations.filter((l) => l.status === "active").length}
+								</p>
+							</div>
+							<Target className="w-8 h-8 text-green-500" />
+						</div>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardContent className="p-6">
+						<div className="flex items-center justify-between">
+							<div>
+								<p className="text-sm font-medium text-gray-600">
+									Rata-rata Radius
+								</p>
+								<p className="text-2xl font-bold">
+									{Math.round(
+										locations.reduce((sum, l) => sum + l.radius, 0) /
+											locations.length || 0
+									)}{" "}
+									m
+								</p>
+							</div>
+							<Clock className="w-8 h-8 text-orange-500" />
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			{/* Add New Location Form */}
+			<Card>
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<Plus className="w-5 h-5" />
+						Tambah Lokasi Baru
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<Label htmlFor="locationName">Nama Lokasi</Label>
+							<Input
+								id="locationName"
+								placeholder="Masukkan nama lokasi"
+								value={newLocation.name}
+								onChange={(e) =>
+									setNewLocation({ ...newLocation, name: e.target.value })
+								}
+							/>
+						</div>
+						<div>
+							<Label htmlFor="locationRadius">Radius (meter)</Label>
+							<Input
+								id="locationRadius"
+								type="number"
+								placeholder="100"
+								value={newLocation.radius}
+								onChange={(e) =>
+									setNewLocation({
+										...newLocation,
+										radius: parseInt(e.target.value) || 100,
+									})
+								}
+							/>
+						</div>
+					</div>
+
+					<div>
+						<Label htmlFor="locationAddress">Alamat</Label>
+						<Textarea
+							id="locationAddress"
+							placeholder="Masukkan alamat lengkap"
+							value={newLocation.address}
+							onChange={(e) =>
+								setNewLocation({ ...newLocation, address: e.target.value })
+							}
+						/>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<Label htmlFor="latitude">Latitude</Label>
+							<Input
+								id="latitude"
+								type="number"
+								step="any"
+								placeholder="-6.2088"
+								value={newLocation.latitude}
+								onChange={(e) =>
+									setNewLocation({
+										...newLocation,
+										latitude: e.target.value,
+									})
+								}
+							/>
+						</div>
+						<div>
+							<Label htmlFor="longitude">Longitude</Label>
+							<Input
+								id="longitude"
+								type="number"
+								step="any"
+								placeholder="106.8456"
+								value={newLocation.longitude}
+								onChange={(e) =>
+									setNewLocation({
+										...newLocation,
+										longitude: e.target.value,
+									})
+								}
+							/>
+						</div>
+					</div>
+
+					<div className="flex gap-2">
+						<Button
+							onClick={getCurrentLocation}
+							variant="outline"
+							disabled={isLoading}
+						>
+							{isLoading ? (
+								<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+							) : (
+								<Target className="w-4 h-4 mr-2" />
+							)}
+							Gunakan Lokasi Saat Ini
+						</Button>
+						<Button onClick={handleSaveLocation} disabled={isLoading}>
+							{isLoading ? (
+								<RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+							) : (
+								<Save className="w-4 h-4 mr-2" />
+							)}
+							Simpan Lokasi
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Existing Locations */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Daftar Lokasi</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="space-y-4">
+						{locations.map((location) => (
+							<div
+								key={location.id}
+								className="border rounded-lg p-4 hover:bg-gray-50"
+							>
+								<div className="flex justify-between items-start">
+									<div className="flex-1">
+										<h3 className="font-semibold text-lg">{location.name}</h3>
+										<p className="text-gray-600 text-sm mb-2">
+											{location.address}
+										</p>
+										<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+											<div>
+												<span className="text-gray-500">Latitude:</span>
+												<p className="font-medium">{location.latitude}</p>
+											</div>
+											<div>
+												<span className="text-gray-500">Longitude:</span>
+												<p className="font-medium">{location.longitude}</p>
+											</div>
+											<div>
+												<span className="text-gray-500">Radius:</span>
+												<p className="font-medium">{location.radius}m</p>
+											</div>
+											<div>
+												<span className="text-gray-500">Status:</span>
+												<p
+													className={`font-medium ${
+														location.status === "active"
+															? "text-green-600"
+															: "text-red-600"
+													}`}
+												>
+													{location.status === "active" ? "Aktif" : "Nonaktif"}
+												</p>
+											</div>
+										</div>
+									</div>
+									<div className="flex gap-2 ml-4">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setEditingLocation(location)}
+										>
+											<Edit className="w-4 h-4" />
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => handleDeleteLocation(location.id)}
+											className="text-red-600 hover:text-red-700"
+										>
+											<Trash2 className="w-4 h-4" />
+										</Button>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

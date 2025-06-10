@@ -6,8 +6,8 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-	title: "SDM Handal",
-	description: "Aplikasi Manajemen SDM RS Bhayangkara Nganjuk",
+	title: "SDM App",
+	description: "Sistem Manajemen SDM",
 	manifest: "/manifest.json",
 	icons: [
 		{
@@ -33,7 +33,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
 	return (
-		<html lang="id">
+		<html lang="en">
 			<head>
 				<link rel="manifest" href="/manifest.json" />
 				<link rel="apple-touch-icon" href="/icons/icon-192x192.png"></link>
@@ -75,6 +75,72 @@ export default function RootLayout({ children }) {
 			<body className={`${inter.className} min-h-screen bg-gray-50`}>
 				{children}
 				<Toaster position="top-right" expand={true} richColors closeButton />
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+							// Setup global error handler
+							if (typeof window !== 'undefined') {
+								// Handle unhandled JavaScript errors
+								window.addEventListener('error', (event) => {
+									const errorData = {
+										error_type: 'UnhandledError',
+										error_message: event.message,
+										error_stack: event.error?.stack,
+										page_url: window.location.pathname,
+										severity: 'HIGH',
+										component_name: 'Global',
+										action_attempted: 'Unknown',
+										additional_data: {
+											filename: event.filename,
+											lineno: event.lineno,
+											colno: event.colno,
+											userAgent: navigator.userAgent,
+											url: window.location.href
+										}
+									};
+
+									fetch('/api/error-logs', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json',
+										},
+										body: JSON.stringify(errorData),
+									}).catch(err => {
+										console.warn('Failed to log global error:', err);
+									});
+								});
+
+								// Handle unhandled promise rejections
+								window.addEventListener('unhandledrejection', (event) => {
+									const errorData = {
+										error_type: 'UnhandledPromiseRejection',
+										error_message: event.reason?.message || String(event.reason),
+										error_stack: event.reason?.stack,
+										page_url: window.location.pathname,
+										severity: 'HIGH',
+										component_name: 'Global',
+										action_attempted: 'Promise execution',
+										additional_data: {
+											reason: String(event.reason),
+											userAgent: navigator.userAgent,
+											url: window.location.href
+										}
+									};
+
+									fetch('/api/error-logs', {
+										method: 'POST',
+										headers: {
+											'Content-Type': 'application/json',
+										},
+										body: JSON.stringify(errorData),
+									}).catch(err => {
+										console.warn('Failed to log promise rejection:', err);
+									});
+								});
+							}
+						`,
+					}}
+				/>
 			</body>
 		</html>
 	);
