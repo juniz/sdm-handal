@@ -26,40 +26,6 @@ const padZero = (num) => {
 	return num.toString().padStart(2, "0");
 };
 
-// Modal Component
-const LocationModal = ({
-	isOpen,
-	onClose,
-	onLocationVerified,
-	onSecurityStatusChange,
-}) => {
-	if (!isOpen) return null;
-
-	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-				<div className="p-4 border-b flex items-center justify-between">
-					<h3 className="text-lg font-semibold">
-						Verifikasi Lokasi & Keamanan
-					</h3>
-					<button
-						onClick={onClose}
-						className="p-1 text-gray-400 hover:text-gray-600"
-					>
-						<X className="w-5 h-5" />
-					</button>
-				</div>
-				<div className="p-4">
-					<SecureLocationMap
-						onLocationVerified={onLocationVerified}
-						onSecurityStatusChange={onSecurityStatusChange}
-					/>
-				</div>
-			</div>
-		</div>
-	);
-};
-
 export default function AttendancePage() {
 	const [photo, setPhoto] = useState(null);
 	const [isLocationValid, setIsLocationValid] = useState(false);
@@ -85,7 +51,6 @@ export default function AttendancePage() {
 		warnings: [],
 		isLocationSpoofed: false,
 	});
-	const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 	const [locationPermission, setLocationPermission] = useState("checking"); // checking, granted, denied, prompt
 
 	// Error logging
@@ -493,38 +458,6 @@ export default function AttendancePage() {
 		);
 	};
 
-	// Get location button style based on security status
-	const getLocationButtonStyle = () => {
-		if (locationPermission !== "granted") {
-			return "bg-gray-400 text-white cursor-not-allowed border-gray-400";
-		}
-		if (
-			isLocationValid &&
-			!securityStatus.isLocationSpoofed &&
-			securityStatus.confidence >= 60
-		) {
-			return "bg-green-500 text-white hover:bg-green-600 border-green-500";
-		} else {
-			return "bg-red-500 text-white hover:bg-red-600 border-red-500";
-		}
-	};
-
-	// Get location status text
-	const getLocationStatusText = () => {
-		if (locationPermission !== "granted") {
-			return "Izin Lokasi Diperlukan";
-		}
-		if (
-			isLocationValid &&
-			!securityStatus.isLocationSpoofed &&
-			securityStatus.confidence >= 60
-		) {
-			return "Lokasi Aman";
-		} else {
-			return "Lokasi Bermasalah";
-		}
-	};
-
 	return (
 		<div className="max-w-lg mx-auto space-y-6">
 			<div className="bg-white p-6 rounded-lg shadow-sm">
@@ -784,40 +717,107 @@ export default function AttendancePage() {
 							</p>
 						</div>
 
-						{/* Tombol Lokasi */}
+						{/* Verifikasi Lokasi Otomatis */}
 						<div className="mb-6">
 							<div className="flex items-center gap-2 text-gray-600 mb-2">
 								<MapPin className="w-5 h-5" />
-								<span>Verifikasi Lokasi</span>
-							</div>
-							<button
-								onClick={() =>
-									locationPermission === "granted" &&
-									setIsLocationModalOpen(true)
-								}
-								disabled={locationPermission !== "granted"}
-								className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${getLocationButtonStyle()}`}
-							>
-								<MapPin className="w-5 h-5" />
-								<span>{getLocationStatusText()}</span>
-								{locationPermission === "granted" ? (
-									isLocationValid &&
-									!securityStatus.isLocationSpoofed &&
-									securityStatus.confidence >= 60 ? (
-										<CheckCircle className="w-5 h-5" />
-									) : (
-										<XCircle className="w-5 h-5" />
-									)
-								) : (
-									<AlertTriangle className="w-5 h-5" />
+								<span>Status Lokasi</span>
+								{locationPermission === "granted" && (
+									<div className="flex items-center gap-1">
+										<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+										<span className="text-xs text-green-600">Memantau</span>
+									</div>
 								)}
-							</button>
-							<p className="text-xs text-gray-500 mt-1 text-center">
+							</div>
+
+							{/* Status Card */}
+							<div
+								className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
+									locationPermission !== "granted"
+										? "bg-gray-50 border-gray-300"
+										: isLocationValid &&
+										  !securityStatus.isLocationSpoofed &&
+										  securityStatus.confidence >= 60
+										? "bg-green-50 border-green-300"
+										: "bg-red-50 border-red-300"
+								}`}
+							>
+								<div className="flex items-center gap-3">
+									<MapPin className="w-5 h-5" />
+									<div>
+										<span className="font-medium">
+											{locationPermission !== "granted"
+												? "Izin Lokasi Diperlukan"
+												: isLocationValid &&
+												  !securityStatus.isLocationSpoofed &&
+												  securityStatus.confidence >= 60
+												? "Lokasi Aman"
+												: "Lokasi Bermasalah"}
+										</span>
+										{locationPermission === "granted" && (
+											<div className="text-xs text-gray-600 mt-1">
+												{securityStatus.confidence > 0 && (
+													<span>Confidence: {securityStatus.confidence}%</span>
+												)}
+												{securityStatus.warnings.length > 0 && (
+													<span className="text-red-600 ml-2">
+														⚠ {securityStatus.warnings.length} peringatan
+													</span>
+												)}
+											</div>
+										)}
+									</div>
+								</div>
+								<div className="flex items-center gap-2">
+									{locationPermission === "granted" ? (
+										isLocationValid &&
+										!securityStatus.isLocationSpoofed &&
+										securityStatus.confidence >= 60 ? (
+											<CheckCircle className="w-6 h-6 text-green-600" />
+										) : (
+											<XCircle className="w-6 h-6 text-red-600" />
+										)
+									) : (
+										<AlertTriangle className="w-6 h-6 text-gray-400" />
+									)}
+								</div>
+							</div>
+
+							{/* Security Warnings */}
+							{securityStatus.warnings.length > 0 && (
+								<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+									<div className="flex items-start gap-2">
+										<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+										<div>
+											<div className="font-medium text-yellow-800 text-sm mb-1">
+												Peringatan Keamanan:
+											</div>
+											<ul className="text-xs text-yellow-700 space-y-1">
+												{securityStatus.warnings.map((warning, index) => (
+													<li key={index}>• {warning}</li>
+												))}
+											</ul>
+										</div>
+									</div>
+								</div>
+							)}
+
+							<p className="text-xs text-gray-500 mt-2 text-center">
 								{locationPermission === "granted"
-									? "Klik untuk verifikasi lokasi dan keamanan"
-									: "Aktifkan izin lokasi terlebih dahulu"}
+									? "Lokasi dipantau secara otomatis untuk keamanan"
+									: "Aktifkan izin lokasi untuk verifikasi otomatis"}
 							</p>
 						</div>
+
+						{/* Hidden Auto Location Verification Component */}
+						{locationPermission === "granted" && (
+							<div className="hidden">
+								<SecureLocationMap
+									onLocationVerified={setIsLocationValid}
+									onSecurityStatusChange={handleSecurityStatusChange}
+								/>
+							</div>
+						)}
 
 						{/* Tombol Presensi Masuk */}
 						<button
@@ -871,34 +871,95 @@ export default function AttendancePage() {
 								<span className="font-medium">Presensi Pulang</span>
 							</div>
 							<p className="text-sm text-orange-600">
-								Presensi pulang tidak memerlukan foto. Cukup verifikasi lokasi
-								dan klik tombol presensi pulang.
+								Presensi pulang tidak memerlukan foto. Lokasi akan dipantau
+								secara otomatis.
 							</p>
 						</div>
 
-						{/* Tombol Lokasi untuk Checkout */}
+						{/* Status Lokasi untuk Checkout - Otomatis */}
 						<div className="mb-6">
 							<div className="flex items-center gap-2 text-gray-600 mb-2">
 								<MapPin className="w-5 h-5" />
-								<span>Verifikasi Lokasi Pulang</span>
+								<span>Status Lokasi Pulang</span>
+								<div className="flex items-center gap-1">
+									<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+									<span className="text-xs text-green-600">Memantau</span>
+								</div>
 							</div>
-							<button
-								onClick={() => setIsLocationModalOpen(true)}
-								className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${getLocationButtonStyle()}`}
+
+							{/* Status Card untuk Checkout */}
+							<div
+								className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
+									isLocationValid &&
+									!securityStatus.isLocationSpoofed &&
+									securityStatus.confidence >= 60
+										? "bg-green-50 border-green-300"
+										: "bg-red-50 border-red-300"
+								}`}
 							>
-								<MapPin className="w-5 h-5" />
-								<span>{getLocationStatusText()}</span>
-								{isLocationValid &&
-								!securityStatus.isLocationSpoofed &&
-								securityStatus.confidence >= 60 ? (
-									<CheckCircle className="w-5 h-5" />
-								) : (
-									<XCircle className="w-5 h-5" />
-								)}
-							</button>
-							<p className="text-xs text-gray-500 mt-1 text-center">
-								Klik untuk verifikasi lokasi dan keamanan
+								<div className="flex items-center gap-3">
+									<MapPin className="w-5 h-5" />
+									<div>
+										<span className="font-medium">
+											{isLocationValid &&
+											!securityStatus.isLocationSpoofed &&
+											securityStatus.confidence >= 60
+												? "Lokasi Aman untuk Pulang"
+												: "Lokasi Bermasalah"}
+										</span>
+										<div className="text-xs text-gray-600 mt-1">
+											{securityStatus.confidence > 0 && (
+												<span>Confidence: {securityStatus.confidence}%</span>
+											)}
+											{securityStatus.warnings.length > 0 && (
+												<span className="text-red-600 ml-2">
+													⚠ {securityStatus.warnings.length} peringatan
+												</span>
+											)}
+										</div>
+									</div>
+								</div>
+								<div className="flex items-center gap-2">
+									{isLocationValid &&
+									!securityStatus.isLocationSpoofed &&
+									securityStatus.confidence >= 60 ? (
+										<CheckCircle className="w-6 h-6 text-green-600" />
+									) : (
+										<XCircle className="w-6 h-6 text-red-600" />
+									)}
+								</div>
+							</div>
+
+							{/* Security Warnings untuk Checkout */}
+							{securityStatus.warnings.length > 0 && (
+								<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+									<div className="flex items-start gap-2">
+										<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+										<div>
+											<div className="font-medium text-yellow-800 text-sm mb-1">
+												Peringatan Keamanan:
+											</div>
+											<ul className="text-xs text-yellow-700 space-y-1">
+												{securityStatus.warnings.map((warning, index) => (
+													<li key={index}>• {warning}</li>
+												))}
+											</ul>
+										</div>
+									</div>
+								</div>
+							)}
+
+							<p className="text-xs text-gray-500 mt-2 text-center">
+								Lokasi dipantau secara otomatis untuk keamanan
 							</p>
+						</div>
+
+						{/* Hidden Auto Location Verification Component untuk Checkout */}
+						<div className="hidden">
+							<SecureLocationMap
+								onLocationVerified={setIsLocationValid}
+								onSecurityStatusChange={handleSecurityStatusChange}
+							/>
 						</div>
 
 						{/* Tombol Presensi Pulang */}
@@ -908,13 +969,15 @@ export default function AttendancePage() {
 								!isCheckingOut ||
 								!isLocationValid ||
 								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60
+								securityStatus.confidence < 60 ||
+								isSubmitting
 							}
 							className={`w-full py-3 rounded-lg font-medium transition-all ${
 								!isCheckingOut ||
 								!isLocationValid ||
 								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60
+								securityStatus.confidence < 60 ||
+								isSubmitting
 									? "bg-gray-100 text-gray-400 cursor-not-allowed"
 									: "bg-orange-500 text-white hover:bg-orange-600"
 							}`}
@@ -941,14 +1004,6 @@ export default function AttendancePage() {
 						</button>
 					</>
 				)}
-
-				{/* Location Modal */}
-				<LocationModal
-					isOpen={isLocationModalOpen}
-					onClose={() => setIsLocationModalOpen(false)}
-					onLocationVerified={setIsLocationValid}
-					onSecurityStatusChange={handleSecurityStatusChange}
-				/>
 			</div>
 		</div>
 	);

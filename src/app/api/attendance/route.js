@@ -12,7 +12,10 @@ import {
 	update,
 	delete_,
 	rawQuery,
+	withTransaction,
+	transactionHelpers,
 } from "@/lib/db-helper";
+import { getUser } from "@/lib/auth";
 
 // Set locale ke Indonesia dan default timezone
 moment.locale("id");
@@ -374,68 +377,81 @@ export async function POST(request) {
 
 			// OPTIMIZED: Gunakan transaction untuk konsistensi data
 			try {
-				// Simpan security log untuk checkout
-				await insert({
-					table: "security_logs",
-					data: {
-						id_pegawai: idPegawai,
-						tanggal: moment().format("YYYY-MM-DD"),
-						action_type: "CHECKOUT",
-						confidence_level: securityValidation.confidence,
-						risk_level: securityValidation.riskLevel,
-						warnings: JSON.stringify(securityData.warnings || []),
-						gps_accuracy: securityData.accuracy || null,
-						latitude: latitude,
-						longitude: longitude,
-						created_at: currentTime,
-					},
-				});
+				const result = await withTransaction(async (transaction) => {
+					// Simpan security log untuk checkout
+					await transactionHelpers.insert(transaction, {
+						table: "security_logs",
+						data: {
+							id_pegawai: idPegawai,
+							tanggal: moment().format("YYYY-MM-DD"),
+							action_type: "CHECKOUT",
+							confidence_level: securityValidation.confidence,
+							risk_level: securityValidation.riskLevel,
+							warnings: JSON.stringify(securityData.warnings || []),
+							gps_accuracy: securityData.accuracy || null,
+							latitude: latitude,
+							longitude: longitude,
+							created_at: currentTime,
+						},
+					});
 
-				// Update temporary_presensi dengan jam pulang
-				// await update({
-				// 	table: "temporary_presensi",
-				// 	data: {
-				// 		jam_pulang: currentTime,
-				// 		durasi: durasi,
-				// 	},
-				// 	where: {
-				// 		id: idPegawai,
-				// 		jam_datang: existingAttendance.jam_datang,
-				// 	},
-				// });
+					// Insert ke rekap_presensi
+					await transactionHelpers.insert(transaction, {
+						table: "rekap_presensi",
+						data: {
+							id: idPegawai,
+							shift: existingAttendance.shift,
+							jam_datang: moment(existingAttendance.jam_datang).format(
+								"YYYY-MM-DD HH:mm:ss"
+							),
+							jam_pulang: currentTime,
+							durasi: durasi,
+							status: existingAttendance.status,
+							keterlambatan: existingAttendance.keterlambatan,
+							keterangan: "-",
+							photo: existingAttendance.photo,
+						},
+					});
 
-				// Insert ke rekap_presensi
-				await insert({
-					table: "rekap_presensi",
-					data: {
-						id: idPegawai,
-						shift: existingAttendance.shift,
+					// Debug logging untuk existingAttendance
+					console.log("Existing attendance data:", {
+						id: existingAttendance.id,
 						jam_datang: existingAttendance.jam_datang,
+						jam_datang_type: typeof existingAttendance.jam_datang,
+						jam_datang_value: moment(existingAttendance.jam_datang).format(
+							"YYYY-MM-DD HH:mm:ss"
+						),
+					});
+
+					// Validasi data sebelum delete
+					if (!existingAttendance.jam_datang) {
+						throw new Error(
+							"jam_datang is required for delete operation but got: " +
+								existingAttendance.jam_datang
+						);
+					}
+
+					// Hapus dari temporary_presensi
+					await transactionHelpers.delete(transaction, {
+						table: "temporary_presensi",
+						where: {
+							id: idPegawai,
+							jam_datang: moment(existingAttendance.jam_datang).format(
+								"YYYY-MM-DD HH:mm:ss"
+							),
+						},
+					});
+
+					return {
+						...existingAttendance,
 						jam_pulang: currentTime,
 						durasi: durasi,
-						status: existingAttendance.status,
-						keterlambatan: existingAttendance.keterlambatan,
-						keterangan: "-",
-						photo: existingAttendance.photo,
-					},
-				});
-
-				// Hapus dari temporary_presensi
-				await delete_({
-					table: "temporary_presensi",
-					where: {
-						id: idPegawai,
-						jam_datang: existingAttendance.jam_datang,
-					},
+					};
 				});
 
 				return NextResponse.json({
 					message: "Presensi pulang berhasil dicatat",
-					data: {
-						...existingAttendance,
-						jam_pulang: currentTime,
-						durasi: durasi,
-					},
+					data: result,
 					security: {
 						riskLevel: securityValidation.riskLevel,
 						confidence: securityValidation.confidence,
@@ -444,7 +460,7 @@ export async function POST(request) {
 			} catch (error) {
 				console.error("Error in checkout transaction:", error);
 				return NextResponse.json(
-					{ message: "Gagal menyimpan presensi pulang" },
+					{ message: "Gagal menyimpan presensi pulang: " + error.message },
 					{ status: 500 }
 				);
 			}
@@ -496,54 +512,54 @@ export async function POST(request) {
 				timestamp
 			);
 
-			// OPTIMIZED: Batch insert operations untuk konsistensi
+			// OPTIMIZED: Gunakan transaction untuk konsistensi data
 			try {
-				// Simpan security log
-				await insert({
-					table: "security_logs",
-					data: {
-						id_pegawai: idPegawai,
-						tanggal: moment().format("YYYY-MM-DD"),
-						action_type: "CHECKIN",
-						confidence_level: securityValidation.confidence,
-						risk_level: securityValidation.riskLevel,
-						warnings: JSON.stringify(securityData.warnings || []),
-						gps_accuracy: securityData.accuracy || null,
-						latitude: latitude,
-						longitude: longitude,
-						created_at: currentTime,
-					},
-				});
+				const result = await withTransaction(async (transaction) => {
+					// Simpan security log
+					const securityResult = await transactionHelpers.insert(transaction, {
+						table: "security_logs",
+						data: {
+							id_pegawai: idPegawai,
+							tanggal: moment().format("YYYY-MM-DD"),
+							action_type: "CHECKIN",
+							confidence_level: securityValidation.confidence,
+							risk_level: securityValidation.riskLevel,
+							warnings: JSON.stringify(securityData.warnings || []),
+							gps_accuracy: securityData.accuracy || null,
+							latitude: latitude,
+							longitude: longitude,
+							created_at: currentTime,
+						},
+					});
 
-				// Simpan data presensi
-				const presensiResult = await insert({
-					table: "temporary_presensi",
-					data: {
-						id: idPegawai,
-						shift: scheduleWithShift.shift_today,
-						jam_datang: mysqlTimestamp,
-						status: status,
-						keterlambatan: keterlambatan,
-						photo: photoUrl,
-					},
-				});
+					// Simpan data presensi
+					const presensiResult = await transactionHelpers.insert(transaction, {
+						table: "temporary_presensi",
+						data: {
+							id: idPegawai,
+							shift: scheduleWithShift.shift_today,
+							jam_datang: mysqlTimestamp,
+							status: status,
+							keterlambatan: keterlambatan,
+							photo: photoUrl,
+						},
+					});
 
-				// Simpan data lokasi
-				const geoResult = await insert({
-					table: "geolocation_presensi",
-					data: {
-						id: idPegawai,
-						tanggal: moment().format("YYYY-MM-DD"),
-						latitude,
-						longitude,
-					},
-				});
+					// Simpan data lokasi
+					const geoResult = await transactionHelpers.insert(transaction, {
+						table: "geolocation_presensi",
+						data: {
+							id: idPegawai,
+							tanggal: moment().format("YYYY-MM-DD"),
+							latitude,
+							longitude,
+						},
+					});
 
-				return NextResponse.json({
-					message: "Presensi berhasil disimpan",
-					data: {
+					return {
 						presensi: presensiResult,
 						geolocation: geoResult,
+						security: securityResult,
 						status,
 						keterlambatan,
 						shift_info: {
@@ -551,7 +567,12 @@ export async function POST(request) {
 							jam_masuk: scheduleWithShift.jam_masuk,
 							jam_pulang: scheduleWithShift.jam_pulang,
 						},
-					},
+					};
+				});
+
+				return NextResponse.json({
+					message: "Presensi berhasil disimpan",
+					data: result,
 					security: {
 						riskLevel: securityValidation.riskLevel,
 						confidence: securityValidation.confidence,
@@ -561,7 +582,7 @@ export async function POST(request) {
 			} catch (error) {
 				console.error("Error in checkin transaction:", error);
 				return NextResponse.json(
-					{ message: "Gagal menyimpan presensi masuk" },
+					{ message: "Gagal menyimpan presensi masuk: " + error.message },
 					{ status: 500 }
 				);
 			}

@@ -1,4 +1,200 @@
 import { query } from "./db";
+import { createConnection } from "./db";
+
+/**
+ * Transaction manager untuk database operations
+ */
+class TransactionManager {
+	constructor(connection) {
+		this.connection = connection;
+		this.inTransaction = false;
+	}
+
+	async begin() {
+		if (this.inTransaction) {
+			throw new Error("Transaction already started");
+		}
+		await this.connection.beginTransaction();
+		this.inTransaction = true;
+		console.log("Transaction started");
+	}
+
+	async commit() {
+		if (!this.inTransaction) {
+			throw new Error("No active transaction to commit");
+		}
+		await this.connection.commit();
+		this.inTransaction = false;
+		console.log("Transaction committed");
+	}
+
+	async rollback() {
+		if (!this.inTransaction) {
+			console.log("No active transaction to rollback");
+			return;
+		}
+		await this.connection.rollback();
+		this.inTransaction = false;
+		console.log("Transaction rolled back");
+	}
+
+	async execute(sql, params = []) {
+		if (!this.connection) {
+			throw new Error("No database connection available");
+		}
+		const [results] = await this.connection.execute(sql, params);
+		return results;
+	}
+
+	async end() {
+		if (this.inTransaction) {
+			await this.rollback();
+		}
+		if (this.connection) {
+			await this.connection.end();
+		}
+	}
+}
+
+/**
+ * Wrapper function untuk menjalankan operasi database dalam transaction
+ * @param {Function} operations - Function yang berisi operasi database
+ * @returns {Promise<*>} - Result dari operations function
+ */
+export async function withTransaction(operations) {
+	let connection;
+	let transaction;
+
+	try {
+		connection = await createConnection();
+		transaction = new TransactionManager(connection);
+
+		// Begin transaction
+		await transaction.begin();
+
+		// Execute operations dengan transaction context
+		const result = await operations(transaction);
+
+		// Commit transaction
+		await transaction.commit();
+
+		return result;
+	} catch (error) {
+		console.error("Transaction error:", error);
+
+		// Rollback transaction jika ada error
+		if (transaction) {
+			try {
+				await transaction.rollback();
+			} catch (rollbackError) {
+				console.error("Rollback error:", rollbackError);
+			}
+		}
+
+		throw error;
+	} finally {
+		// Clean up connection
+		if (transaction) {
+			await transaction.end();
+		} else if (connection) {
+			try {
+				await connection.end();
+			} catch (endError) {
+				console.error("Error closing connection:", endError);
+			}
+		}
+	}
+}
+
+/**
+ * Helper functions yang bisa digunakan dalam transaction context
+ */
+export const transactionHelpers = {
+	/**
+	 * Insert dengan transaction context
+	 */
+	async insert(transaction, { table, data }) {
+		const keys = Object.keys(data);
+		const values = Object.values(data);
+		const placeholders = values.map(() => "?").join(", ");
+
+		const sqlQuery = `
+			INSERT INTO ${table} (${keys.join(", ")})
+			VALUES (${placeholders})
+		`;
+
+		return await transaction.execute(sqlQuery, values);
+	},
+
+	/**
+	 * Update dengan transaction context
+	 */
+	async update(transaction, { table, data, where }) {
+		const { whereClause, values: whereValues } = processWhereClause(where);
+		const setClause = Object.keys(data)
+			.map((key) => `${key} = ?`)
+			.join(", ");
+
+		const sqlQuery = `
+			UPDATE ${table}
+			SET ${setClause}
+			${whereClause}
+		`;
+
+		const values = [...Object.values(data), ...whereValues];
+		return await transaction.execute(sqlQuery, values);
+	},
+
+	/**
+	 * Delete dengan transaction context
+	 */
+	async delete(transaction, { table, where }) {
+		const { whereClause, values } = processWhereClause(where);
+
+		const sqlQuery = `
+			DELETE FROM ${table}
+			${whereClause}
+		`;
+
+		return await transaction.execute(sqlQuery, values);
+	},
+
+	/**
+	 * Select dengan transaction context
+	 */
+	async select(
+		transaction,
+		{
+			table,
+			where = {},
+			fields = ["*"],
+			orderBy = null,
+			order = "ASC",
+			limit = null,
+		}
+	) {
+		const { whereClause, values } = processWhereClause(where);
+		const limitClause = limit ? `LIMIT ${parseInt(limit)}` : "";
+		const orderByClause = orderBy ? `ORDER BY ${orderBy} ${order}` : "";
+
+		const sqlQuery = `
+			SELECT ${fields.join(", ")}
+			FROM ${table}
+			${whereClause}
+			${orderByClause}
+			${limitClause}
+		`;
+
+		return await transaction.execute(sqlQuery, values);
+	},
+
+	/**
+	 * Raw query dengan transaction context
+	 */
+	async rawQuery(transaction, sql, values = []) {
+		return await transaction.execute(sql, values);
+	},
+};
 
 /**
  * Helper untuk melakukan SELECT dari database
@@ -162,6 +358,14 @@ function processWhereClause(where) {
 	const conditions = [];
 
 	for (const [key, value] of Object.entries(where)) {
+		// Skip undefined values
+		if (value === undefined) {
+			console.warn(
+				`Warning: Skipping undefined value for key '${key}' in WHERE clause`
+			);
+			continue;
+		}
+
 		if (value === null) {
 			conditions.push(`${key} IS NULL`);
 		} else if (typeof value === "object" && value !== null) {

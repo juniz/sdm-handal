@@ -1,0 +1,35 @@
+{
+	"name": "sdm-load-testing",
+	"version": "1.0.0",
+	"description": "Load testing suite for SDM application",
+	"main": "index.js",
+	"scripts": {
+		"test:light": "artillery run artillery-light.yml",
+		"test:medium": "artillery run artillery-medium.yml",
+		"test:heavy": "artillery run artillery-heavy.yml",
+		"test:stress": "artillery run artillery-stress.yml",
+		"test:spike": "artillery run artillery-spike.yml",
+		"test:custom": "node custom-load-test.js",
+		"test:attendance": "node attendance-stress-test.js",
+		"test:all": "npm run test:light && npm run test:medium && npm run test:heavy",
+		"install-tools": "npm install artillery k6 axios moment",
+		"report": "artillery report"
+	},
+	"keywords": [
+		"load-testing",
+		"performance",
+		"sdm"
+	],
+	"author": "SDM Team",
+	"license": "MIT",
+	"dependencies": {
+		"artillery": "^2.0.0",
+		"axios": "^1.6.0",
+		"moment": "^2.29.4",
+		"winston": "^3.11.0",
+		"colors": "^1.4.0"
+	},
+	"devDependencies": {
+		"k6": "^0.47.0"
+	}
+}

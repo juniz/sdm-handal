@@ -1,0 +1,183 @@
+config:
+  target: "https://localhost:3000"
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm-up"
+    # Heavy ramp-up
+    - duration: 180
+      arrivalRate: 20
+      rampTo: 100
+      name: "Heavy ramp-up"
+    # Peak load
+    - duration: 600
+      arrivalRate: 100
+      name: "Peak load - 100 users/sec"
+    # Spike test
+    - duration: 120
+      arrivalRate: 100
+      rampTo: 200
+      name: "Spike to 200 users/sec"
+    # Sustained high load
+    - duration: 300
+      arrivalRate: 200
+      name: "Sustained spike"
+    # Gradual ramp-down
+    - duration: 180
+      arrivalRate: 200
+      rampTo: 10
+      name: "Ramp-down"
+
+  timeout: 60
+
+  tls:
+    rejectUnauthorized: false
+
+  http:
+    timeout: 60
+    pool: 50
+    maxSockets: 100
+
+  variables:
+    userIds:
+      - "EMP001"
+      - "EMP002"
+      - "EMP003"
+      - "EMP004"
+      - "EMP005"
+      - "EMP006"
+      - "EMP007"
+      - "EMP008"
+      - "EMP009"
+      - "EMP010"
+    passwords:
+      - "password123"
+      - "pass456"
+      - "test789"
+      - "demo123"
+      - "user456"
+
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    expect: {}
+    hdrhistogram: {}
+
+scenarios:
+  # Heavy attendance load
+  - name: "Attendance Heavy Load"
+    weight: 60
+    flow:
+      # Fast login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ $randomElement(userIds) }}"
+            password: "{{ $randomElement(passwords) }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+
+      # Multiple attendance requests
+      - loop:
+          - get:
+              url: "/api/attendance"
+              headers:
+                Cookie: "auth_token={{ authToken }}"
+              expect:
+                - statusCode: 200
+
+          - post:
+              url: "/api/attendance"
+              headers:
+                Cookie: "auth_token={{ authToken }}"
+                Content-Type: "application/json"
+              json:
+                photo: "data:image/jpeg;base64,{{ $randomString(1000) }}"
+                timestamp: "{{ $timestamp }}"
+                latitude: "{{ $randomFloat(-8.0, -7.5) }}"
+                longitude: "{{ $randomFloat(112.0, 113.0) }}"
+                isCheckingOut: "{{ $randomBoolean }}"
+                securityData:
+                  accuracy: "{{ $randomInt(5, 100) }}"
+                  warnings: []
+              ifTrue: "{{ $randomInt(1, 100) <= 70 }}"
+              expect:
+                - statusCode: [200, 400, 403]
+
+          - think: "{{ $randomInt(0, 2) }}"
+        count: "{{ $randomInt(2, 5) }}"
+
+  # Admin dashboard stress
+  - name: "Admin Dashboard Stress"
+    weight: 25
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "adminToken"
+          expect:
+            - statusCode: 200
+
+      # Heavy admin operations
+      - parallel:
+          - get:
+              url: "/api/error-logs?page=1&limit=50"
+              headers:
+                Cookie: "auth_token={{ adminToken }}"
+
+          - get:
+              url: "/api/admin/security-logs?date={{ $today }}"
+              headers:
+                Cookie: "auth_token={{ adminToken }}"
+
+          - get:
+              url: "/api/admin/security-stats?date={{ $today }}"
+              headers:
+                Cookie: "auth_token={{ adminToken }}"
+
+          - get:
+              url: "/dashboard/admin/location-settings"
+              headers:
+                Cookie: "auth_token={{ adminToken }}"
+
+  # Database intensive operations
+  - name: "Database Stress"
+    weight: 15
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ $randomElement(userIds) }}"
+            password: "{{ $randomElement(passwords) }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+
+      # Concurrent database operations
+      - parallel:
+          - get:
+              url: "/api/attendance?date={{ $yesterday }}"
+              headers:
+                Cookie: "auth_token={{ authToken }}"
+
+          - get:
+              url: "/api/attendance?date={{ $today }}"
+              headers:
+                Cookie: "auth_token={{ authToken }}"
+
+          - get:
+              url: "/api/schedule"
+              headers:
+                Cookie: "auth_token={{ authToken }}"
+
+processor: "./test-helpers.js"

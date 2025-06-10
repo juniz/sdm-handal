@@ -20,6 +20,21 @@ export async function getUser() {
 	}
 }
 
+// Alias untuk verifyToken (untuk kompatibilitas)
+export async function verifyToken(token) {
+	try {
+		if (!token) return null;
+
+		const secret = new TextEncoder().encode(JWT_SECRET);
+		const { payload } = await jwtVerify(token, secret);
+
+		return payload;
+	} catch (error) {
+		console.error("Error verifying token:", error);
+		return null;
+	}
+}
+
 // Fungsi untuk membuat JWT token
 export async function createToken(payload) {
 	const secret = new TextEncoder().encode(JWT_SECRET);

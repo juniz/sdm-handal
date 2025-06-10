@@ -151,20 +151,20 @@ const AdminMenu = () => {
 			href: "/dashboard/admin/settings",
 			color: "from-gray-500 to-slate-500",
 		},
-		{
-			title: "User Management",
-			description: "Kelola pengguna",
-			icon: Shield,
-			href: "/dashboard/admin/users",
-			color: "from-blue-500 to-indigo-500",
-		},
-		{
-			title: "Database",
-			description: "Database management",
-			icon: Database,
-			href: "/dashboard/admin/database",
-			color: "from-purple-500 to-violet-500",
-		},
+		// {
+		// 	title: "User Management",
+		// 	description: "Kelola pengguna",
+		// 	icon: Shield,
+		// 	href: "/dashboard/admin/users",
+		// 	color: "from-blue-500 to-indigo-500",
+		// },
+		// {
+		// 	title: "Database",
+		// 	description: "Database management",
+		// 	icon: Database,
+		// 	href: "/dashboard/admin/database",
+		// 	color: "from-purple-500 to-violet-500",
+		// },
 	];
 
 	return (

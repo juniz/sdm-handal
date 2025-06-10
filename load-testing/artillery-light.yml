@@ -1,0 +1,159 @@
+config:
+  target: "https://localhost:3000"
+  phases:
+    # Warm-up phase
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm-up"
+    # Ramp-up phase
+    - duration: 120
+      arrivalRate: 10
+      rampTo: 20
+      name: "Ramp-up"
+    # Steady state
+    - duration: 300
+      arrivalRate: 20
+      name: "Steady state"
+    # Ramp-down
+    - duration: 60
+      arrivalRate: 20
+      rampTo: 5
+      name: "Ramp-down"
+
+  # Request timeout in seconds
+  timeout: 30
+
+  # TLS settings for HTTPS
+  tls:
+    rejectUnauthorized: false
+
+  # Custom HTTP settings
+  http:
+    timeout: 30
+    pool: 10
+
+  # Variables for dynamic data
+  variables:
+    userIds:
+      - "EMP001"
+      - "EMP002"
+      - "EMP003"
+      - "EMP004"
+      - "EMP005"
+    passwords:
+      - "password123"
+      - "pass456"
+      - "test789"
+
+  # Plugins for metrics and reporting
+  plugins:
+    metrics-by-endpoint:
+      useOnlyRequestNames: true
+    expect: {}
+
+scenarios:
+  # Main scenario - mixed workload
+  - name: "Mixed Workload"
+    weight: 100
+    flow:
+      # Login flow
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ $randomElement(userIds) }}"
+            password: "{{ $randomElement(passwords) }}"
+          capture:
+            - json: "$.token"
+              as: "authToken"
+          expect:
+            - statusCode: 200
+
+      # Dashboard access
+      - get:
+          url: "/dashboard"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+          expect:
+            - statusCode: 200
+
+      # Check attendance status
+      - get:
+          url: "/api/attendance"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+          expect:
+            - statusCode: 200
+
+      # Random pause to simulate user behavior
+      - think: "{{ $randomInt(1, 5) }}"
+
+      # Simulate attendance check-in (25% chance)
+      - post:
+          url: "/api/attendance"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+            Content-Type: "application/json"
+          json:
+            photo: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+            timestamp: "{{ $timestamp }}"
+            latitude: -7.9797
+            longitude: 112.6304
+            isCheckingOut: false
+            securityData:
+              accuracy: "{{ $randomInt(5, 50) }}"
+              warnings: []
+          ifTrue: "{{ $randomInt(1, 100) <= 25 }}"
+          expect:
+            - statusCode: [200, 400]
+
+      # Admin dashboard access (10% chance for IT users)
+      - get:
+          url: "/dashboard/admin"
+          headers:
+            Cookie: "auth_token={{ authToken }}"
+          ifTrue: "{{ $randomInt(1, 100) <= 10 }}"
+          expect:
+            - statusCode: [200, 403]
+
+  # Error logs monitoring scenario
+  - name: "Admin Monitoring"
+    weight: 20
+    flow:
+      # Login as admin
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "admin"
+            password: "admin123"
+          capture:
+            - json: "$.token"
+              as: "adminToken"
+          expect:
+            - statusCode: 200
+
+      # Check error logs
+      - get:
+          url: "/api/error-logs"
+          headers:
+            Cookie: "auth_token={{ adminToken }}"
+          expect:
+            - statusCode: 200
+
+      # Check security logs
+      - get:
+          url: "/api/admin/security-logs"
+          headers:
+            Cookie: "auth_token={{ adminToken }}"
+          expect:
+            - statusCode: 200
+
+      # Location settings
+      - get:
+          url: "/dashboard/admin/location-settings"
+          headers:
+            Cookie: "auth_token={{ adminToken }}"
+          expect:
+            - statusCode: 200
+
+# Custom functions for test data generation
+processor: "./test-helpers.js"

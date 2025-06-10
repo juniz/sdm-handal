@@ -259,17 +259,50 @@ const useLocationSecurity = (options = {}) => {
 			maximumAge,
 		};
 
-		watchIdRef.current = navigator.geolocation.watchPosition(
-			processLocation,
-			(error) => {
-				console.error("Location error:", error);
-				setError(`Error: ${error.message}`);
-			},
-			watchOptions
-		);
+		const handleLocationError = (error) => {
+			let errorMessage = "Gagal mendapatkan lokasi";
 
-		setIsWatching(true);
-	}, [processLocation]);
+			switch (error.code) {
+				case error.PERMISSION_DENIED:
+					errorMessage =
+						"Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di pengaturan browser.";
+					break;
+				case error.POSITION_UNAVAILABLE:
+					errorMessage =
+						"Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.";
+					break;
+				case error.TIMEOUT:
+					errorMessage =
+						"Timeout saat mengambil lokasi. Coba lagi atau periksa koneksi internet.";
+					break;
+				default:
+					errorMessage = `Error lokasi: ${error.message || "Unknown error"}`;
+					break;
+			}
+
+			console.error("Geolocation error details:", {
+				code: error.code,
+				message: error.message,
+				timestamp: new Date().toISOString(),
+			});
+
+			setError(errorMessage);
+			setIsWatching(false);
+		};
+
+		try {
+			watchIdRef.current = navigator.geolocation.watchPosition(
+				processLocation,
+				handleLocationError,
+				watchOptions
+			);
+
+			setIsWatching(true);
+		} catch (err) {
+			console.error("Error starting location watch:", err);
+			setError("Gagal memulai monitoring lokasi");
+		}
+	}, [processLocation, enableHighAccuracy, timeout, maximumAge]);
 
 	// Stop watching location
 	const stopWatching = useCallback(() => {
@@ -294,8 +327,36 @@ const useLocationSecurity = (options = {}) => {
 					resolve(position);
 				},
 				(error) => {
-					setError(`Error: ${error.message}`);
-					reject(error);
+					let errorMessage = "Gagal mendapatkan lokasi";
+
+					switch (error.code) {
+						case error.PERMISSION_DENIED:
+							errorMessage =
+								"Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di pengaturan browser.";
+							break;
+						case error.POSITION_UNAVAILABLE:
+							errorMessage =
+								"Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.";
+							break;
+						case error.TIMEOUT:
+							errorMessage =
+								"Timeout saat mengambil lokasi. Coba lagi atau periksa koneksi internet.";
+							break;
+						default:
+							errorMessage = `Error lokasi: ${
+								error.message || "Unknown error"
+							}`;
+							break;
+					}
+
+					console.error("Geolocation error details:", {
+						code: error.code,
+						message: error.message,
+						timestamp: new Date().toISOString(),
+					});
+
+					setError(errorMessage);
+					reject(new Error(errorMessage));
 				},
 				{
 					enableHighAccuracy,

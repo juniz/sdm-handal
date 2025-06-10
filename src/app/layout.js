@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-	title: "SDM App",
+	title: "SDM Handal",
 	description: "Sistem Manajemen SDM",
 	manifest: "/manifest.json",
 	icons: [
