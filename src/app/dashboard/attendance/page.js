@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { AttendanceCamera } from "@/components/AttendanceCamera";
 import SecureLocationMap from "@/components/SecureLocationMap";
+import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
 import moment from "moment";
 import "moment/locale/id";
 import {
@@ -642,15 +643,16 @@ export default function AttendancePage() {
 										Foto Presensi Masuk
 									</span>
 									<div className="flex justify-center">
-										<Image
-											src={
+										<OptimizedPhotoDisplay
+											photoUrl={
 												todayAttendance?.photo ||
 												attendanceStatus.checkout?.photo
 											}
 											alt="Foto Presensi Masuk"
 											width={200}
 											height={200}
-											className="rounded-lg"
+											priority={false}
+											lazy={true}
 										/>
 									</div>
 								</div>

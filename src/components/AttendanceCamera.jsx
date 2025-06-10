@@ -1,28 +1,219 @@
 "use client";
 
-import { useRef, forwardRef, useImperativeHandle } from "react";
+import {
+	useRef,
+	forwardRef,
+	useImperativeHandle,
+	useState,
+	useEffect,
+} from "react";
 import Webcam from "react-webcam";
+import { Camera, AlertTriangle, Loader2 } from "lucide-react";
+import {
+	fileToOptimizedBase64,
+	getOptimalImageSettings,
+} from "@/utils/imageOptimizer";
 
 export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	{ onCapture },
 	ref
 ) {
 	const webcamRef = useRef(null);
+	const [cameraReady, setCameraReady] = useState(false);
+	const [cameraError, setCameraError] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isCapturing, setIsCapturing] = useState(false);
+	const [optimalSettings, setOptimalSettings] = useState({
+		quality: 0.8,
+		maxWidth: 800,
+		maxHeight: 600,
+	});
 
-	// Expose capture function to parent component
-	useImperativeHandle(ref, () => ({
-		capturePhoto: () => {
-			const imageSrc = webcamRef.current?.getScreenshot();
-			if (imageSrc && onCapture) {
-				onCapture(imageSrc);
-				return imageSrc;
+	// Get optimal settings hanya di client-side
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			const settings = getOptimalImageSettings();
+			setOptimalSettings(settings);
+		}
+	}, []);
+
+	// Check camera access
+	useEffect(() => {
+		const checkCameraAccess = async () => {
+			try {
+				if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+					throw new Error("Camera not supported");
+				}
+
+				// Test camera access
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: {
+						facingMode: "user",
+						width: { ideal: 720, min: 480 },
+						height: { ideal: 480, min: 360 },
+					},
+				});
+
+				// Stop stream immediately after test
+				stream.getTracks().forEach((track) => track.stop());
+
+				setCameraReady(true);
+				setCameraError(null);
+			} catch (error) {
+				console.error("Camera access error:", error);
+				let errorMessage = "Tidak dapat mengakses kamera";
+
+				if (error.name === "NotAllowedError") {
+					errorMessage =
+						"Izin kamera ditolak. Aktifkan kamera di pengaturan browser.";
+				} else if (error.name === "NotFoundError") {
+					errorMessage = "Kamera tidak ditemukan di perangkat ini.";
+				} else if (error.name === "NotSupportedError") {
+					errorMessage = "Kamera tidak didukung di browser ini.";
+				} else if (error.name === "NotReadableError") {
+					errorMessage = "Kamera sedang digunakan aplikasi lain.";
+				}
+
+				setCameraError(errorMessage);
+				setCameraReady(false);
+			} finally {
+				setIsLoading(false);
 			}
-			return null;
+		};
+
+		// Only run in browser
+		if (typeof window !== "undefined") {
+			const timer = setTimeout(checkCameraAccess, 500);
+			return () => clearTimeout(timer);
+		} else {
+			setIsLoading(false);
+		}
+	}, []);
+
+	// Convert dataURL to blob for optimization
+	const dataURLToBlob = (dataURL) => {
+		const arr = dataURL.split(",");
+		const mime = arr[0].match(/:(.*?);/)[1];
+		const bstr = atob(arr[1]);
+		let n = bstr.length;
+		const u8arr = new Uint8Array(n);
+		while (n--) {
+			u8arr[n] = bstr.charCodeAt(n);
+		}
+		return new Blob([u8arr], { type: mime });
+	};
+
+	// Optimize captured photo
+	const optimizePhoto = async (dataURL) => {
+		try {
+			// Convert to blob
+			const blob = dataURLToBlob(dataURL);
+
+			// Create file object for optimization
+			const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+
+			// Optimize dengan settings optimal
+			const optimizedBase64 = await fileToOptimizedBase64(file, {
+				maxWidth: optimalSettings.maxWidth,
+				maxHeight: optimalSettings.maxHeight,
+				quality: optimalSettings.quality,
+				outputFormat: "image/jpeg",
+			});
+
+			return optimizedBase64;
+		} catch (error) {
+			console.error("Error optimizing photo:", error);
+			// Fallback to original if optimization fails
+			return dataURL;
+		}
+	};
+
+	// Expose methods to parent component
+	useImperativeHandle(ref, () => ({
+		capturePhoto: async () => {
+			if (!webcamRef.current || !cameraReady) {
+				console.error("Camera not ready for capture");
+				return null;
+			}
+
+			try {
+				setIsCapturing(true);
+
+				// Capture photo
+				const imageSrc = webcamRef.current.getScreenshot({
+					width: 1280,
+					height: 720,
+					screenshotFormat: "image/jpeg",
+					screenshotQuality: 0.95,
+				});
+
+				if (!imageSrc) {
+					throw new Error("Failed to capture photo");
+				}
+
+				// Optimize captured photo
+				const optimizedPhoto = await optimizePhoto(imageSrc);
+
+				if (onCapture) {
+					onCapture(optimizedPhoto);
+				}
+
+				return optimizedPhoto;
+			} catch (error) {
+				console.error("Error capturing photo:", error);
+				return null;
+			} finally {
+				setIsCapturing(false);
+			}
 		},
 		isReady: () => {
-			return webcamRef.current !== null;
+			return cameraReady && webcamRef.current !== null && !isCapturing;
 		},
 	}));
+
+	const handleWebcamUserMedia = () => {
+		setCameraReady(true);
+		setIsLoading(false);
+		setCameraError(null);
+	};
+
+	const handleWebcamError = (error) => {
+		console.error("Webcam error:", error);
+		setCameraError("Gagal menginisialisasi kamera");
+		setCameraReady(false);
+		setIsLoading(false);
+	};
+
+	// Loading state
+	if (isLoading) {
+		return (
+			<div className="relative w-full h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+				<div className="text-center">
+					<Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
+					<p className="text-sm text-gray-600">Memuat kamera...</p>
+				</div>
+			</div>
+		);
+	}
+
+	// Error state
+	if (cameraError) {
+		return (
+			<div className="relative w-full h-64 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+				<div className="text-center p-4">
+					<AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+					<p className="text-red-700 font-medium mb-2">Masalah Kamera</p>
+					<p className="text-sm text-red-600 mb-3">{cameraError}</p>
+					<button
+						onClick={() => window.location.reload()}
+						className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm transition-colors"
+					>
+						Coba Lagi
+					</button>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="relative">
@@ -30,17 +221,54 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 				audio={false}
 				ref={webcamRef}
 				screenshotFormat="image/jpeg"
+				screenshotQuality={0.95}
 				className="w-full rounded-lg"
 				mirrored={true}
 				videoConstraints={{
 					facingMode: "user",
-					width: 720,
-					height: 480,
+					width: { ideal: 1280, min: 640 },
+					height: { ideal: 720, min: 480 },
+				}}
+				onUserMedia={handleWebcamUserMedia}
+				onUserMediaError={handleWebcamError}
+				style={{
+					width: "100%",
+					height: "auto",
+					aspectRatio: "16/9",
 				}}
 			/>
-			<div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-				Kamera Siap
+
+			{/* Status indicator */}
+			<div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+				<Camera className="w-3 h-3" />
+				<span>
+					{isCapturing
+						? "Mengambil foto..."
+						: cameraReady
+						? "Kamera Siap"
+						: "Memuat..."}
+				</span>
 			</div>
+
+			{/* Capture indicator */}
+			{isCapturing && (
+				<div className="absolute inset-0 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
+					<div className="text-center text-gray-800">
+						<Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+						<p className="text-sm font-medium">Memproses foto...</p>
+					</div>
+				</div>
+			)}
+
+			{/* Loading overlay saat kamera belum ready */}
+			{!cameraReady && !cameraError && (
+				<div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
+					<div className="text-center text-white">
+						<Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+						<p className="text-sm">Menyiapkan kamera...</p>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 });

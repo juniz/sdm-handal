@@ -564,7 +564,9 @@ export async function GET(request) {
 			padZero(moment().month() + 1),
 		]);
 
-		if (!result[0].shift_today) {
+		console.log(result);
+
+		if (!result[0][`h${moment().format("D")}`]) {
 			const queryJadwalTambahan = `
 				SELECT 
 					jt.*

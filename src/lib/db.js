@@ -24,7 +24,7 @@ export async function createConnection() {
 			queueLimit: 0,
 			enableKeepAlive: true,
 			keepAliveInitialDelay: 0,
-			debug: process.env.NODE_ENV !== "production",
+			debug: false, // Disable MySQL debug output
 		});
 
 		// console.log("Connection created, attempting to ping...");
