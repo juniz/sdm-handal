@@ -36,7 +36,9 @@ export function EmployeeCard() {
 					<h2 className="text-sm font-bold text-gray-900 leading-tight mb-1">
 						{user.nama}
 					</h2>
-					<p className="text-gray-600 text-sm mb-3">{user.departemen}</p>
+					<p className="text-gray-600 text-sm mb-3">
+						{user.departemen_name || user.departemen}
+					</p>
 					<div className="space-y-1">
 						<div className="flex items-center text-sm text-gray-600">
 							<Building2 className="w-4 h-4 mr-2 flex-shrink-0 text-gray-400" />

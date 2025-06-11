@@ -6,7 +6,19 @@
 		"dev": "NODE_OPTIONS='--inspect' next dev --turbopack --experimental-https",
 		"build": "next build",
 		"start": "next start",
-		"lint": "next lint"
+		"lint": "next lint",
+		"install:safe": "npm install --legacy-peer-deps",
+		"install:force": "npm install --force",
+		"pm2:start": "pm2 start ecosystem.config.js --env production",
+		"pm2:dev": "pm2 start ecosystem.config.js --env development",
+		"pm2:stop": "pm2 stop sdm-app",
+		"pm2:restart": "pm2 restart sdm-app",
+		"pm2:reload": "pm2 reload sdm-app",
+		"pm2:delete": "pm2 delete sdm-app",
+		"pm2:logs": "pm2 logs sdm-app",
+		"pm2:monit": "pm2 monit",
+		"pm2:list": "pm2 list",
+		"pm2:status": "pm2 status sdm-app"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.10",

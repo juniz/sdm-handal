@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { selectFirst } from "@/lib/db-helper";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const BASE_URL = "https://simrs.rsbhayangkaranganjuk.com/webapps/penggajian/";
@@ -21,6 +22,27 @@ export async function GET() {
 		);
 
 		const payload = verified.payload;
+
+		// Ambil nama departemen dari tabel departemen
+		if (payload.departemen) {
+			try {
+				const departemen = await selectFirst({
+					table: "departemen",
+					where: {
+						dep_id: payload.departemen,
+					},
+					select: ["nama"],
+				});
+
+				if (departemen) {
+					payload.departemen_name = departemen.nama;
+				}
+			} catch (error) {
+				console.error("Error fetching departemen name:", error);
+				// Jika gagal mengambil nama departemen, tetap lanjutkan dengan departemen ID
+			}
+		}
+
 		if (payload.photo) {
 			payload.photo = BASE_URL + payload.photo;
 		}
