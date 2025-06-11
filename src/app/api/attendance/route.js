@@ -190,11 +190,16 @@ function validateSecurityData(securityData, latitude, longitude) {
 		riskLevel = "HIGH";
 	}
 
+	// Check environment setting untuk validasi lokasi
+	const isLocationValidationEnabled =
+		process.env.ENABLE_LOCATION_VALIDATION !== "false";
+
 	return {
-		isValid: riskLevel !== "HIGH",
+		isValid: isLocationValidationEnabled ? riskLevel !== "HIGH" : true, // Jika disabled, selalu valid
 		riskLevel,
 		issues,
 		confidence: securityData.confidence || 0,
+		isValidationEnabled: isLocationValidationEnabled,
 	};
 }
 
@@ -341,8 +346,8 @@ export async function POST(request) {
 			longitude
 		);
 
-		// Block if high risk
-		if (!securityValidation.isValid) {
+		// Block if high risk (hanya jika validasi lokasi diaktifkan)
+		if (!securityValidation.isValid && securityValidation.isValidationEnabled) {
 			return NextResponse.json(
 				{
 					message: "Presensi ditolak karena masalah keamanan lokasi",
@@ -351,6 +356,7 @@ export async function POST(request) {
 						riskLevel: securityValidation.riskLevel,
 						issues: securityValidation.issues,
 						confidence: securityValidation.confidence,
+						validationEnabled: securityValidation.isValidationEnabled,
 					},
 				},
 				{ status: 403 }
@@ -455,6 +461,7 @@ export async function POST(request) {
 					security: {
 						riskLevel: securityValidation.riskLevel,
 						confidence: securityValidation.confidence,
+						validationEnabled: securityValidation.isValidationEnabled,
 					},
 				});
 			} catch (error) {
@@ -577,6 +584,7 @@ export async function POST(request) {
 						riskLevel: securityValidation.riskLevel,
 						confidence: securityValidation.confidence,
 						issues: securityValidation.issues,
+						validationEnabled: securityValidation.isValidationEnabled,
 					},
 				});
 			} catch (error) {

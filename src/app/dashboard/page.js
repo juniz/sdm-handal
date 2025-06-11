@@ -124,6 +124,13 @@ const AdminMenu = () => {
 	const router = useRouter();
 	const adminActions = [
 		{
+			title: "Monitoring Presensi",
+			description: "Monitor presensi seluruh pegawai",
+			icon: Users,
+			href: "/dashboard/it/attendance-monitoring",
+			color: "from-purple-500 to-violet-500",
+		},
+		{
 			title: "Error Logs",
 			description: "Monitor error aplikasi",
 			icon: AlertTriangle,

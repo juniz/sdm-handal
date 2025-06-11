@@ -52,14 +52,32 @@ export default function AttendancePage() {
 		isLocationSpoofed: false,
 	});
 	const [locationPermission, setLocationPermission] = useState("checking"); // checking, granted, denied, prompt
+	const [locationValidationEnabled, setLocationValidationEnabled] = useState(
+		true
+	);
 
 	// Error logging
 	const { logError } = useErrorLogger();
 
-	// Check location permission on component mount
+	// Check location permission and settings on component mount
 	useEffect(() => {
 		checkLocationPermission();
+		fetchLocationSettings();
 	}, []);
+
+	const fetchLocationSettings = async () => {
+		try {
+			const response = await fetch("/api/attendance/location-settings");
+			const data = await response.json();
+			if (data.data) {
+				setLocationValidationEnabled(data.data.isLocationValidationEnabled);
+			}
+		} catch (error) {
+			console.error("Error fetching location settings:", error);
+			// Default ke enabled jika gagal
+			setLocationValidationEnabled(true);
+		}
+	};
 
 	const checkLocationPermission = async () => {
 		try {
@@ -214,7 +232,11 @@ export default function AttendancePage() {
 	}, [jadwal, tanggal]);
 
 	const handleCheckIn = async () => {
-		if (!isLocationValid || securityStatus.isLocationSpoofed) {
+		// Hanya lakukan validasi lokasi jika diaktifkan
+		if (
+			locationValidationEnabled &&
+			(!isLocationValid || securityStatus.isLocationSpoofed)
+		) {
 			if (securityStatus.isLocationSpoofed) {
 				await logError({
 					error: "Location spoofing detected",
@@ -367,7 +389,8 @@ export default function AttendancePage() {
 	};
 
 	const handleCheckOut = async () => {
-		if (securityStatus.isLocationSpoofed) {
+		// Hanya lakukan validasi lokasi jika diaktifkan
+		if (locationValidationEnabled && securityStatus.isLocationSpoofed) {
 			setStatus("security_error");
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -449,13 +472,17 @@ export default function AttendancePage() {
 
 	// Check if form is ready for submission
 	const isFormReady = () => {
-		return (
-			locationPermission === "granted" &&
-			isLocationValid &&
-			!securityStatus.isLocationSpoofed &&
-			securityStatus.confidence >= 60 &&
-			cameraRef.current?.isReady()
-		);
+		const baseRequirements =
+			locationPermission === "granted" && cameraRef.current?.isReady();
+
+		// Jika validasi lokasi diaktifkan, tambahkan syarat lokasi
+		const locationRequirements = locationValidationEnabled
+			? isLocationValid &&
+			  !securityStatus.isLocationSpoofed &&
+			  securityStatus.confidence >= 60
+			: true; // Jika disabled, lokasi selalu dianggap valid
+
+		return baseRequirements && locationRequirements;
 	};
 
 	return (
@@ -717,97 +744,117 @@ export default function AttendancePage() {
 							</p>
 						</div>
 
-						{/* Verifikasi Lokasi Otomatis */}
-						<div className="mb-6">
-							<div className="flex items-center gap-2 text-gray-600 mb-2">
-								<MapPin className="w-5 h-5" />
-								<span>Status Lokasi</span>
-								{locationPermission === "granted" && (
-									<div className="flex items-center gap-1">
-										<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-										<span className="text-xs text-green-600">Memantau</span>
-									</div>
-								)}
-							</div>
-
-							{/* Status Card */}
-							<div
-								className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
-									locationPermission !== "granted"
-										? "bg-gray-50 border-gray-300"
-										: isLocationValid &&
-										  !securityStatus.isLocationSpoofed &&
-										  securityStatus.confidence >= 60
-										? "bg-green-50 border-green-300"
-										: "bg-red-50 border-red-300"
-								}`}
-							>
-								<div className="flex items-center gap-3">
+						{/* Verifikasi Lokasi Otomatis - Hanya tampilkan jika validasi diaktifkan */}
+						{locationValidationEnabled && (
+							<div className="mb-6">
+								<div className="flex items-center gap-2 text-gray-600 mb-2">
 									<MapPin className="w-5 h-5" />
-									<div>
-										<span className="font-medium">
-											{locationPermission !== "granted"
-												? "Izin Lokasi Diperlukan"
-												: isLocationValid &&
-												  !securityStatus.isLocationSpoofed &&
-												  securityStatus.confidence >= 60
-												? "Lokasi Aman"
-												: "Lokasi Bermasalah"}
-										</span>
-										{locationPermission === "granted" && (
-											<div className="text-xs text-gray-600 mt-1">
-												{securityStatus.confidence > 0 && (
-													<span>Confidence: {securityStatus.confidence}%</span>
-												)}
-												{securityStatus.warnings.length > 0 && (
-													<span className="text-red-600 ml-2">
-														⚠ {securityStatus.warnings.length} peringatan
-													</span>
-												)}
-											</div>
+									<span>Status Lokasi</span>
+									{locationPermission === "granted" && (
+										<div className="flex items-center gap-1">
+											<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+											<span className="text-xs text-green-600">Memantau</span>
+										</div>
+									)}
+								</div>
+
+								{/* Status Card */}
+								<div
+									className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
+										locationPermission !== "granted"
+											? "bg-gray-50 border-gray-300"
+											: !locationValidationEnabled
+											? "bg-blue-50 border-blue-300" // Status biru jika validasi disabled
+											: isLocationValid &&
+											  !securityStatus.isLocationSpoofed &&
+											  securityStatus.confidence >= 60
+											? "bg-green-50 border-green-300"
+											: "bg-red-50 border-red-300"
+									}`}
+								>
+									<div className="flex items-center gap-3">
+										<MapPin className="w-5 h-5" />
+										<div>
+											<span className="font-medium">
+												{locationPermission !== "granted"
+													? "Izin Lokasi Diperlukan"
+													: !locationValidationEnabled
+													? "Lokasi Dicatat (Validasi Nonaktif)"
+													: isLocationValid &&
+													  !securityStatus.isLocationSpoofed &&
+													  securityStatus.confidence >= 60
+													? "Lokasi Aman"
+													: "Lokasi Bermasalah"}
+											</span>
+											{locationPermission === "granted" && (
+												<div className="text-xs text-gray-600 mt-1">
+													{!locationValidationEnabled && (
+														<span className="text-blue-600">
+															Validasi lokasi dinonaktifkan
+														</span>
+													)}
+													{locationValidationEnabled &&
+														securityStatus.confidence > 0 && (
+															<span>
+																Confidence: {securityStatus.confidence}%
+															</span>
+														)}
+													{locationValidationEnabled &&
+														securityStatus.warnings.length > 0 && (
+															<span className="text-red-600 ml-2">
+																⚠ {securityStatus.warnings.length} peringatan
+															</span>
+														)}
+												</div>
+											)}
+										</div>
+									</div>
+									<div className="flex items-center gap-2">
+										{locationPermission === "granted" ? (
+											!locationValidationEnabled ? (
+												<CheckCircle className="w-6 h-6 text-blue-600" />
+											) : isLocationValid &&
+											  !securityStatus.isLocationSpoofed &&
+											  securityStatus.confidence >= 60 ? (
+												<CheckCircle className="w-6 h-6 text-green-600" />
+											) : (
+												<XCircle className="w-6 h-6 text-red-600" />
+											)
+										) : (
+											<AlertTriangle className="w-6 h-6 text-gray-400" />
 										)}
 									</div>
 								</div>
-								<div className="flex items-center gap-2">
-									{locationPermission === "granted" ? (
-										isLocationValid &&
-										!securityStatus.isLocationSpoofed &&
-										securityStatus.confidence >= 60 ? (
-											<CheckCircle className="w-6 h-6 text-green-600" />
-										) : (
-											<XCircle className="w-6 h-6 text-red-600" />
-										)
-									) : (
-										<AlertTriangle className="w-6 h-6 text-gray-400" />
-									)}
-								</div>
-							</div>
 
-							{/* Security Warnings */}
-							{securityStatus.warnings.length > 0 && (
-								<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-									<div className="flex items-start gap-2">
-										<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-										<div>
-											<div className="font-medium text-yellow-800 text-sm mb-1">
-												Peringatan Keamanan:
+								{/* Security Warnings - hanya tampilkan jika validasi diaktifkan */}
+								{locationValidationEnabled &&
+									securityStatus.warnings.length > 0 && (
+										<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<div className="font-medium text-yellow-800 text-sm mb-1">
+														Peringatan Keamanan:
+													</div>
+													<ul className="text-xs text-yellow-700 space-y-1">
+														{securityStatus.warnings.map((warning, index) => (
+															<li key={index}>• {warning}</li>
+														))}
+													</ul>
+												</div>
 											</div>
-											<ul className="text-xs text-yellow-700 space-y-1">
-												{securityStatus.warnings.map((warning, index) => (
-													<li key={index}>• {warning}</li>
-												))}
-											</ul>
 										</div>
-									</div>
-								</div>
-							)}
+									)}
 
-							<p className="text-xs text-gray-500 mt-2 text-center">
-								{locationPermission === "granted"
-									? "Lokasi dipantau secara otomatis untuk keamanan"
-									: "Aktifkan izin lokasi untuk verifikasi otomatis"}
-							</p>
-						</div>
+								<p className="text-xs text-gray-500 mt-2 text-center">
+									{locationPermission === "granted"
+										? !locationValidationEnabled
+											? "Lokasi dicatat untuk pencatatan (validasi nonaktif)"
+											: "Lokasi dipantau secara otomatis untuk keamanan"
+										: "Aktifkan izin lokasi untuk verifikasi otomatis"}
+								</p>
+							</div>
+						)}
 
 						{/* Hidden Auto Location Verification Component */}
 						{locationPermission === "granted" && (
@@ -876,83 +923,103 @@ export default function AttendancePage() {
 							</p>
 						</div>
 
-						{/* Status Lokasi untuk Checkout - Otomatis */}
-						<div className="mb-6">
-							<div className="flex items-center gap-2 text-gray-600 mb-2">
-								<MapPin className="w-5 h-5" />
-								<span>Status Lokasi Pulang</span>
-								<div className="flex items-center gap-1">
-									<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-									<span className="text-xs text-green-600">Memantau</span>
-								</div>
-							</div>
-
-							{/* Status Card untuk Checkout */}
-							<div
-								className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
-									isLocationValid &&
-									!securityStatus.isLocationSpoofed &&
-									securityStatus.confidence >= 60
-										? "bg-green-50 border-green-300"
-										: "bg-red-50 border-red-300"
-								}`}
-							>
-								<div className="flex items-center gap-3">
+						{/* Status Lokasi untuk Checkout - Otomatis - Hanya tampilkan jika validasi diaktifkan */}
+						{locationValidationEnabled && (
+							<div className="mb-6">
+								<div className="flex items-center gap-2 text-gray-600 mb-2">
 									<MapPin className="w-5 h-5" />
-									<div>
-										<span className="font-medium">
-											{isLocationValid &&
-											!securityStatus.isLocationSpoofed &&
-											securityStatus.confidence >= 60
-												? "Lokasi Aman untuk Pulang"
-												: "Lokasi Bermasalah"}
-										</span>
-										<div className="text-xs text-gray-600 mt-1">
-											{securityStatus.confidence > 0 && (
-												<span>Confidence: {securityStatus.confidence}%</span>
-											)}
-											{securityStatus.warnings.length > 0 && (
-												<span className="text-red-600 ml-2">
-													⚠ {securityStatus.warnings.length} peringatan
-												</span>
-											)}
-										</div>
+									<span>Status Lokasi Pulang</span>
+									<div className="flex items-center gap-1">
+										<div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+										<span className="text-xs text-green-600">Memantau</span>
 									</div>
 								</div>
-								<div className="flex items-center gap-2">
-									{isLocationValid &&
-									!securityStatus.isLocationSpoofed &&
-									securityStatus.confidence >= 60 ? (
-										<CheckCircle className="w-6 h-6 text-green-600" />
-									) : (
-										<XCircle className="w-6 h-6 text-red-600" />
-									)}
-								</div>
-							</div>
 
-							{/* Security Warnings untuk Checkout */}
-							{securityStatus.warnings.length > 0 && (
-								<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-									<div className="flex items-start gap-2">
-										<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+								{/* Status Card untuk Checkout */}
+								<div
+									className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-between transition-all ${
+										!locationValidationEnabled
+											? "bg-blue-50 border-blue-300" // Status biru jika validasi disabled
+											: isLocationValid &&
+											  !securityStatus.isLocationSpoofed &&
+											  securityStatus.confidence >= 60
+											? "bg-green-50 border-green-300"
+											: "bg-red-50 border-red-300"
+									}`}
+								>
+									<div className="flex items-center gap-3">
+										<MapPin className="w-5 h-5" />
 										<div>
-											<div className="font-medium text-yellow-800 text-sm mb-1">
-												Peringatan Keamanan:
+											<span className="font-medium">
+												{!locationValidationEnabled
+													? "Lokasi Dicatat (Validasi Nonaktif)"
+													: isLocationValid &&
+													  !securityStatus.isLocationSpoofed &&
+													  securityStatus.confidence >= 60
+													? "Lokasi Aman untuk Pulang"
+													: "Lokasi Bermasalah"}
+											</span>
+											<div className="text-xs text-gray-600 mt-1">
+												{!locationValidationEnabled && (
+													<span className="text-blue-600">
+														Validasi lokasi dinonaktifkan
+													</span>
+												)}
+												{locationValidationEnabled &&
+													securityStatus.confidence > 0 && (
+														<span>
+															Confidence: {securityStatus.confidence}%
+														</span>
+													)}
+												{locationValidationEnabled &&
+													securityStatus.warnings.length > 0 && (
+														<span className="text-red-600 ml-2">
+															⚠ {securityStatus.warnings.length} peringatan
+														</span>
+													)}
 											</div>
-											<ul className="text-xs text-yellow-700 space-y-1">
-												{securityStatus.warnings.map((warning, index) => (
-													<li key={index}>• {warning}</li>
-												))}
-											</ul>
 										</div>
 									</div>
+									<div className="flex items-center gap-2">
+										{!locationValidationEnabled ? (
+											<CheckCircle className="w-6 h-6 text-blue-600" />
+										) : isLocationValid &&
+										  !securityStatus.isLocationSpoofed &&
+										  securityStatus.confidence >= 60 ? (
+											<CheckCircle className="w-6 h-6 text-green-600" />
+										) : (
+											<XCircle className="w-6 h-6 text-red-600" />
+										)}
+									</div>
 								</div>
-							)}
 
-							<p className="text-xs text-gray-500 mt-2 text-center">
-								Lokasi dipantau secara otomatis untuk keamanan
-							</p>
-						</div>
+								{/* Security Warnings untuk Checkout - hanya tampilkan jika validasi diaktifkan */}
+								{locationValidationEnabled &&
+									securityStatus.warnings.length > 0 && (
+										<div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+											<div className="flex items-start gap-2">
+												<AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+												<div>
+													<div className="font-medium text-yellow-800 text-sm mb-1">
+														Peringatan Keamanan:
+													</div>
+													<ul className="text-xs text-yellow-700 space-y-1">
+														{securityStatus.warnings.map((warning, index) => (
+															<li key={index}>• {warning}</li>
+														))}
+													</ul>
+												</div>
+											</div>
+										</div>
+									)}
+
+								<p className="text-xs text-gray-500 mt-2 text-center">
+									{!locationValidationEnabled
+										? "Lokasi dicatat untuk pencatatan (validasi nonaktif)"
+										: "Lokasi dipantau secara otomatis untuk keamanan"}
+								</p>
+							</div>
+						)}
 
 						{/* Hidden Auto Location Verification Component untuk Checkout */}
 						<div className="hidden">
@@ -967,16 +1034,18 @@ export default function AttendancePage() {
 							onClick={handleCheckOut}
 							disabled={
 								!isCheckingOut ||
-								!isLocationValid ||
-								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60 ||
+								(locationValidationEnabled &&
+									(!isLocationValid ||
+										securityStatus.isLocationSpoofed ||
+										securityStatus.confidence < 60)) ||
 								isSubmitting
 							}
 							className={`w-full py-3 rounded-lg font-medium transition-all ${
 								!isCheckingOut ||
-								!isLocationValid ||
-								securityStatus.isLocationSpoofed ||
-								securityStatus.confidence < 60 ||
+								(locationValidationEnabled &&
+									(!isLocationValid ||
+										securityStatus.isLocationSpoofed ||
+										securityStatus.confidence < 60)) ||
 								isSubmitting
 									? "bg-gray-100 text-gray-400 cursor-not-allowed"
 									: "bg-orange-500 text-white hover:bg-orange-600"
@@ -989,11 +1058,13 @@ export default function AttendancePage() {
 								</div>
 							) : !isCheckingOut ? (
 								"Belum waktunya pulang"
-							) : !isLocationValid ? (
+							) : locationValidationEnabled && !isLocationValid ? (
 								"Lokasi tidak valid"
-							) : securityStatus.isLocationSpoofed ? (
+							) : locationValidationEnabled &&
+							  securityStatus.isLocationSpoofed ? (
 								"Lokasi terdeteksi palsu"
-							) : securityStatus.confidence < 60 ? (
+							) : locationValidationEnabled &&
+							  securityStatus.confidence < 60 ? (
 								"Confidence level terlalu rendah"
 							) : (
 								<div className="flex items-center justify-center gap-2">
