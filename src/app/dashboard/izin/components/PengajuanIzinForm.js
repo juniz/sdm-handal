@@ -206,14 +206,11 @@ export default function PengajuanIzinForm() {
 						Urgensi
 					</label>
 					<Select
-						className="w-full"
-						name="urgensi"
 						value={form.urgensi}
-						onValueChange={(e) => setForm({ ...form, urgensi: e })}
-						required
+						onValueChange={(value) => setForm({ ...form, urgensi: value })}
 					>
-						<SelectTrigger name="urgensi" className="w-full">
-							<SelectValue placeholder="Perjalanan Dinas" />
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder="Pilih urgensi" />
 						</SelectTrigger>
 						<SelectContent>
 							<SelectGroup>

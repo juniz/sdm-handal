@@ -215,10 +215,8 @@ function PengajuanCutiForm() {
 						Jenis Cuti
 					</label>
 					<Select
-						name="urgensi"
 						value={form.urgensi}
 						onValueChange={(value) => setForm({ ...form, urgensi: value })}
-						required
 					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Pilih jenis cuti" />

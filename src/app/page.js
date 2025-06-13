@@ -11,8 +11,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserRound, KeyRound } from "lucide-react";
-import { useState } from "react";
-import { setClientToken } from "@/lib/client-auth";
+import { useState, useEffect } from "react";
+import { setClientToken, getClientToken } from "@/lib/client-auth";
 import Image from "next/image";
 
 export default function LoginPage() {
@@ -22,6 +22,19 @@ export default function LoginPage() {
 	});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
+
+	// Cek apakah user sudah login saat component mount
+	useEffect(() => {
+		const checkExistingAuth = () => {
+			const existingToken = getClientToken();
+			if (existingToken) {
+				console.log("Existing token found, redirecting to dashboard");
+				window.location.href = "/dashboard";
+			}
+		};
+
+		checkExistingAuth();
+	}, []);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -45,7 +58,7 @@ export default function LoginPage() {
 				throw new Error(data.message || "Login gagal");
 			}
 
-			// Simpan token di client-side
+			// Simpan token di client-side (sudah include localStorage backup)
 			const cookies = response.headers.get("set-cookie");
 			if (cookies) {
 				const tokenMatch = cookies.match(/auth_token=([^;]+)/);

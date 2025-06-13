@@ -22,13 +22,29 @@ export async function middleware(request) {
 
 		// Validasi token jika ada
 		let isValidToken = false;
+		let tokenError = null;
+
 		if (tokenValue) {
 			try {
-				await jwtVerify(tokenValue, new TextEncoder().encode(JWT_SECRET));
-				isValidToken = true;
-				console.log("Token is valid");
+				const verified = await jwtVerify(
+					tokenValue,
+					new TextEncoder().encode(JWT_SECRET)
+				);
+
+				// Cek apakah token akan expired dalam 1 jam ke depan
+				const now = Math.floor(Date.now() / 1000);
+				const expiresIn = verified.payload.exp - now;
+
+				if (expiresIn > 0) {
+					isValidToken = true;
+					console.log("Token is valid, expires in:", expiresIn, "seconds");
+				} else {
+					console.log("Token is expired");
+					tokenError = "expired";
+				}
 			} catch (error) {
-				console.log("Token is invalid or expired");
+				console.log("Token validation error:", error.message);
+				tokenError = error.message;
 				isValidToken = false;
 			}
 		}
@@ -55,6 +71,16 @@ export async function middleware(request) {
 
 		// Untuk rute dashboard dan protected routes lainnya
 		if (!isValidToken) {
+			// Jika token ada tapi expired, berikan grace period untuk Android
+			if (tokenValue && tokenError === "expired") {
+				console.log("Token expired, but giving grace period for Android PWA");
+				// Biarkan akses dengan warning, tapi jangan redirect langsung
+				// User masih bisa menggunakan app, tapi akan diminta login saat melakukan action
+				const response = NextResponse.next();
+				response.headers.set("X-Token-Status", "expired");
+				return response;
+			}
+
 			console.log("No valid token found, redirecting to login");
 			const response = NextResponse.redirect(new URL("/", request.url));
 			// Bersihkan cookie yang tidak valid
@@ -68,6 +94,15 @@ export async function middleware(request) {
 		return NextResponse.next();
 	} catch (error) {
 		console.error("Error in middleware:", error);
+
+		// Jangan langsung redirect jika error network/temporary
+		if (error.message.includes("fetch") || error.message.includes("network")) {
+			console.log("Network error detected, allowing access with warning");
+			const response = NextResponse.next();
+			response.headers.set("X-Network-Error", "true");
+			return response;
+		}
+
 		const response = NextResponse.redirect(new URL("/", request.url));
 		// Bersihkan cookie jika terjadi error
 		response.cookies.delete("auth_token");

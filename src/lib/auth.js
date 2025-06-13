@@ -51,7 +51,7 @@ export function setServerCookie(cookieStore, token) {
 	cookieStore.set("auth_token", token, {
 		httpOnly: true,
 		secure: process.env.NODE_ENV === "production",
-		sameSite: "strict",
+		sameSite: "lax",
 		path: "/",
 		maxAge: 7 * 24 * 60 * 60, // 7 hari dalam detik
 	});
@@ -62,6 +62,6 @@ export function removeServerCookie(cookieStore) {
 	cookieStore.delete("auth_token", {
 		path: "/",
 		secure: process.env.NODE_ENV === "production",
-		sameSite: "strict",
+		sameSite: "lax",
 	});
 }
