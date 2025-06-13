@@ -12,7 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserRound, KeyRound } from "lucide-react";
 import { useState, useEffect } from "react";
-import { setClientToken, getClientToken } from "@/lib/client-auth";
+import {
+	setClientToken,
+	getClientToken,
+	forceRestoreFromBackup,
+} from "@/lib/client-auth";
 import Image from "next/image";
 
 export default function LoginPage() {
@@ -25,11 +29,25 @@ export default function LoginPage() {
 
 	// Cek apakah user sudah login saat component mount
 	useEffect(() => {
-		const checkExistingAuth = () => {
+		const checkExistingAuth = async () => {
 			const existingToken = getClientToken();
 			if (existingToken) {
 				console.log("Existing token found, redirecting to dashboard");
 				window.location.href = "/dashboard";
+				return;
+			}
+
+			// Try to restore from backup for Android PWA
+			try {
+				const restored = forceRestoreFromBackup();
+				if (restored) {
+					console.log("Token restored from backup, redirecting to dashboard");
+					setTimeout(() => {
+						window.location.href = "/dashboard";
+					}, 500);
+				}
+			} catch (error) {
+				console.warn("Failed to restore token from backup:", error);
 			}
 		};
 

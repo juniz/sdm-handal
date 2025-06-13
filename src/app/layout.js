@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import { Viewport } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
+import PWAHandler from "@/components/PWAHandler";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -43,6 +44,11 @@ export default function RootLayout({ children }) {
 					name="apple-mobile-web-app-status-bar-style"
 					content="black-translucent"
 				/>
+				{/* PWA Android specific meta tags */}
+				<meta name="mobile-web-app-capable" content="yes" />
+				<meta name="application-name" content="SDM Handal" />
+				<meta name="msapplication-TileColor" content="#2563eb" />
+				<meta name="msapplication-tap-highlight" content="no" />
 				<style>{`
 					:root {
 						--sat: env(safe-area-inset-top);
@@ -73,6 +79,7 @@ export default function RootLayout({ children }) {
 				`}</style>
 			</head>
 			<body className={`${inter.className} min-h-screen bg-gray-50`}>
+				<PWAHandler />
 				{children}
 				<Toaster position="top-right" expand={true} richColors closeButton />
 				<script
