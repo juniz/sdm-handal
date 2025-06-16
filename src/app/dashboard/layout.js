@@ -185,7 +185,7 @@ export default function DashboardLayout({ children }) {
 				</div>
 
 				{/* Page content */}
-				<main className="bg-white rounded-lg shadow-sm p-4 mt-0 md:mt-0">
+				<main className="bg-white rounded-lg shadow-sm p-0 mt-0 md:mt-0">
 					{children}
 				</main>
 			</div>

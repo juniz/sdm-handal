@@ -55,6 +55,8 @@ export default function AttendancePage() {
 	const [locationValidationEnabled, setLocationValidationEnabled] = useState(
 		true
 	);
+	const [unfinishedAttendance, setUnfinishedAttendance] = useState(null);
+	const [showUnfinishedAlert, setShowUnfinishedAlert] = useState(false);
 
 	// Error logging
 	const { logError } = useErrorLogger();
@@ -204,10 +206,70 @@ export default function AttendancePage() {
 		}
 	};
 
+	const fetchUnfinishedAttendance = async () => {
+		try {
+			const response = await fetch("/api/attendance/unfinished");
+			const data = await response.json();
+			if (data.has_unfinished) {
+				setUnfinishedAttendance(data.data);
+				setShowUnfinishedAlert(true);
+			} else {
+				setUnfinishedAttendance(null);
+				setShowUnfinishedAlert(false);
+			}
+		} catch (error) {
+			console.error("Error fetching unfinished attendance:", error);
+		}
+	};
+
+	const handleAutoCheckout = async () => {
+		try {
+			setIsSubmitting(true);
+			const response = await fetch("/api/attendance/auto-checkout", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				setStatus("success");
+				setUnfinishedAttendance(null);
+				setShowUnfinishedAlert(false);
+
+				// Refresh data
+				await fetchAttendanceStatus();
+				await fetchTodayAttendance();
+				await fetchUnfinishedAttendance();
+
+				// Scroll ke alert
+				setTimeout(() => {
+					alertRef.current?.scrollIntoView({ behavior: "smooth" });
+					alertRef.current?.focus();
+				}, 100);
+			} else {
+				setStatus("error");
+				console.error("Auto checkout failed:", data);
+			}
+		} catch (error) {
+			console.error("Error in auto checkout:", error);
+			setStatus("error");
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const dismissUnfinishedAlert = () => {
+		setShowUnfinishedAlert(false);
+	};
+
 	useEffect(() => {
 		fetchShift();
 		fetchTodayAttendance();
 		fetchAttendanceStatus();
+		fetchUnfinishedAttendance();
 	}, []);
 
 	// Tambahkan useEffect baru untuk memantau perubahan tanggal
@@ -323,7 +385,26 @@ export default function AttendancePage() {
 			});
 
 			if (!response.ok) {
-				const errorData = await response.text();
+				let errorData;
+				try {
+					errorData = await response.json();
+				} catch (jsonError) {
+					// Jika response bukan JSON, gunakan text
+					errorData = { error: "UNKNOWN", message: await response.text() };
+				}
+
+				// Handle specific error for unfinished attendance
+				if (errorData.error === "UNFINISHED_ATTENDANCE") {
+					// Refresh unfinished attendance data
+					await fetchUnfinishedAttendance();
+					setStatus("unfinished_attendance");
+					setTimeout(() => {
+						alertRef.current?.scrollIntoView({ behavior: "smooth" });
+						alertRef.current?.focus();
+					}, 100);
+					return;
+				}
+
 				const error = new Error(`Gagal melakukan presensi: ${response.status}`);
 				await logError({
 					error,
@@ -487,8 +568,78 @@ export default function AttendancePage() {
 
 	return (
 		<div className="max-w-lg mx-auto space-y-6">
-			<div className="bg-white p-6 rounded-lg shadow-sm">
+			<div className="bg-white p-2 rounded-lg shadow-sm">
 				<h1 className="text-2xl font-semibold mb-6 text-center">Presensi</h1>
+
+				{/* Unfinished Attendance Alert */}
+				{showUnfinishedAlert && unfinishedAttendance && (
+					<div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+						<div className="flex items-start gap-3">
+							<AlertTriangle className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" />
+							<div className="flex-1">
+								<div className="font-medium text-orange-800 mb-2">
+									Presensi Sebelumnya Belum Selesai
+								</div>
+								<div className="text-sm text-orange-700 space-y-1">
+									<p>
+										<strong>Tanggal:</strong>{" "}
+										{unfinishedAttendance.status_info?.work_date}
+									</p>
+									<p>
+										<strong>Jam Masuk:</strong>{" "}
+										{unfinishedAttendance.status_info?.jam_datang_formatted}
+									</p>
+									<p>
+										<strong>Shift:</strong>{" "}
+										{unfinishedAttendance.status_info?.shift_info}
+									</p>
+									<p>
+										<strong>Durasi Kerja:</strong>{" "}
+										{unfinishedAttendance.current_duration}
+									</p>
+									{unfinishedAttendance.time_info && (
+										<p>
+											<strong>Status:</strong>{" "}
+											{unfinishedAttendance.time_info.formatted}
+										</p>
+									)}
+								</div>
+								<div className="mt-3 flex flex-wrap gap-2">
+									{unfinishedAttendance.can_auto_checkout ? (
+										<button
+											onClick={handleAutoCheckout}
+											disabled={isSubmitting}
+											className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-2 text-sm"
+										>
+											{isSubmitting ? (
+												<>
+													<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+													<span>Memproses...</span>
+												</>
+											) : (
+												<>
+													<Clock className="w-4 h-4" />
+													<span>Pulang</span>
+												</>
+											)}
+										</button>
+									) : (
+										<div className="text-xs text-orange-600 bg-orange-100 px-3 py-1 rounded">
+											Belum bisa pulang
+										</div>
+									)}
+									<button
+										onClick={dismissUnfinishedAlert}
+										className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 text-sm"
+									>
+										<X className="w-4 h-4" />
+										<span>Tutup</span>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 
 				{/* Status */}
 				{status && (
@@ -508,6 +659,8 @@ export default function AttendancePage() {
 								? "bg-red-50 text-red-700"
 								: status === "location_error"
 								? "bg-yellow-50 text-yellow-700"
+								: status === "unfinished_attendance"
+								? "bg-orange-50 text-orange-700"
 								: "bg-red-50 text-red-700"
 						}`}
 					>
@@ -555,6 +708,16 @@ export default function AttendancePage() {
 									<span>
 										Gagal mengakses lokasi. Pastikan GPS aktif dan koneksi
 										internet stabil.
+									</span>
+								</>
+							) : status === "unfinished_attendance" ? (
+								<>
+									<AlertTriangle className="w-5 h-5" />
+									<span>
+										Anda masih memiliki presensi sebelumnya yang belum
+										di-checkout. Silakan selesaikan presensi tersebut terlebih
+										dahulu atau gunakan tombol Auto Checkout jika sudah melewati
+										batas waktu.
 									</span>
 								</>
 							) : (

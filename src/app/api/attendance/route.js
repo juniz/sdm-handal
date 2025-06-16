@@ -257,40 +257,218 @@ async function getScheduleWithShift(idPegawai, targetDate = null) {
 	return result[0] || null;
 }
 
-// OPTIMIZED: Fungsi untuk cek attendance hari ini dengan DATE range yang efisien
+// OPTIMIZED: Fungsi untuk cek presensi yang belum checkout (masih di temporary_presensi)
+async function getUnfinishedAttendance(idPegawai) {
+	const query = `
+		SELECT 
+			tp.*,
+			jm.jam_masuk,
+			jm.jam_pulang,
+			jm.shift as shift_name
+		FROM temporary_presensi tp
+		LEFT JOIN jam_masuk jm ON tp.shift = jm.shift
+		WHERE tp.id = ? 
+		AND tp.jam_pulang IS NULL
+		ORDER BY tp.jam_datang DESC
+		LIMIT 1
+	`;
+
+	const result = await rawQuery(query, [idPegawai]);
+	return result[0] || null;
+}
+
+// Fungsi untuk mengecek apakah presensi sebelumnya sudah melewati batas waktu checkout
+function isAttendanceOverdue(attendance, currentTime) {
+	if (!attendance || !attendance.jam_pulang) return false;
+
+	const jamDatang = moment(attendance.jam_datang);
+	const jamPulangExpected =
+		moment(attendance.jam_datang).format("YYYY-MM-DD") +
+		" " +
+		attendance.jam_pulang;
+	const expectedCheckout = moment(jamPulangExpected);
+	const current = moment(currentTime);
+
+	// Jika shift melewati tengah malam (jam_pulang < jam_masuk)
+	if (attendance.jam_pulang < attendance.jam_masuk) {
+		expectedCheckout.add(1, "day");
+	}
+
+	// Berikan toleransi 2 jam setelah jam pulang
+	const overdueTime = expectedCheckout.clone().add(2, "hours");
+
+	return current.isAfter(overdueTime);
+}
+
+// Fungsi untuk auto-checkout presensi yang overdue
+async function autoCheckoutOverdueAttendance(attendance, currentTime) {
+	try {
+		const jamDatang = moment(attendance.jam_datang);
+		const jamPulangExpected =
+			moment(attendance.jam_datang).format("YYYY-MM-DD") +
+			" " +
+			attendance.jam_pulang;
+		let expectedCheckout = moment(jamPulangExpected);
+
+		// Jika shift melewati tengah malam
+		if (attendance.jam_pulang < attendance.jam_masuk) {
+			expectedCheckout.add(1, "day");
+		}
+
+		// Hitung durasi sampai jam pulang yang diharapkan
+		const durasiPresensi = expectedCheckout.diff(jamDatang);
+		const durasi = moment.utc(durasiPresensi).format("HH:mm:ss");
+
+		const result = await withTransaction(async (transaction) => {
+			// Insert ke rekap_presensi dengan jam pulang otomatis
+			await transactionHelpers.insert(transaction, {
+				table: "rekap_presensi",
+				data: {
+					id: attendance.id,
+					shift: attendance.shift,
+					jam_datang: moment(attendance.jam_datang).format(
+						"YYYY-MM-DD HH:mm:ss"
+					),
+					jam_pulang: expectedCheckout.format("YYYY-MM-DD HH:mm:ss"),
+					durasi: durasi,
+					status: attendance.status,
+					keterlambatan: attendance.keterlambatan,
+					keterangan: "Auto checkout - Overdue",
+					photo: attendance.photo,
+				},
+			});
+
+			// Hapus dari temporary_presensi
+			await transactionHelpers.delete(transaction, {
+				table: "temporary_presensi",
+				where: {
+					id: attendance.id,
+					jam_datang: moment(attendance.jam_datang).format(
+						"YYYY-MM-DD HH:mm:ss"
+					),
+				},
+			});
+
+			return {
+				...attendance,
+				jam_pulang: expectedCheckout.format("YYYY-MM-DD HH:mm:ss"),
+				durasi: durasi,
+				keterangan: "Auto checkout - Overdue",
+			};
+		});
+
+		return result;
+	} catch (error) {
+		console.error("Error in auto checkout:", error);
+		throw error;
+	}
+}
+
+// OPTIMIZED: Fungsi untuk cek attendance hari ini dengan handling shift malam
 async function getTodayAttendance(idPegawai, targetDate = null) {
 	const dateStr = targetDate
 		? moment(targetDate).format("YYYY-MM-DD")
 		: moment().format("YYYY-MM-DD");
 
+	// Untuk menangani shift malam yang melewati tengah malam,
+	// kita perlu cek presensi dari hari sebelumnya juga
+	const previousDateStr = moment(dateStr)
+		.subtract(1, "day")
+		.format("YYYY-MM-DD");
+
 	const query = `
 		SELECT *
 		FROM temporary_presensi 
 		WHERE id = ? 
-		AND DATE(jam_datang) = ?
+		AND (
+			DATE(jam_datang) = ? 
+			OR (
+				DATE(jam_datang) = ? 
+				AND jam_pulang IS NULL
+				AND EXISTS (
+					SELECT 1 FROM jam_masuk jm 
+					WHERE jm.shift = temporary_presensi.shift 
+					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+				)
+			)
+		)
+		ORDER BY jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(query, [idPegawai, dateStr]);
+	let result = await rawQuery(query, [idPegawai, dateStr, previousDateStr]);
+
+	// Jika tidak ada di temporary_presensi, cek di rekap_presensi
+	if (!result[0]) {
+		const rekapQuery = `
+			SELECT *
+			FROM rekap_presensi 
+			WHERE id = ? 
+			AND (
+				DATE(jam_datang) = ? 
+				OR (
+					DATE(jam_datang) = ? 
+					AND EXISTS (
+						SELECT 1 FROM jam_masuk jm 
+						WHERE jm.shift = rekap_presensi.shift 
+						AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+						AND DATE(jam_pulang) = ?
+					)
+				)
+			)
+			ORDER BY jam_datang DESC
+			LIMIT 1
+		`;
+
+		result = await rawQuery(rekapQuery, [
+			idPegawai,
+			dateStr,
+			previousDateStr,
+			dateStr,
+		]);
+	}
+
 	return result[0] || null;
 }
 
-// Fungsi untuk cek presensi pulang dari rekap_presensi
+// Fungsi untuk cek presensi pulang dari rekap_presensi dengan handling shift malam
 async function getTodayCheckout(idPegawai, targetDate = null) {
 	const dateStr = targetDate
 		? moment(targetDate).format("YYYY-MM-DD")
 		: moment().format("YYYY-MM-DD");
 
+	// Untuk menangani shift malam yang melewati tengah malam
+	const previousDateStr = moment(dateStr)
+		.subtract(1, "day")
+		.format("YYYY-MM-DD");
+
 	const query = `
 		SELECT *
 		FROM rekap_presensi 
 		WHERE id = ? 
-		AND DATE(jam_datang) = ?
 		AND jam_pulang IS NOT NULL
+		AND (
+			DATE(jam_datang) = ? 
+			OR (
+				DATE(jam_datang) = ? 
+				AND EXISTS (
+					SELECT 1 FROM jam_masuk jm 
+					WHERE jm.shift = rekap_presensi.shift 
+					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+					AND DATE(jam_pulang) = ?
+				)
+			)
+		)
+		ORDER BY jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(query, [idPegawai, dateStr]);
+	const result = await rawQuery(query, [
+		idPegawai,
+		dateStr,
+		previousDateStr,
+		dateStr,
+	]);
 	return result[0] || null;
 }
 
@@ -472,6 +650,82 @@ export async function POST(request) {
 				);
 			}
 		} else {
+			// OPTIMIZED: Cek presensi yang belum checkout terlebih dahulu
+			const unfinishedAttendance = await getUnfinishedAttendance(idPegawai);
+
+			if (unfinishedAttendance) {
+				// Cek apakah presensi sudah overdue (melewati batas waktu + toleransi)
+				const isOverdue = isAttendanceOverdue(
+					unfinishedAttendance,
+					currentTime
+				);
+
+				if (isOverdue) {
+					// Auto checkout presensi yang overdue
+					try {
+						const autoCheckedOut = await autoCheckoutOverdueAttendance(
+							unfinishedAttendance,
+							currentTime
+						);
+						console.log(
+							"Auto checkout completed for overdue attendance:",
+							autoCheckedOut
+						);
+					} catch (error) {
+						console.error("Failed to auto checkout overdue attendance:", error);
+						return NextResponse.json(
+							{
+								message:
+									"Gagal menyelesaikan presensi sebelumnya secara otomatis",
+								error: "AUTO_CHECKOUT_FAILED",
+								details: {
+									previousAttendance: {
+										jam_datang: unfinishedAttendance.jam_datang,
+										shift: unfinishedAttendance.shift,
+										jam_pulang_expected: unfinishedAttendance.jam_pulang,
+									},
+								},
+							},
+							{ status: 500 }
+						);
+					}
+				} else {
+					// Masih dalam batas waktu, user harus checkout manual
+					const jamDatang = moment(unfinishedAttendance.jam_datang);
+					const jamPulangExpected =
+						moment(unfinishedAttendance.jam_datang).format("YYYY-MM-DD") +
+						" " +
+						unfinishedAttendance.jam_pulang;
+					let expectedCheckout = moment(jamPulangExpected);
+
+					// Jika shift melewati tengah malam
+					if (
+						unfinishedAttendance.jam_pulang < unfinishedAttendance.jam_masuk
+					) {
+						expectedCheckout.add(1, "day");
+					}
+
+					return NextResponse.json(
+						{
+							message: "Anda masih memiliki presensi yang belum di-checkout",
+							error: "UNFINISHED_ATTENDANCE",
+							details: {
+								previousAttendance: {
+									jam_datang: unfinishedAttendance.jam_datang,
+									shift: unfinishedAttendance.shift,
+									jam_pulang_expected: expectedCheckout.format(
+										"YYYY-MM-DD HH:mm:ss"
+									),
+									time_remaining:
+										expectedCheckout.diff(moment(), "minutes") + " menit lagi",
+								},
+							},
+						},
+						{ status: 400 }
+					);
+				}
+			}
+
 			// OPTIMIZED: Cek apakah sudah ada presensi hari ini
 			const existingAttendance = await getTodayAttendance(idPegawai);
 			if (existingAttendance) {
