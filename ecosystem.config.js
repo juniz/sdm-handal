@@ -4,8 +4,8 @@ module.exports = {
 			name: "sdm-app",
 			script: "npm",
 			args: "start -- -H 0.0.0.0 -p 3001",
-			instances: 4,
-			exec_mode: "cluster",
+			instances: 1,
+			exec_mode: "fork",
 			watch: true,
 			watch_delay: 1000,
 			ignore_watch: [
