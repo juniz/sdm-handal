@@ -567,7 +567,7 @@ export default function AttendancePage() {
 	};
 
 	return (
-		<div className="max-w-lg mx-auto space-y-6">
+		<div className="max-w-lg mx-auto space-y-6 pb-32">
 			<div className="bg-white p-2 rounded-lg shadow-sm">
 				<h1 className="text-2xl font-semibold mb-6 text-center">Presensi</h1>
 
@@ -1029,45 +1029,42 @@ export default function AttendancePage() {
 							</div>
 						)}
 
-						{/* Tombol Presensi Masuk */}
-						<button
-							onClick={handleCheckIn}
-							disabled={!isFormReady() || isSubmitting}
-							className={`w-full py-3 rounded-lg font-medium transition-all ${
-								!isFormReady() || isSubmitting
-									? "bg-gray-100 text-gray-400 cursor-not-allowed"
-									: "bg-blue-500 text-white hover:bg-blue-600"
+						{/* Status Kesiapan Presensi */}
+						<div
+							className={`w-full py-3 px-4 rounded-lg border-2 text-center ${
+								!isFormReady()
+									? "bg-yellow-50 border-yellow-300 text-yellow-700"
+									: "bg-green-50 border-green-300 text-green-700"
 							}`}
 						>
-							{isSubmitting ? (
-								<div className="flex items-center justify-center gap-2">
-									<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-									<span>Memproses...</span>
-								</div>
-							) : !isFormReady() ? (
-								<div className="flex items-center justify-center gap-2">
-									<Shield className="w-5 h-5" />
-									<span>
-										{locationPermission !== "granted"
-											? "Izin lokasi diperlukan"
-											: !isLocationValid
-											? "Lokasi tidak valid"
-											: securityStatus.isLocationSpoofed
-											? "Lokasi terdeteksi palsu"
-											: securityStatus.confidence < 60
-											? "Confidence level terlalu rendah"
-											: !cameraRef.current?.isReady()
-											? "Kamera belum siap"
-											: "Persyaratan belum terpenuhi"}
-									</span>
-								</div>
-							) : (
-								<div className="flex items-center justify-center gap-2">
-									<Camera className="w-5 h-5" />
-									<span>Ambil Foto & Presensi Masuk</span>
-								</div>
-							)}
-						</button>
+							<div className="flex items-center justify-center gap-2">
+								{!isFormReady() ? (
+									<>
+										<AlertTriangle className="w-5 h-5" />
+										<span className="font-medium">
+											{locationPermission !== "granted"
+												? "Izin lokasi diperlukan"
+												: !isLocationValid
+												? "Lokasi tidak valid"
+												: securityStatus.isLocationSpoofed
+												? "Lokasi terdeteksi palsu"
+												: securityStatus.confidence < 60
+												? "Confidence level terlalu rendah"
+												: !cameraRef.current?.isReady()
+												? "Kamera belum siap"
+												: "Persyaratan belum terpenuhi"}
+										</span>
+									</>
+								) : (
+									<>
+										<CheckCircle className="w-5 h-5" />
+										<span className="font-medium">
+											Siap untuk presensi masuk
+										</span>
+									</>
+								)}
+							</div>
+						</div>
 					</>
 				)}
 
@@ -1192,7 +1189,104 @@ export default function AttendancePage() {
 							/>
 						</div>
 
-						{/* Tombol Presensi Pulang */}
+						{/* Status Kesiapan Presensi Pulang */}
+						<div
+							className={`w-full py-3 px-4 rounded-lg border-2 text-center ${
+								!isCheckingOut ||
+								(locationValidationEnabled &&
+									(!isLocationValid ||
+										securityStatus.isLocationSpoofed ||
+										securityStatus.confidence < 60))
+									? "bg-yellow-50 border-yellow-300 text-yellow-700"
+									: "bg-green-50 border-green-300 text-green-700"
+							}`}
+						>
+							<div className="flex items-center justify-center gap-2">
+								{!isCheckingOut ? (
+									<>
+										<Clock className="w-5 h-5" />
+										<span className="font-medium">Belum waktunya pulang</span>
+									</>
+								) : locationValidationEnabled && !isLocationValid ? (
+									<>
+										<MapPin className="w-5 h-5" />
+										<span className="font-medium">Lokasi tidak valid</span>
+									</>
+								) : locationValidationEnabled &&
+								  securityStatus.isLocationSpoofed ? (
+									<>
+										<Shield className="w-5 h-5" />
+										<span className="font-medium">Lokasi terdeteksi palsu</span>
+									</>
+								) : locationValidationEnabled &&
+								  securityStatus.confidence < 60 ? (
+									<>
+										<AlertTriangle className="w-5 h-5" />
+										<span className="font-medium">
+											Confidence level terlalu rendah
+										</span>
+									</>
+								) : (
+									<>
+										<CheckCircle className="w-5 h-5" />
+										<span className="font-medium">
+											Siap untuk presensi pulang
+										</span>
+									</>
+								)}
+							</div>
+						</div>
+					</>
+				)}
+			</div>
+
+			{/* Sticky Button Container */}
+			<div className="fixed bottom-25 left-0 right-0 p-3 mx-3 shadow-lg z-40 rounded-t-lg">
+				<div className="max-w-lg mx-auto">
+					{/* Tombol Presensi Masuk - Sticky */}
+					{!todayAttendance && !attendanceStatus.isCompleted && (
+						<button
+							onClick={handleCheckIn}
+							disabled={!isFormReady() || isSubmitting}
+							className={`w-full py-3 rounded-lg font-medium text-base transition-all shadow-md ${
+								!isFormReady() || isSubmitting
+									? "bg-gray-100 text-gray-400 cursor-not-allowed"
+									: "bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700"
+							}`}
+						>
+							{isSubmitting ? (
+								<div className="flex items-center justify-center gap-2">
+									<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									<span>Memproses...</span>
+								</div>
+							) : !isFormReady() ? (
+								<div className="flex items-center justify-center gap-2">
+									<Shield className="w-4 h-4" />
+									<span className="text-sm">
+										{locationPermission !== "granted"
+											? "Izin Lokasi Diperlukan"
+											: !isLocationValid
+											? "Lokasi Tidak Valid"
+											: securityStatus.isLocationSpoofed
+											? "Lokasi Terdeteksi Palsu"
+											: securityStatus.confidence < 60
+											? "Confidence Level Rendah"
+											: !cameraRef.current?.isReady()
+											? "Kamera Belum Siap"
+											: "Persyaratan Belum Terpenuhi"}
+									</span>
+								</div>
+							) : (
+								<div className="flex items-center justify-center gap-2">
+									<Camera className="w-5 h-5" />
+									<span>Presensi Masuk</span>
+								</div>
+							)}
+						</button>
+					)}
+
+					{/* Tombol Presensi Pulang - Sticky */}
+					{todayAttendance && !attendanceStatus.isCompleted && (
 						<button
 							onClick={handleCheckOut}
 							disabled={
@@ -1203,7 +1297,7 @@ export default function AttendancePage() {
 										securityStatus.confidence < 60)) ||
 								isSubmitting
 							}
-							className={`w-full py-3 rounded-lg font-medium transition-all ${
+							className={`w-full py-3 rounded-lg font-medium text-base transition-all shadow-md ${
 								!isCheckingOut ||
 								(locationValidationEnabled &&
 									(!isLocationValid ||
@@ -1211,24 +1305,36 @@ export default function AttendancePage() {
 										securityStatus.confidence < 60)) ||
 								isSubmitting
 									? "bg-gray-100 text-gray-400 cursor-not-allowed"
-									: "bg-orange-500 text-white hover:bg-orange-600"
+									: "bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700"
 							}`}
 						>
 							{isSubmitting ? (
 								<div className="flex items-center justify-center gap-2">
-									<div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+									<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 									<span>Memproses...</span>
 								</div>
 							) : !isCheckingOut ? (
-								"Belum waktunya pulang"
+								<div className="flex items-center justify-center gap-2">
+									<Clock className="w-5 h-5" />
+									<span>Belum Waktunya Pulang</span>
+								</div>
 							) : locationValidationEnabled && !isLocationValid ? (
-								"Lokasi tidak valid"
+								<div className="flex items-center justify-center gap-2">
+									<MapPin className="w-5 h-5" />
+									<span className="text-sm">Lokasi Tidak Valid</span>
+								</div>
 							) : locationValidationEnabled &&
 							  securityStatus.isLocationSpoofed ? (
-								"Lokasi terdeteksi palsu"
+								<div className="flex items-center justify-center gap-2">
+									<Shield className="w-5 h-5" />
+									<span className="text-sm">Lokasi Terdeteksi Palsu</span>
+								</div>
 							) : locationValidationEnabled &&
 							  securityStatus.confidence < 60 ? (
-								"Confidence level terlalu rendah"
+								<div className="flex items-center justify-center gap-2">
+									<AlertTriangle className="w-5 h-5" />
+									<span className="text-sm">Confidence Level Rendah</span>
+								</div>
 							) : (
 								<div className="flex items-center justify-center gap-2">
 									<Clock className="w-5 h-5" />
@@ -1236,8 +1342,18 @@ export default function AttendancePage() {
 								</div>
 							)}
 						</button>
-					</>
-				)}
+					)}
+
+					{/* Status Selesai */}
+					{attendanceStatus.isCompleted && (
+						<div className="w-full py-3 bg-green-50 border-2 border-green-200 rounded-lg">
+							<div className="flex items-center justify-center gap-2 text-green-700">
+								<CheckCircle className="w-5 h-5" />
+								<span className="font-medium">Presensi Selesai</span>
+							</div>
+						</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);

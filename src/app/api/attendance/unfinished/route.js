@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { rawQuery } from "@/lib/db-helper";
-import moment from "moment";
+import moment from "moment-timezone";
+import "moment/locale/id";
 
+moment.locale("id");
+moment.tz.setDefault("Asia/Jakarta");
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 // Fungsi untuk cek presensi yang belum checkout
 async function getUnfinishedAttendance(idPegawai) {
+	const today = moment().format("YYYY-MM-DD");
+
 	const query = `
 		SELECT 
 			tp.*,
@@ -18,11 +23,12 @@ async function getUnfinishedAttendance(idPegawai) {
 		LEFT JOIN jam_masuk jm ON tp.shift = jm.shift
 		WHERE tp.id = ? 
 		AND tp.jam_pulang IS NULL
+		AND DATE(tp.jam_datang) < ?
 		ORDER BY tp.jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(query, [idPegawai]);
+	const result = await rawQuery(query, [idPegawai, today]);
 	return result[0] || null;
 }
 

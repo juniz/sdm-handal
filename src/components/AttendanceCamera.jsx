@@ -66,16 +66,16 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		if (isMobile) {
 			return {
 				facingMode: "user",
-				width: { ideal: 720, min: 480, max: 1280 },
-				height: { ideal: 720, min: 480, max: 720 },
-				aspectRatio: { ideal: 1, min: 0.75, max: 1.333 },
+				width: { ideal: 480, min: 320, max: 640 },
+				height: { ideal: 480, min: 320, max: 640 },
+				aspectRatio: { ideal: 1, min: 0.8, max: 1.2 },
 			};
 		} else {
 			return {
 				facingMode: "user",
-				width: { ideal: 1280, min: 640, max: 1920 },
-				height: { ideal: 720, min: 480, max: 1080 },
-				aspectRatio: { ideal: 16 / 9, min: 4 / 3, max: 16 / 9 },
+				width: { ideal: 640, min: 480, max: 1280 },
+				height: { ideal: 480, min: 360, max: 720 },
+				aspectRatio: { ideal: 4 / 3, min: 4 / 3, max: 16 / 9 },
 			};
 		}
 	};
@@ -234,10 +234,10 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 
 				// Capture photo
 				const imageSrc = webcamRef.current.getScreenshot({
-					width: 1280,
-					height: 720,
+					width: isMobile ? 480 : 640,
+					height: isMobile ? 480 : 480,
 					screenshotFormat: "image/jpeg",
-					screenshotQuality: 0.95,
+					screenshotQuality: 0.9,
 				});
 
 				console.log("Raw capture result:", {
@@ -322,10 +322,18 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	// Loading state
 	if (isLoading) {
 		return (
-			<div className="relative w-full bg-gray-100 rounded-lg flex items-center justify-center mobile-camera-container">
-				<div className="text-center">
-					<Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-					<p className="text-sm text-gray-600">Memuat kamera...</p>
+			<div className="relative max-w-sm mx-auto">
+				<div
+					className={`relative bg-gray-100 rounded-lg flex items-center justify-center ${
+						isMobile
+							? "aspect-square max-w-xs mx-auto"
+							: "aspect-[4/3] max-w-md mx-auto"
+					}`}
+				>
+					<div className="text-center">
+						<Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
+						<p className="text-sm text-gray-600">Memuat kamera...</p>
+					</div>
 				</div>
 			</div>
 		);
@@ -334,67 +342,83 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 	// Error state
 	if (cameraError) {
 		return (
-			<div className="relative w-full bg-red-50 border border-red-200 rounded-lg flex items-center justify-center mobile-camera-container">
-				<div className="text-center p-4">
-					<AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-					<p className="text-red-700 font-medium mb-2">Masalah Kamera</p>
-					<p className="text-sm text-red-600 mb-3">{cameraError}</p>
-					<button
-						onClick={() => window.location.reload()}
-						className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm transition-colors"
-					>
-						Coba Lagi
-					</button>
+			<div className="relative max-w-sm mx-auto">
+				<div
+					className={`relative bg-red-50 border border-red-200 rounded-lg flex items-center justify-center ${
+						isMobile
+							? "aspect-square max-w-xs mx-auto"
+							: "aspect-[4/3] max-w-md mx-auto"
+					}`}
+				>
+					<div className="text-center p-4">
+						<AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+						<p className="text-red-700 font-medium mb-2">Masalah Kamera</p>
+						<p className="text-sm text-red-600 mb-3">{cameraError}</p>
+						<button
+							onClick={() => window.location.reload()}
+							className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm transition-colors"
+						>
+							Coba Lagi
+						</button>
+					</div>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="relative">
-			<Webcam
-				audio={false}
-				ref={webcamRef}
-				screenshotFormat="image/jpeg"
-				screenshotQuality={0.95}
-				className="w-full rounded-lg mobile-webcam"
-				mirrored={true}
-				videoConstraints={getVideoConstraints()}
-				onUserMedia={handleWebcamUserMedia}
-				onUserMediaError={handleWebcamError}
-			/>
+		<div className="relative max-w-sm mx-auto">
+			<div
+				className={`relative overflow-hidden rounded-lg ${
+					isMobile
+						? "aspect-square max-w-xs mx-auto"
+						: "aspect-[4/3] max-w-md mx-auto"
+				}`}
+			>
+				<Webcam
+					audio={false}
+					ref={webcamRef}
+					screenshotFormat="image/jpeg"
+					screenshotQuality={0.95}
+					className="w-full h-full object-cover"
+					mirrored={true}
+					videoConstraints={getVideoConstraints()}
+					onUserMedia={handleWebcamUserMedia}
+					onUserMediaError={handleWebcamError}
+				/>
 
-			{/* Status indicator */}
-			<div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-				<Camera className="w-3 h-3" />
-				<span>
-					{isCapturing
-						? "Mengambil foto..."
-						: cameraReady
-						? "Kamera Siap"
-						: "Memuat..."}
-				</span>
+				{/* Status indicator */}
+				<div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+					<Camera className="w-3 h-3" />
+					<span>
+						{isCapturing
+							? "Mengambil foto..."
+							: cameraReady
+							? "Kamera Siap"
+							: "Memuat..."}
+					</span>
+				</div>
+
+				{/* Capture indicator */}
+				{isCapturing && (
+					<div className="absolute inset-0 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
+						<div className="text-center text-gray-800">
+							<Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+							<p className="text-sm font-medium">Memproses foto...</p>
+						</div>
+					</div>
+				)}
+
+				{/* Loading overlay saat kamera belum ready */}
+				{!cameraReady && !cameraError && (
+					<div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
+						<div className="text-center text-white">
+							<Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+							<p className="text-sm">Menyiapkan kamera...</p>
+						</div>
+					</div>
+				)}
 			</div>
-
-			{/* Capture indicator */}
-			{isCapturing && (
-				<div className="absolute inset-0 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
-					<div className="text-center text-gray-800">
-						<Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-						<p className="text-sm font-medium">Memproses foto...</p>
-					</div>
-				</div>
-			)}
-
-			{/* Loading overlay saat kamera belum ready */}
-			{!cameraReady && !cameraError && (
-				<div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
-					<div className="text-center text-white">
-						<Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-						<p className="text-sm">Menyiapkan kamera...</p>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 });

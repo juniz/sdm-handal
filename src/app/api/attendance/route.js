@@ -259,6 +259,8 @@ async function getScheduleWithShift(idPegawai, targetDate = null) {
 
 // OPTIMIZED: Fungsi untuk cek presensi yang belum checkout (masih di temporary_presensi)
 async function getUnfinishedAttendance(idPegawai) {
+	const today = moment().format("YYYY-MM-DD");
+
 	const query = `
 		SELECT 
 			tp.*,
@@ -269,11 +271,12 @@ async function getUnfinishedAttendance(idPegawai) {
 		LEFT JOIN jam_masuk jm ON tp.shift = jm.shift
 		WHERE tp.id = ? 
 		AND tp.jam_pulang IS NULL
+		AND DATE(tp.jam_datang) < ?
 		ORDER BY tp.jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(query, [idPegawai]);
+	const result = await rawQuery(query, [idPegawai, today]);
 	return result[0] || null;
 }
 
