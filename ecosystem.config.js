@@ -3,9 +3,9 @@ module.exports = {
 		{
 			name: "sdm-app",
 			script: "npm",
-			args: "start -- -H 0.0.0.0 -p 3001",
+			args: "start",
 			instances: 6,
-			exec_mode: "fork",
+			exec_mode: "cluster",
 			watch: false,
 			watch_delay: 1000,
 			ignore_watch: [
@@ -53,6 +53,7 @@ module.exports = {
 			node_args: ["--max-old-space-size=2048", "--optimize-for-size"],
 			health_check_grace_period: 3000,
 			health_check_fatal_exceptions: true,
+			increment_var: "PORT",
 		},
 	],
 	deploy: {
