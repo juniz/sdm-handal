@@ -18,7 +18,12 @@
 		"pm2:logs": "pm2 logs sdm-app",
 		"pm2:monit": "pm2 monit",
 		"pm2:list": "pm2 list",
-		"pm2:status": "pm2 status sdm-app"
+		"pm2:status": "pm2 status sdm-app",
+		"deploy:production": "chmod +x scripts/deploy-production.sh && ./scripts/deploy-production.sh",
+		"monitor": "pm2 start pm2-monitoring.config.js",
+		"load-test": "echo '🧪 Load testing for 300 concurrent users...' && echo 'Install artillery: npm install -g artillery' && echo 'Run: artillery run load-test.yml'",
+		"health-check": "curl -f http://localhost:3001/api/health || exit 1",
+		"performance-check": "pm2 show sdm-app && pm2 monit"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.10",

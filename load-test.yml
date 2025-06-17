@@ -1,0 +1,86 @@
+config:
+  target: "http://localhost:3001"
+  phases:
+    # Warm up phase
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up"
+
+    # Ramp up phase - gradually increase to 300 users
+    - duration: 300
+      arrivalRate: 1
+      rampTo: 50
+      name: "Ramp up to 50 users"
+
+    # Peak load phase - 300 concurrent users
+    - duration: 600
+      arrivalRate: 50
+      name: "Peak load - 300 concurrent users"
+
+    # Cool down phase
+    - duration: 120
+      arrivalRate: 10
+      name: "Cool down"
+
+  processor: "./load-test-processor.js"
+
+  # Performance thresholds
+  ensure:
+    maxErrorRate: 5 # Max 5% error rate
+    p95: 2000 # 95% of requests should complete within 2s
+    p99: 5000 # 99% of requests should complete within 5s
+
+scenarios:
+  - name: "Attendance Flow"
+    weight: 60
+    flow:
+      - get:
+          url: "/dashboard/attendance"
+          headers:
+            User-Agent: "LoadTest-AttendanceFlow"
+      - think: 2
+      - get:
+          url: "/api/attendance/status"
+      - think: 1
+      - get:
+          url: "/api/attendance/today"
+      - think: 3
+      - post:
+          url: "/api/attendance"
+          json:
+            timestamp: "{{ $timestamp }}"
+            latitude: "-6.2088"
+            longitude: "106.8456"
+            isCheckingOut: false
+      - think: 2
+
+  - name: "Dashboard Navigation"
+    weight: 30
+    flow:
+      - get:
+          url: "/dashboard"
+          headers:
+            User-Agent: "LoadTest-Dashboard"
+      - think: 1
+      - get:
+          url: "/dashboard/reports"
+      - think: 2
+      - get:
+          url: "/api/reports/monthly"
+      - think: 1
+
+  - name: "API Health Check"
+    weight: 10
+    flow:
+      - get:
+          url: "/api/health"
+          headers:
+            User-Agent: "LoadTest-HealthCheck"
+      - think: 1
+
+# Custom metrics
+metrics:
+  - name: "attendance_requests"
+    unit: "count"
+  - name: "response_time_attendance"
+    unit: "ms"
