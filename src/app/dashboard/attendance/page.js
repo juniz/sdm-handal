@@ -842,8 +842,10 @@ export default function AttendancePage() {
 									<div className="flex justify-center">
 										<OptimizedPhotoDisplay
 											photoUrl={
-												todayAttendance?.photo ||
-												attendanceStatus.checkout?.photo
+												todayAttendance?.photo + "?timestamp=" + Date.now() ||
+												attendanceStatus.checkout?.photo +
+													"?timestamp=" +
+													Date.now()
 											}
 											alt="Foto Presensi Masuk"
 											width={200}

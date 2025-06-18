@@ -204,7 +204,7 @@ const OptimizedPhotoDisplay = ({
 
 			{/* Main image */}
 			<Image
-				src={`${formattedUrl}?timestamp=${Date.now()}`} // Add retry parameter to bust cache
+				src={`${formattedUrl}}`} // Add retry parameter to bust cache
 				alt={alt}
 				width={width}
 				height={height}
