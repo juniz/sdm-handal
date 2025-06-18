@@ -47,6 +47,8 @@ const nextConfig = {
 				hostname: "**.itbhayangkara.id",
 			},
 		],
+		unoptimized: true, // Nonaktifkan optimisasi untuk menghindari cache
+		minimumCacheTTL: 0, // Cache TTL minimum 0
 	},
 	webpack: (config) => {
 		config.resolve.alias.canvas = false;
@@ -56,7 +58,7 @@ const nextConfig = {
 	experimental: {
 		serverActions: true,
 	},
-	// Headers untuk PWA Android compatibility
+	// Headers untuk PWA Android compatibility dan foto presensi
 	async headers() {
 		return [
 			{
@@ -80,6 +82,37 @@ const nextConfig = {
 						value: "/",
 					},
 				],
+			},
+			{
+				// Headers khusus untuk foto presensi
+				source: "/photos/:path*",
+				headers: [
+					{
+						key: "Cache-Control",
+						value: "no-store, no-cache, must-revalidate, proxy-revalidate",
+					},
+					{
+						key: "Pragma",
+						value: "no-cache",
+					},
+					{
+						key: "Expires",
+						value: "0",
+					},
+					{
+						key: "X-Content-Type-Options",
+						value: "nosniff",
+					},
+				],
+			},
+		];
+	},
+	// Rewrites untuk menangani foto presensi
+	async rewrites() {
+		return [
+			{
+				source: "/api/photos/:path*",
+				destination: "/photos/:path*", // Redirect ke static files
 			},
 		];
 	},

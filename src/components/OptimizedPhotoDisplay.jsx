@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ImageIcon, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import PhotoDebugger from "./PhotoDebugger";
 
 const OptimizedPhotoDisplay = ({
 	photoUrl,
@@ -12,12 +13,14 @@ const OptimizedPhotoDisplay = ({
 	className = "",
 	priority = false,
 	lazy = true,
+	debug = false,
 }) => {
 	const [imageError, setImageError] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isVisible, setIsVisible] = useState(!lazy);
 	const [retryCount, setRetryCount] = useState(0);
 	const [isMounted, setIsMounted] = useState(false);
+	const [showDebugger, setShowDebugger] = useState(false);
 	const imgRef = useRef(null);
 	const maxRetries = 3;
 
@@ -31,15 +34,24 @@ const OptimizedPhotoDisplay = ({
 		if (!url) return null;
 
 		try {
+			// Tambahkan cache busting parameters
+			const timestamp = Date.now();
+			const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
+			const cacheParam = `t=${timestamp}`;
+			const params = [cacheParam, retryParam].filter(Boolean).join("&");
+
 			// Jika sudah URL lengkap
 			if (url.startsWith("http://") || url.startsWith("https://")) {
-				return url;
+				const separator = url.includes("?") ? "&" : "?";
+				return `${url}${separator}${params}`;
 			}
 
 			// Jika path relatif, gunakan base URL
 			const baseUrl = process.env.NEXT_PUBLIC_URL || "";
 			const cleanPath = url.startsWith("/") ? url : `/${url}`;
-			return `${baseUrl}${cleanPath}`;
+			const fullUrl = `${baseUrl}${cleanPath}`;
+			const separator = fullUrl.includes("?") ? "&" : "?";
+			return `${fullUrl}${separator}${params}`;
 		} catch (error) {
 			console.error("Error formatting photo URL:", error);
 			return null;
@@ -91,14 +103,31 @@ const OptimizedPhotoDisplay = ({
 		console.error("Image load error:", error);
 		setIsLoading(false);
 		setImageError(true);
+
+		// Auto retry dengan delay yang bertambah
+		if (retryCount < maxRetries) {
+			const delay = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff
+			console.log(
+				`Retrying image load in ${delay}ms, attempt ${
+					retryCount + 1
+				}/${maxRetries}`
+			);
+
+			setTimeout(() => {
+				setRetryCount((prev) => prev + 1);
+				setImageError(false);
+				setIsLoading(true);
+			}, delay);
+		} else {
+			console.error(`Failed to load image after ${maxRetries} attempts`);
+		}
 	};
 
 	const handleRetry = () => {
-		if (retryCount < maxRetries) {
-			setRetryCount((prev) => prev + 1);
-			setImageError(false);
-			setIsLoading(true);
-		}
+		console.log("Manual retry triggered");
+		setRetryCount(0);
+		setImageError(false);
+		setIsLoading(true);
 	};
 
 	const formattedUrl = getFormattedPhotoUrl(photoUrl);
@@ -125,15 +154,25 @@ const OptimizedPhotoDisplay = ({
 			<div className="text-center p-4">
 				<AlertCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
 				<p className="text-xs text-gray-500 mb-2">Gagal memuat foto</p>
-				{retryCount < maxRetries && (
-					<button
-						onClick={handleRetry}
-						className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 mx-auto"
-					>
-						<RefreshCw className="w-3 h-3" />
-						Coba lagi
-					</button>
-				)}
+				<div className="flex flex-col gap-2">
+					{retryCount < maxRetries && (
+						<button
+							onClick={handleRetry}
+							className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 mx-auto"
+						>
+							<RefreshCw className="w-3 h-3" />
+							Coba lagi
+						</button>
+					)}
+					{debug && (
+						<button
+							onClick={() => setShowDebugger(true)}
+							className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 mx-auto"
+						>
+							🔍 Debug
+						</button>
+					)}
+				</div>
 			</div>
 		</div>
 	);
@@ -191,41 +230,117 @@ const OptimizedPhotoDisplay = ({
 	}
 
 	return (
-		<div
-			ref={imgRef}
-			className={`relative ${className}`}
-			style={{ width, height }}
-		>
-			{/* Loading overlay */}
-			{isLoading && <LoadingState />}
+		<>
+			<div
+				ref={imgRef}
+				className={`relative ${className}`}
+				style={{ width, height }}
+			>
+				{isLoading && <LoadingState />}
+				{imageError && retryCount < maxRetries && <LoadingState />}
 
-			{/* Error overlay saat retry */}
-			{imageError && retryCount < maxRetries && <LoadingState />}
+				<Image
+					src={formattedUrl}
+					alt={alt}
+					width={width}
+					height={height}
+					className="rounded-lg object-fit object-center"
+					onLoad={handleImageLoad}
+					onError={handleImageError}
+					priority={priority}
+					loading={lazy ? "lazy" : "eager"}
+					unoptimized={true}
+					quality={85}
+					placeholder="blur"
+					blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
+					sizes={`${width}px`}
+					style={{
+						width: "100%",
+						height: "100%",
+						maxWidth: width,
+						maxHeight: height,
+					}}
+				/>
 
-			{/* Main image */}
-			<Image
-				src={`${formattedUrl}}`} // Add retry parameter to bust cache
-				alt={alt}
-				width={width}
-				height={height}
-				className="rounded-lg object-fit object-center"
-				onLoad={handleImageLoad}
-				onError={handleImageError}
-				priority={priority}
-				loading={lazy ? "lazy" : "eager"}
-				unoptimized={false} // Let Next.js optimize the image
-				quality={85} // Balanced quality vs file size
-				placeholder="blur"
-				blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
-				sizes={`${width}px`}
-				style={{
-					width: "100%",
-					height: "100%",
-					maxWidth: width,
-					maxHeight: height,
-				}}
-			/>
-		</div>
+				{/* Debug button overlay */}
+				{debug && (
+					<button
+						onClick={() => setShowDebugger(true)}
+						className="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded opacity-75 hover:opacity-100"
+					>
+						🔍
+					</button>
+				)}
+			</div>
+
+			{/* Debug modal */}
+			{showDebugger && (
+				<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-lg font-semibold">Photo Debug Info</h3>
+							<button
+								onClick={() => setShowDebugger(false)}
+								className="text-gray-500 hover:text-gray-700"
+							>
+								✕
+							</button>
+						</div>
+
+						<div className="space-y-3 text-sm">
+							<div>
+								<strong>Original URL:</strong>
+								<div className="bg-gray-100 p-2 rounded mt-1 break-all">
+									{photoUrl || "No URL"}
+								</div>
+							</div>
+
+							<div>
+								<strong>Formatted URL:</strong>
+								<div className="bg-gray-100 p-2 rounded mt-1 break-all">
+									{formattedUrl || "No formatted URL"}
+								</div>
+							</div>
+
+							<div>
+								<strong>Status:</strong>
+								<div className="mt-1">
+									<span
+										className={`px-2 py-1 rounded text-xs ${
+											isLoading
+												? "bg-blue-100 text-blue-800"
+												: imageError
+												? "bg-red-100 text-red-800"
+												: "bg-green-100 text-green-800"
+										}`}
+									>
+										{isLoading ? "Loading" : imageError ? "Error" : "Loaded"}
+									</span>
+									<span className="ml-2 text-gray-600">
+										Retry: {retryCount}/{maxRetries}
+									</span>
+								</div>
+							</div>
+
+							<div className="flex gap-2 pt-2">
+								<button
+									onClick={handleRetry}
+									className="px-3 py-1 bg-blue-500 text-white rounded text-xs"
+								>
+									Retry Load
+								</button>
+								<button
+									onClick={() => window.open(formattedUrl, "_blank")}
+									className="px-3 py-1 bg-green-500 text-white rounded text-xs"
+								>
+									Open URL
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+		</>
 	);
 };
 

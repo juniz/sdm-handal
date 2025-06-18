@@ -29,7 +29,9 @@
 		"monitor": "pm2 monit",
 		"load-test": "echo '🧪 Load testing for 300 concurrent users...' && echo 'Install artillery: npm install -g artillery' && echo 'Run: artillery run load-test.yml'",
 		"health-check": "curl -f http://localhost:3001 || exit 1",
-		"performance-check": "pm2 show sdm-app && pm2 monit"
+		"performance-check": "pm2 show sdm-app && pm2 monit",
+		"photo-watcher": "node scripts/photo-watcher.js",
+		"check-photos": "node scripts/check-photos.js"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.10",
@@ -78,7 +80,8 @@
 		"react-signature-canvas": "^1.1.0-alpha.2",
 		"react-webcam": "^7.2.0",
 		"sonner": "^2.0.3",
-		"tailwind-merge": "^3.2.0"
+		"tailwind-merge": "^3.2.0",
+		"chokidar": "^3.5.3"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3",
