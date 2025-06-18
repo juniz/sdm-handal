@@ -6,7 +6,7 @@ module.exports = {
 			args: "start",
 			instances: 1,
 			exec_mode: "fork",
-			watch: true,
+			watch: ["public"],
 			watch_delay: 1000,
 			ignore_watch: ["node_modules", "logs", ".git", ".next", "*.log"],
 			watch_options: {
