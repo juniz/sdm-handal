@@ -258,9 +258,50 @@ async function getScheduleWithShift(idPegawai, targetDate = null) {
 	return result[0] || null;
 }
 
-// OPTIMIZED: Fungsi untuk cek presensi yang belum checkout (masih di temporary_presensi)
+// Fungsi helper untuk mengecek apakah shift malam masih dalam periode aktif
+function isNightShiftStillActive(attendance, currentTime = null) {
+	if (
+		!attendance ||
+		!attendance.jam_datang ||
+		!attendance.jam_masuk ||
+		!attendance.jam_pulang
+	) {
+		return false;
+	}
+
+	const current = currentTime ? moment(currentTime) : moment();
+	const jamDatang = moment(attendance.jam_datang);
+
+	// Cek apakah ini shift malam (jam_pulang < jam_masuk)
+	const isNightShift = attendance.jam_pulang < attendance.jam_masuk;
+
+	if (!isNightShift) {
+		// Bukan shift malam, gunakan logika normal
+		const jamPulangExpected = moment(
+			jamDatang.format("YYYY-MM-DD") + " " + attendance.jam_pulang
+		);
+		return current.isBefore(jamPulangExpected);
+	}
+
+	// Untuk shift malam, jam pulang di hari berikutnya
+	const jamPulangExpected = moment(
+		jamDatang.format("YYYY-MM-DD") + " " + attendance.jam_pulang
+	).add(1, "day");
+
+	// Shift malam masih aktif jika:
+	// 1. Belum melewati jam pulang keesokan harinya
+	// 2. Masih dalam periode yang wajar (tidak lebih dari 24 jam)
+	const maxShiftDuration = jamDatang.clone().add(24, "hours");
+
+	return (
+		current.isBefore(jamPulangExpected) && current.isBefore(maxShiftDuration)
+	);
+}
+
+// OPTIMIZED: Fungsi untuk cek presensi yang belum checkout dengan perbaikan logika shift malam
 async function getUnfinishedAttendance(idPegawai) {
 	const today = moment().format("YYYY-MM-DD");
+	const yesterday = moment().subtract(1, "day").format("YYYY-MM-DD");
 
 	const query = `
 		SELECT 
@@ -272,13 +313,41 @@ async function getUnfinishedAttendance(idPegawai) {
 		LEFT JOIN jam_masuk jm ON tp.shift = jm.shift
 		WHERE tp.id = ? 
 		AND tp.jam_pulang IS NULL
-		AND DATE(tp.jam_datang) < ?
+		AND (
+			-- Presensi hari ini yang belum checkout
+			DATE(tp.jam_datang) = ?
+			OR (
+				-- Shift malam dari kemarin yang mungkin masih berlangsung
+				DATE(tp.jam_datang) = ?
+				AND EXISTS (
+					SELECT 1 FROM jam_masuk jm2 
+					WHERE jm2.shift = tp.shift 
+					AND TIME(jm2.jam_pulang) < TIME(jm2.jam_masuk)
+				)
+			)
+		)
 		ORDER BY tp.jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(query, [idPegawai, today]);
-	return result[0] || null;
+	const result = await rawQuery(query, [idPegawai, today, yesterday]);
+	const attendance = result[0];
+
+	if (!attendance) {
+		return null;
+	}
+
+	// PERBAIKAN: Cek apakah shift malam masih aktif
+	if (attendance.jam_pulang < attendance.jam_masuk) {
+		// Ini shift malam, cek apakah masih dalam periode aktif
+		if (!isNightShiftStillActive(attendance)) {
+			// Shift malam sudah berakhir, tapi belum di-checkout
+			// Kembalikan sebagai unfinished untuk auto-checkout
+			return attendance;
+		}
+	}
+
+	return attendance;
 }
 
 // Fungsi untuk mengecek apakah presensi sebelumnya sudah melewati batas waktu checkout
@@ -368,7 +437,7 @@ async function autoCheckoutOverdueAttendance(attendance, currentTime) {
 	}
 }
 
-// OPTIMIZED: Fungsi untuk cek attendance hari ini dengan handling shift malam
+// OPTIMIZED: Fungsi untuk cek attendance hari ini dengan handling shift malam yang lebih akurat
 async function getTodayAttendance(idPegawai, targetDate = null) {
 	const dateStr = targetDate
 		? moment(targetDate).format("YYYY-MM-DD")
@@ -380,19 +449,35 @@ async function getTodayAttendance(idPegawai, targetDate = null) {
 		.subtract(1, "day")
 		.format("YYYY-MM-DD");
 
+	// PERBAIKAN UTAMA: Hanya cari presensi AKTIF (yang belum checkout)
+	// Tidak perlu cek rekap_presensi karena itu untuk presensi yang sudah selesai
 	const query = `
 		SELECT *
 		FROM temporary_presensi 
 		WHERE id = ? 
+		AND jam_pulang IS NULL
 		AND (
-			DATE(jam_datang) = ? 
+			-- Presensi hari ini (shift normal atau shift malam yang dimulai hari ini)
+			DATE(jam_datang) = ?
 			OR (
+				-- Shift malam dari kemarin yang masih berlangsung
 				DATE(jam_datang) = ? 
-				AND jam_pulang IS NULL
 				AND EXISTS (
 					SELECT 1 FROM jam_masuk jm 
 					WHERE jm.shift = temporary_presensi.shift 
 					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+				)
+				-- PERBAIKAN: Pastikan shift malam ini masih dalam periode aktif
+				AND (
+					CONCAT(?, ' ', (
+						SELECT jam_pulang FROM jam_masuk 
+						WHERE shift = temporary_presensi.shift
+					)) > NOW()
+					OR 
+					CONCAT(DATE_ADD(?, INTERVAL 1 DAY), ' ', (
+						SELECT jam_pulang FROM jam_masuk 
+						WHERE shift = temporary_presensi.shift
+					)) > NOW()
 				)
 			)
 		)
@@ -400,37 +485,17 @@ async function getTodayAttendance(idPegawai, targetDate = null) {
 		LIMIT 1
 	`;
 
-	let result = await rawQuery(query, [idPegawai, dateStr, previousDateStr]);
+	let result = await rawQuery(query, [
+		idPegawai,
+		dateStr,
+		previousDateStr,
+		previousDateStr,
+		previousDateStr,
+	]);
 
-	// Jika tidak ada di temporary_presensi, cek di rekap_presensi
-	if (!result[0]) {
-		const rekapQuery = `
-			SELECT *
-			FROM rekap_presensi 
-			WHERE id = ? 
-			AND (
-				DATE(jam_datang) = ? 
-				OR (
-					DATE(jam_datang) = ? 
-					AND EXISTS (
-						SELECT 1 FROM jam_masuk jm 
-						WHERE jm.shift = rekap_presensi.shift 
-						AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
-						AND DATE(jam_pulang) = ?
-					)
-				)
-			)
-			ORDER BY jam_datang DESC
-			LIMIT 1
-		`;
-
-		result = await rawQuery(rekapQuery, [
-			idPegawai,
-			dateStr,
-			previousDateStr,
-			dateStr,
-		]);
-	}
+	// PERBAIKAN: Tidak perlu cek rekap_presensi
+	// Fungsi ini untuk mengecek presensi yang masih aktif
+	// rekap_presensi berisi presensi yang sudah selesai
 
 	return result[0] || null;
 }
@@ -473,6 +538,50 @@ async function getTodayCheckout(idPegawai, targetDate = null) {
 		previousDateStr,
 		dateStr,
 	]);
+	return result[0] || null;
+}
+
+// Fungsi baru untuk mengecek presensi yang sudah selesai hari ini (untuk tampilan UI)
+async function getTodayCompletedAttendance(idPegawai, targetDate = null) {
+	const dateStr = targetDate
+		? moment(targetDate).format("YYYY-MM-DD")
+		: moment().format("YYYY-MM-DD");
+
+	const previousDateStr = moment(dateStr)
+		.subtract(1, "day")
+		.format("YYYY-MM-DD");
+
+	// Cek di rekap_presensi untuk presensi yang sudah selesai
+	const rekapQuery = `
+		SELECT *
+		FROM rekap_presensi 
+		WHERE id = ? 
+		AND jam_pulang IS NOT NULL
+		AND (
+			-- Presensi yang dimulai hari ini
+			DATE(jam_datang) = ?
+			OR (
+				-- Shift malam dari kemarin yang pulangnya hari ini
+				DATE(jam_datang) = ? 
+				AND EXISTS (
+					SELECT 1 FROM jam_masuk jm 
+					WHERE jm.shift = rekap_presensi.shift 
+					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+					AND DATE(jam_pulang) = ?
+				)
+			)
+		)
+		ORDER BY jam_datang DESC
+		LIMIT 1
+	`;
+
+	const result = await rawQuery(rekapQuery, [
+		idPegawai,
+		dateStr,
+		previousDateStr,
+		dateStr,
+	]);
+
 	return result[0] || null;
 }
 

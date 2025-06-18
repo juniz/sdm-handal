@@ -6,7 +6,8 @@ import moment from "moment";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
-// Fungsi untuk cek attendance hari ini dengan handling shift malam
+// Fungsi untuk cek attendance AKTIF hari ini (hanya yang belum checkout)
+// PERBAIKAN: Gunakan logika yang sama dengan /api/attendance/today
 async function getTodayAttendance(idPegawai, targetDate = null) {
 	const dateStr = targetDate
 		? moment(targetDate).format("YYYY-MM-DD")
@@ -17,19 +18,35 @@ async function getTodayAttendance(idPegawai, targetDate = null) {
 		.subtract(1, "day")
 		.format("YYYY-MM-DD");
 
-	const sql = `
+	// PERBAIKAN UTAMA: Hanya cari presensi AKTIF (yang belum checkout)
+	// Tidak perlu cek rekap_presensi karena itu untuk presensi yang sudah selesai
+	const query = `
 		SELECT *
 		FROM temporary_presensi 
 		WHERE id = ? 
+		AND jam_pulang IS NULL
 		AND (
-			DATE(jam_datang) = ? 
+			-- Presensi hari ini (shift normal atau shift malam yang dimulai hari ini)
+			DATE(jam_datang) = ?
 			OR (
+				-- Shift malam dari kemarin yang masih berlangsung
 				DATE(jam_datang) = ? 
-				AND jam_pulang IS NULL
 				AND EXISTS (
 					SELECT 1 FROM jam_masuk jm 
 					WHERE jm.shift = temporary_presensi.shift 
 					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+				)
+				-- PERBAIKAN: Pastikan shift malam ini masih dalam periode aktif
+				AND (
+					CONCAT(?, ' ', (
+						SELECT jam_pulang FROM jam_masuk 
+						WHERE shift = temporary_presensi.shift
+					)) > NOW()
+					OR 
+					CONCAT(DATE_ADD(?, INTERVAL 1 DAY), ' ', (
+						SELECT jam_pulang FROM jam_masuk 
+						WHERE shift = temporary_presensi.shift
+					)) > NOW()
 				)
 			)
 		)
@@ -37,7 +54,14 @@ async function getTodayAttendance(idPegawai, targetDate = null) {
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(sql, [idPegawai, dateStr, previousDateStr]);
+	const result = await rawQuery(query, [
+		idPegawai,
+		dateStr,
+		previousDateStr,
+		previousDateStr,
+		previousDateStr,
+	]);
+
 	return result[0] || null;
 }
 
@@ -47,38 +71,23 @@ async function getTodayCheckout(idPegawai, targetDate = null) {
 		? moment(targetDate).format("YYYY-MM-DD")
 		: moment().format("YYYY-MM-DD");
 
-	// Untuk menangani shift malam yang melewati tengah malam
-	const previousDateStr = moment(dateStr)
-		.subtract(1, "day")
-		.format("YYYY-MM-DD");
-
+	// PERBAIKAN: Hanya cek presensi yang benar-benar relevan untuk hari ini
+	// Tidak termasuk shift malam dari kemarin yang sudah selesai
 	const sql = `
 		SELECT *
 		FROM rekap_presensi 
 		WHERE id = ? 
 		AND jam_pulang IS NOT NULL
 		AND (
-			DATE(jam_datang) = ? 
-			OR (
-				DATE(jam_datang) = ? 
-				AND EXISTS (
-					SELECT 1 FROM jam_masuk jm 
-					WHERE jm.shift = rekap_presensi.shift 
-					AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
-					AND DATE(jam_pulang) = ?
-				)
-			)
+			-- HANYA presensi yang dimulai hari ini dan sudah selesai hari ini juga
+			(DATE(jam_datang) = ? AND DATE(jam_pulang) = ?)
 		)
 		ORDER BY jam_datang DESC
 		LIMIT 1
 	`;
 
-	const result = await rawQuery(sql, [
-		idPegawai,
-		dateStr,
-		previousDateStr,
-		dateStr,
-	]);
+	const result = await rawQuery(sql, [idPegawai, dateStr, dateStr]);
+
 	return result[0] || null;
 }
 

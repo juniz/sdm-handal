@@ -32,7 +32,9 @@
 		"performance-check": "pm2 show sdm-app && pm2 monit",
 		"photo-watcher": "node scripts/photo-watcher.js",
 		"check-photos": "node scripts/check-photos.js",
-		"migrate-photos": "node scripts/migrate-photos.js"
+		"migrate-photos": "node scripts/migrate-photos.js",
+		"debug-night-shift": "node scripts/debug-night-shift.js",
+		"test-attendance-query": "node scripts/test-attendance-query.js"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.10",

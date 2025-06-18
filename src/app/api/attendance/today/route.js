@@ -25,23 +25,38 @@ export async function GET(request) {
 		const today = moment().format("YYYY-MM-DD");
 		const yesterday = moment().subtract(1, "day").format("YYYY-MM-DD");
 
-		// Ambil data presensi hari ini dengan handling shift malam
+		// PERBAIKAN: Hanya cari presensi AKTIF (yang belum checkout)
+		// Tidak perlu cek rekap_presensi karena itu untuk presensi yang sudah selesai
 		let todayAttendance = null;
 
-		// Cek di temporary_presensi dengan handling shift malam
+		// Cek di temporary_presensi dengan logika yang lebih tepat
 		const tempQuery = `
 			SELECT *
 			FROM temporary_presensi 
 			WHERE id = ? 
+			AND jam_pulang IS NULL
 			AND (
+				-- Presensi hari ini (shift normal atau shift malam yang dimulai hari ini)
 				DATE(jam_datang) = ? 
 				OR (
+					-- Shift malam dari kemarin yang masih berlangsung
 					DATE(jam_datang) = ? 
-					AND jam_pulang IS NULL
 					AND EXISTS (
 						SELECT 1 FROM jam_masuk jm 
 						WHERE jm.shift = temporary_presensi.shift 
 						AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
+					)
+					-- PERBAIKAN: Pastikan shift malam ini masih dalam periode aktif
+					AND (
+						CONCAT(?, ' ', (
+							SELECT jam_pulang FROM jam_masuk 
+							WHERE shift = temporary_presensi.shift
+						)) > NOW()
+						OR 
+						CONCAT(DATE_ADD(?, INTERVAL 1 DAY), ' ', (
+							SELECT jam_pulang FROM jam_masuk 
+							WHERE shift = temporary_presensi.shift
+						)) > NOW()
 					)
 				)
 			)
@@ -49,34 +64,18 @@ export async function GET(request) {
 			LIMIT 1
 		`;
 
-		let result = await rawQuery(tempQuery, [idPegawai, today, yesterday]);
+		let result = await rawQuery(tempQuery, [
+			idPegawai,
+			today,
+			yesterday,
+			yesterday,
+			yesterday,
+		]);
 		todayAttendance = result[0];
 
-		// Jika tidak ada di temporary_presensi, cek di rekap_presensi
-		if (!todayAttendance) {
-			const rekapQuery = `
-				SELECT *
-				FROM rekap_presensi 
-				WHERE id = ? 
-				AND (
-					DATE(jam_datang) = ? 
-					OR (
-						DATE(jam_datang) = ? 
-						AND EXISTS (
-							SELECT 1 FROM jam_masuk jm 
-							WHERE jm.shift = rekap_presensi.shift 
-							AND TIME(jm.jam_pulang) < TIME(jm.jam_masuk)
-							AND DATE(jam_pulang) = ?
-						)
-					)
-				)
-				ORDER BY jam_datang DESC
-				LIMIT 1
-			`;
-
-			result = await rawQuery(rekapQuery, [idPegawai, today, yesterday, today]);
-			todayAttendance = result[0];
-		}
+		// PERBAIKAN: Tidak perlu cek rekap_presensi
+		// rekap_presensi berisi presensi yang sudah selesai, tidak relevan untuk "today attendance"
+		// API ini seharusnya hanya mengembalikan presensi yang masih aktif
 
 		const jam = await selectFirst({
 			table: "jam_masuk",
@@ -92,7 +91,7 @@ export async function GET(request) {
 		return NextResponse.json({
 			status: 200,
 			message: "Data presensi hari ini berhasil diambil",
-			data: todayAttendance,
+			data: todayAttendance, // null jika tidak ada presensi aktif
 			jam_pulang: jam?.jam_pulang,
 		});
 	} catch (error) {
