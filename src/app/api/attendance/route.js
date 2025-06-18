@@ -130,8 +130,9 @@ async function saveBase64Image(base64Data, idPegawai) {
 		const filePath = path.join(uploadDir, fileName);
 		await fs.writeFile(filePath, buffer);
 
-		// Return URL relatif untuk API endpoint
-		return `/api/uploads/attendance/${fileName}`;
+		// Return full URL menggunakan NEXT_PUBLIC_URL
+		const baseUrl = process.env.NEXT_PUBLIC_URL || "";
+		return `${baseUrl}/api/uploads/attendance/${fileName}`;
 	} catch (error) {
 		console.error("Error saving image:", error);
 		throw new Error("Gagal menyimpan foto: " + error.message);

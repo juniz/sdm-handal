@@ -15,11 +15,12 @@ Sistem upload foto presensi telah diubah dari menggunakan folder `public/photos`
 ### Sesudah (New System)
 
 - Foto disimpan di: `uploads/attendance/`
-- URL akses: `https://domain.com/api/uploads/attendance/filename.jpg`
+- URL akses: `https://domain.com/api/uploads/attendance/filename.jpg` (full URL)
 - Keuntungan:
-  - Terproteksi dengan authentication
+  - URL lengkap dengan domain dari NEXT_PUBLIC_URL
+  - Tidak memerlukan authentication (public access)
   - Tidak ter-commit ke repository
-  - Lebih aman dan sesuai best practice
+  - Lebih mudah untuk CDN dan sharing
 
 ## Struktur Folder
 
@@ -45,24 +46,24 @@ project-root/
 
 ### GET /api/uploads/attendance/[filename]
 
-Endpoint untuk mengakses foto presensi dengan authentication.
+Endpoint untuk mengakses foto presensi tanpa authentication.
 
 **Headers Required:**
 
-- Cookie: `auth_token=<jwt_token>`
+- Tidak ada (public access)
 
 **Response:**
 
 - Success: File foto dengan headers caching
-- Error 401: Unauthorized (token tidak valid)
+- Error 400: Invalid filename
 - Error 404: File tidak ditemukan
 
 **Security Features:**
 
-- Authentication required
 - Path traversal protection
 - Filename validation
 - Long-term caching headers
+- Public access untuk kemudahan integrasi
 
 ## Migration
 
@@ -150,10 +151,11 @@ mkdir -p uploads/attendance
 
 ## Security Considerations
 
-### Authentication
+### Public Access
 
-- Semua akses foto memerlukan valid JWT token
-- Token diverifikasi setiap request
+- Foto presensi dapat diakses tanpa authentication
+- URL menggunakan filename yang unik dengan timestamp
+- Tidak ada informasi sensitif dalam URL
 
 ### File Validation
 
@@ -163,8 +165,8 @@ mkdir -p uploads/attendance
 
 ### Access Control
 
-- Hanya user yang authenticated yang bisa akses
-- Future: Role-based access control per foto
+- Public access untuk kemudahan sharing dan integrasi
+- Future: Optional authentication layer jika diperlukan
 
 ## Performance Optimization
 

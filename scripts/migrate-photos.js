@@ -99,8 +99,9 @@ async function migratePhotos() {
 				// Copy file to new location
 				await fs.copyFile(oldFilePath, newFilePath);
 
-				// New URL for database
-				const newPhotoUrl = `/api/uploads/attendance/${filename}`;
+				// New URL for database - menggunakan full URL dengan NEXT_PUBLIC_URL
+				const baseUrl = process.env.NEXT_PUBLIC_URL || "";
+				const newPhotoUrl = `${baseUrl}/api/uploads/attendance/${filename}`;
 
 				// Update database
 				await connection.execute(

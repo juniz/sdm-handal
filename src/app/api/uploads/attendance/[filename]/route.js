@@ -1,27 +1,9 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
 import fs from "fs/promises";
 import path from "path";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-
 export async function GET(request, { params }) {
 	try {
-		// Verifikasi authentication
-		const cookieStore = cookies();
-		const token = await cookieStore.get("auth_token")?.value;
-
-		if (!token) {
-			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-		}
-
-		try {
-			await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-		} catch (error) {
-			return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-		}
-
 		const { filename } = params;
 
 		// Validasi filename untuk security

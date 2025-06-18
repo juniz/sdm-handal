@@ -34,7 +34,7 @@ const OptimizedPhotoDisplay = ({
 		if (!url) return null;
 
 		try {
-			// Jika sudah URL lengkap (http/https), tambahkan cache busting hanya untuk retry
+			// Jika sudah URL lengkap (http/https), gunakan langsung
 			if (url.startsWith("http://") || url.startsWith("https://")) {
 				if (retryCount > 0) {
 					const retryParam = `retry=${retryCount}`;
@@ -44,14 +44,17 @@ const OptimizedPhotoDisplay = ({
 				return url;
 			}
 
-			// Jika path API endpoint (/api/uploads/...), gunakan langsung tanpa cache busting
+			// Jika path API endpoint (/api/uploads/...), buat full URL
 			if (url.startsWith("/api/uploads/")) {
+				const baseUrl = process.env.NEXT_PUBLIC_URL || "";
+				const fullUrl = `${baseUrl}${url}`;
+
 				if (retryCount > 0) {
 					const retryParam = `retry=${retryCount}`;
-					const separator = url.includes("?") ? "&" : "?";
-					return `${url}${separator}${retryParam}`;
+					const separator = fullUrl.includes("?") ? "&" : "?";
+					return `${fullUrl}${separator}${retryParam}`;
 				}
-				return url;
+				return fullUrl;
 			}
 
 			// Jika path relatif biasa (sistem lama), tambahkan base URL dan cache busting
