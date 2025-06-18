@@ -34,22 +34,32 @@ const OptimizedPhotoDisplay = ({
 		if (!url) return null;
 
 		try {
-			// Tambahkan cache busting parameters
-			const timestamp = Date.now();
-			const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
-			const cacheParam = `t=${timestamp}`;
-			const params = [cacheParam, retryParam].filter(Boolean).join("&");
-
-			// Jika sudah URL lengkap
+			// Jika sudah URL lengkap (http/https), gunakan langsung
 			if (url.startsWith("http://") || url.startsWith("https://")) {
+				// Tambahkan cache busting parameters jika diperlukan
+				const timestamp = Date.now();
+				const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
+				const cacheParam = `t=${timestamp}`;
+				const params = [cacheParam, retryParam].filter(Boolean).join("&");
 				const separator = url.includes("?") ? "&" : "?";
 				return `${url}${separator}${params}`;
 			}
 
-			// Jika path relatif, gunakan base URL
+			// Jika path API endpoint (/api/uploads/...), gunakan langsung
+			if (url.startsWith("/api/uploads/")) {
+				return url;
+			}
+
+			// Jika path relatif biasa, tambahkan base URL
 			const baseUrl = process.env.NEXT_PUBLIC_URL || "";
 			const cleanPath = url.startsWith("/") ? url : `/${url}`;
 			const fullUrl = `${baseUrl}${cleanPath}`;
+
+			// Tambahkan cache busting untuk URL lama
+			const timestamp = Date.now();
+			const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
+			const cacheParam = `t=${timestamp}`;
+			const params = [cacheParam, retryParam].filter(Boolean).join("&");
 			const separator = fullUrl.includes("?") ? "&" : "?";
 			return `${fullUrl}${separator}${params}`;
 		} catch (error) {

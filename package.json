@@ -31,7 +31,8 @@
 		"health-check": "curl -f http://localhost:3001 || exit 1",
 		"performance-check": "pm2 show sdm-app && pm2 monit",
 		"photo-watcher": "node scripts/photo-watcher.js",
-		"check-photos": "node scripts/check-photos.js"
+		"check-photos": "node scripts/check-photos.js",
+		"migrate-photos": "node scripts/migrate-photos.js"
 	},
 	"dependencies": {
 		"@radix-ui/react-accordion": "^1.2.10",

@@ -50,3 +50,6 @@ logs/
 .pm2/
 pids/
 pm2.log
+
+# uploads folder
+/uploads/
