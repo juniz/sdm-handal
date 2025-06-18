@@ -1,7 +1,7 @@
 module.exports = {
 	apps: [
 		{
-			name: "sdm-app",
+			name: "sdm-app-staging",
 			script: "npm",
 			args: "start",
 			instances: 1,
