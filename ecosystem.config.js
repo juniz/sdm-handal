@@ -8,14 +8,7 @@ module.exports = {
 			exec_mode: "fork",
 			watch: true,
 			watch_delay: 1000,
-			ignore_watch: [
-				"node_modules",
-				"logs",
-				".git",
-				".next",
-				"*.log",
-				"public/!(photos)",
-			],
+			ignore_watch: ["node_modules", "logs", ".git", ".next", "*.log"],
 			watch_options: {
 				followSymlinks: false,
 				usePolling: true,
