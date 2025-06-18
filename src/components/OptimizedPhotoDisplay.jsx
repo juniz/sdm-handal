@@ -34,23 +34,27 @@ const OptimizedPhotoDisplay = ({
 		if (!url) return null;
 
 		try {
-			// Jika sudah URL lengkap (http/https), gunakan langsung
+			// Jika sudah URL lengkap (http/https), tambahkan cache busting hanya untuk retry
 			if (url.startsWith("http://") || url.startsWith("https://")) {
-				// Tambahkan cache busting parameters jika diperlukan
-				const timestamp = Date.now();
-				const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
-				const cacheParam = `t=${timestamp}`;
-				const params = [cacheParam, retryParam].filter(Boolean).join("&");
-				const separator = url.includes("?") ? "&" : "?";
-				return `${url}${separator}${params}`;
-			}
-
-			// Jika path API endpoint (/api/uploads/...), gunakan langsung
-			if (url.startsWith("/api/uploads/")) {
+				if (retryCount > 0) {
+					const retryParam = `retry=${retryCount}`;
+					const separator = url.includes("?") ? "&" : "?";
+					return `${url}${separator}${retryParam}`;
+				}
 				return url;
 			}
 
-			// Jika path relatif biasa, tambahkan base URL
+			// Jika path API endpoint (/api/uploads/...), gunakan langsung tanpa cache busting
+			if (url.startsWith("/api/uploads/")) {
+				if (retryCount > 0) {
+					const retryParam = `retry=${retryCount}`;
+					const separator = url.includes("?") ? "&" : "?";
+					return `${url}${separator}${retryParam}`;
+				}
+				return url;
+			}
+
+			// Jika path relatif biasa (sistem lama), tambahkan base URL dan cache busting
 			const baseUrl = process.env.NEXT_PUBLIC_URL || "";
 			const cleanPath = url.startsWith("/") ? url : `/${url}`;
 			const fullUrl = `${baseUrl}${cleanPath}`;
