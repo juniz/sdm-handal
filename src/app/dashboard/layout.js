@@ -12,6 +12,7 @@ import {
 	Ticket,
 	UserCheck,
 	AlertTriangle,
+	CreditCard,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -69,6 +70,11 @@ export default function DashboardLayout({ children }) {
 			icon: UserCheck,
 			label: "Assignment IT",
 			href: "/dashboard/ticket-assignment",
+		},
+		{
+			icon: CreditCard,
+			label: "Pengajuan KTA",
+			href: "/dashboard/pengajuan-kta",
 		},
 		{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
 	];

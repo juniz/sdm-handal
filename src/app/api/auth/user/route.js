@@ -23,6 +23,25 @@ export async function GET() {
 
 		const payload = verified.payload;
 
+		// Ambil data pegawai berdasarkan username untuk mendapatkan jabatan
+		if (payload.username) {
+			try {
+				const pegawai = await selectFirst({
+					table: "pegawai",
+					where: {
+						nik: payload.username,
+					},
+					select: ["jbtn"],
+				});
+
+				if (pegawai) {
+					payload.jabatan = pegawai.jbtn;
+				}
+			} catch (error) {
+				console.error("Error fetching pegawai jabatan:", error);
+			}
+		}
+
 		// Ambil nama departemen dari tabel departemen
 		if (payload.departemen) {
 			try {
