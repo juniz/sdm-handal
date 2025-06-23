@@ -720,8 +720,8 @@ export default function PengajuanKTAPage() {
 
 			{/* Dialog Detail Pengajuan */}
 			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-				<DialogContent className="max-w-2xl">
-					<DialogHeader>
+				<DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+					<DialogHeader className="flex-shrink-0">
 						<DialogTitle>Detail Pengajuan KTA</DialogTitle>
 						<DialogDescription>
 							Informasi lengkap pengajuan KTA
@@ -729,7 +729,7 @@ export default function PengajuanKTAPage() {
 					</DialogHeader>
 
 					{selectedPengajuan && (
-						<div className="space-y-6">
+						<div className="flex-1 overflow-y-auto space-y-6 pr-2">
 							{/* Informasi Pengajuan */}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<div>
@@ -814,7 +814,7 @@ export default function PengajuanKTAPage() {
 										<Label className="text-sm font-medium text-gray-700">
 											Alasan Pengajuan
 										</Label>
-										<div className="mt-1 p-3 bg-gray-50 rounded text-sm">
+										<div className="mt-1 p-3 bg-gray-50 rounded text-sm break-words">
 											{selectedPengajuan.alasan}
 										</div>
 									</div>
@@ -823,7 +823,7 @@ export default function PengajuanKTAPage() {
 											<Label className="text-sm font-medium text-red-700">
 												Alasan Ditolak
 											</Label>
-											<div className="mt-1 p-3 bg-red-50 rounded text-sm text-red-600">
+											<div className="mt-1 p-3 bg-red-50 rounded text-sm text-red-600 break-words">
 												{selectedPengajuan.alasan_ditolak}
 											</div>
 										</div>
@@ -832,7 +832,7 @@ export default function PengajuanKTAPage() {
 							</div>
 
 							{/* Informasi Waktu */}
-							<div className="border-t pt-4">
+							<div className="border-t pt-4 pb-4">
 								<h4 className="font-medium text-gray-900 mb-3">
 									Informasi Waktu
 								</h4>
@@ -866,7 +866,7 @@ export default function PengajuanKTAPage() {
 						</div>
 					)}
 
-					<DialogFooter>
+					<DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
 						<Button
 							variant="outline"
 							onClick={() => setShowDetailDialog(false)}
