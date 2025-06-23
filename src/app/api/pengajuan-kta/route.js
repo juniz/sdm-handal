@@ -3,6 +3,7 @@ import moment from "moment-timezone";
 import "moment/locale/id";
 import { select, insert, update, rawQuery } from "@/lib/db-helper";
 import { getUser } from "@/lib/auth";
+import { generateUniqueNoPengajuan } from "@/lib/pengajuan-kta-helper";
 
 // Set locale ke Indonesia
 moment.locale("id");
@@ -25,7 +26,7 @@ export async function GET(request) {
 			SELECT p.departemen, d.nama as departemen_name, p.nik 
 			FROM pegawai p
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
-			WHERE p.username = ?
+			WHERE p.nik = ?
 		`,
 			[userId]
 		);
@@ -53,9 +54,10 @@ export async function GET(request) {
 		let pengajuanData;
 
 		if (isITorHRD) {
-			// IT/HRD bisa lihat semua pengajuan
+			// IT/HRD bisa lihat semua pengajuan (untuk keperluan admin/processing)
+			// dan juga bisa mengajukan KTA untuk diri sendiri
 			pengajuanData = await rawQuery(`
-				SELECT pk.*, p.nama, p.jabatan, p.unit_kerja, p.departemen 
+				SELECT pk.*, p.nama, p.jbtn, p.departemen 
 				FROM pengajuan_kta pk
 				LEFT JOIN pegawai p ON pk.nik = p.nik
 				ORDER BY pk.created_at DESC
@@ -64,7 +66,7 @@ export async function GET(request) {
 			// User biasa hanya bisa lihat pengajuan sendiri
 			pengajuanData = await rawQuery(
 				`
-				SELECT pk.*, p.nama, p.jabatan, p.unit_kerja, p.departemen 
+				SELECT pk.*, p.nama, p.jbtn, p.departemen 
 				FROM pengajuan_kta pk
 				LEFT JOIN pegawai p ON pk.nik = p.nik
 				WHERE pk.nik = ?
@@ -88,7 +90,7 @@ export async function GET(request) {
 	}
 }
 
-// POST - Buat pengajuan KTA baru
+// POST - Buat pengajuan KTA baru (Semua user termasuk IT/HRD bisa mengajukan)
 export async function POST(request) {
 	try {
 		// Ambil data user dari JWT token
@@ -120,7 +122,7 @@ export async function POST(request) {
 		// Ambil data pegawai
 		const pegawaiData = await rawQuery(
 			`
-			SELECT nik, nama, jabatan, unit_kerja 
+			SELECT nik, nama, jbtn, departemen 
 			FROM pegawai 
 			WHERE id = ?
 		`,
@@ -136,7 +138,7 @@ export async function POST(request) {
 
 		const userNik = pegawaiData[0].nik;
 
-		// Cek apakah ada pengajuan yang masih pending/dalam proses
+		// Cek apakah ada pengajuan yang masih pending/dalam proses untuk user ini
 		const existingPengajuan = await rawQuery(
 			`
 			SELECT id FROM pengajuan_kta 
@@ -153,11 +155,15 @@ export async function POST(request) {
 			);
 		}
 
-		// Insert pengajuan baru
+		// Generate nomor pengajuan unik
 		const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
+		const noPengajuan = await generateUniqueNoPengajuan(new Date());
+
+		// Insert pengajuan baru
 		const result = await insert({
 			table: "pengajuan_kta",
 			data: {
+				no_pengajuan: noPengajuan,
 				nik: userNik, // Menggunakan NIK sesuai struktur tabel
 				jenis: jenis,
 				alasan: alasan,
@@ -172,6 +178,7 @@ export async function POST(request) {
 			message: "Pengajuan KTA berhasil disubmit",
 			data: {
 				id: result.insertId,
+				no_pengajuan: noPengajuan,
 				nik: userNik,
 				jenis: jenis,
 				alasan: alasan,
@@ -294,6 +301,113 @@ export async function PUT(request) {
 		console.error("Error updating pengajuan KTA:", error);
 		return NextResponse.json(
 			{ message: "Terjadi kesalahan saat mengupdate pengajuan KTA" },
+			{ status: 500 }
+		);
+	}
+}
+
+// DELETE - Hapus pengajuan KTA (hanya untuk status pending)
+export async function DELETE(request) {
+	try {
+		// Ambil data user dari JWT token
+		const user = await getUser();
+		if (!user) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		const userId = user.id;
+		const { id } = await request.json();
+
+		// Validasi input
+		if (!id) {
+			return NextResponse.json(
+				{ message: "ID pengajuan harus diisi" },
+				{ status: 400 }
+			);
+		}
+
+		// Ambil data user untuk cek department dan NIK
+		const userData = await rawQuery(
+			`
+			SELECT p.departemen, d.nama as departemen_name, p.nik 
+			FROM pegawai p
+			LEFT JOIN departemen d ON p.departemen = d.dep_id
+			WHERE p.id = ?
+		`,
+			[userId]
+		);
+
+		if (userData.length === 0) {
+			return NextResponse.json(
+				{ message: "Data pegawai tidak ditemukan" },
+				{ status: 404 }
+			);
+		}
+
+		const userDepartment = userData[0].departemen;
+		const userDepartmentName = userData[0].departemen_name;
+		const userNik = userData[0].nik;
+
+		// Cek apakah user dari IT atau HRD
+		const isITorHRD =
+			userDepartment === "IT" ||
+			userDepartment === "HRD" ||
+			userDepartmentName?.toLowerCase().includes("it") ||
+			userDepartmentName?.toLowerCase().includes("teknologi") ||
+			userDepartmentName?.toLowerCase().includes("hrd") ||
+			userDepartmentName?.toLowerCase().includes("human resource");
+
+		// Ambil data pengajuan untuk validasi
+		const pengajuanData = await rawQuery(
+			`
+			SELECT nik, status FROM pengajuan_kta 
+			WHERE id = ?
+		`,
+			[id]
+		);
+
+		if (pengajuanData.length === 0) {
+			return NextResponse.json(
+				{ message: "Pengajuan tidak ditemukan" },
+				{ status: 404 }
+			);
+		}
+
+		const pengajuan = pengajuanData[0];
+
+		// Validasi: hanya bisa hapus jika status pending
+		if (pengajuan.status !== "pending") {
+			return NextResponse.json(
+				{ message: "Hanya pengajuan dengan status pending yang dapat dihapus" },
+				{ status: 400 }
+			);
+		}
+
+		// Validasi: user hanya bisa hapus pengajuan sendiri, kecuali IT/HRD
+		if (!isITorHRD && pengajuan.nik !== userNik) {
+			return NextResponse.json(
+				{ message: "Anda hanya dapat menghapus pengajuan sendiri" },
+				{ status: 403 }
+			);
+		}
+
+		// Hapus pengajuan
+		await rawQuery(
+			`
+			DELETE FROM pengajuan_kta 
+			WHERE id = ?
+		`,
+			[id]
+		);
+
+		return NextResponse.json({
+			status: 200,
+			message: "Pengajuan KTA berhasil dihapus",
+		});
+	} catch (error) {
+		console.error("Error deleting pengajuan KTA:", error);
+		return NextResponse.json(
+			{ message: "Terjadi kesalahan saat menghapus pengajuan KTA" },
 			{ status: 500 }
 		);
 	}
