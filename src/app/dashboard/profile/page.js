@@ -926,19 +926,6 @@ export default function ProfilePage() {
 					value={profile.jk}
 					isLarge
 				/>
-				{/* <ProfileField
-					icon={Phone}
-					label="No. Telepon"
-					value={profile.no_telp}
-					isLarge
-				/>
-				<ProfileField icon={Mail} label="Email" value={profile.email} />
-				<ProfileField
-					icon={Calendar}
-					label="Tempat, Tanggal Lahir"
-					value={`${profile.tmp_lahir}, ${formatDate(profile.tgl_lahir)}`}
-					isLarge
-				/> */}
 				<ProfileField
 					icon={GraduationCap}
 					label="Pendidikan"

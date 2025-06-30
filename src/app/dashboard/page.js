@@ -3,19 +3,30 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Ticket,
-	NotebookPen,
-	Briefcase,
-	MenuIcon,
-	BookOpen,
+	Calendar,
+	Clock,
 	Users,
-	AlertTriangle,
-	Settings,
-	Shield,
-	Database,
 	MapPin,
-	Eye,
+	Settings,
+	AlertCircle,
+	CheckCircle,
+	XCircle,
+	PlusCircle,
+	ArrowRight,
+	TrendingUp,
+	BarChart3,
+	Activity,
+	Bell,
+	BookOpen,
+	Briefcase,
 	IdCard,
+	NotebookPen,
+	Ticket,
+	Shield,
+	Eye,
+	AlertTriangle,
+	MenuIcon,
+	RefreshCcw,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -52,6 +63,12 @@ const QuickActions = () => {
 			icon: IdCard,
 			href: "/dashboard/pengajuan-kta",
 			color: "from-green-500 to-emerald-500",
+		},
+		{
+			title: "Tukar Dinas",
+			icon: RefreshCcw,
+			href: "/dashboard/pengajuan-tukar-dinas",
+			color: "from-orange-500 to-red-500",
 		},
 		{
 			title: "Ajukan Izin",

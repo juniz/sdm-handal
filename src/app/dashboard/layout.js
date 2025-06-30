@@ -13,6 +13,7 @@ import {
 	UserCheck,
 	AlertTriangle,
 	CreditCard,
+	RefreshCcw,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -75,6 +76,11 @@ export default function DashboardLayout({ children }) {
 			icon: CreditCard,
 			label: "Pengajuan KTA",
 			href: "/dashboard/pengajuan-kta",
+		},
+		{
+			icon: RefreshCcw,
+			label: "Tukar Dinas",
+			href: "/dashboard/pengajuan-tukar-dinas",
 		},
 		{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
 	];

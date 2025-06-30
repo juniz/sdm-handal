@@ -70,7 +70,7 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 					>
 						{value
 							? pegawai.find((item) => item.value === value)?.label
-							: "Pilih penanggung jawab..."}
+							: "Pilih nama pegawai..."}
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
 				</PopoverTrigger>
