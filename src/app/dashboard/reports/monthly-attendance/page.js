@@ -471,7 +471,7 @@ export default function MonthlyAttendanceReport() {
 
 			{/* Summary Statistics */}
 			{data?.summary && (
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mx-3 md:mx-0">
+				<div className="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4 mx-3 md:mx-0">
 					<Card>
 						<CardContent className="p-3 md:p-6">
 							<div className="flex items-center justify-between">
@@ -529,6 +529,36 @@ export default function MonthlyAttendanceReport() {
 									</p>
 								</div>
 								<AlertTriangle className="h-6 w-6 md:h-8 md:w-8 text-red-600" />
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardContent className="p-3 md:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-xs md:text-sm font-medium text-gray-600">
+										Jadwal Masuk
+									</p>
+									<p className="text-lg md:text-2xl font-bold text-blue-600">
+										{data.summary.total_jadwal_masuk}
+									</p>
+								</div>
+								<Calendar className="h-6 w-6 md:h-8 md:w-8 text-blue-600" />
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardContent className="p-3 md:p-6">
+							<div className="flex items-center justify-between">
+								<div>
+									<p className="text-xs md:text-sm font-medium text-gray-600">
+										Tidak Presensi
+									</p>
+									<p className="text-lg md:text-2xl font-bold text-orange-600">
+										{data.summary.total_pegawai_tidak_presensi}
+									</p>
+								</div>
+								<X className="h-6 w-6 md:h-8 md:w-8 text-orange-600" />
 							</div>
 						</CardContent>
 					</Card>
@@ -606,7 +636,13 @@ export default function MonthlyAttendanceReport() {
 															{item.jnj_jabatan} • {item.departemen_nama}
 														</p>
 													</div>
-													<div className="grid grid-cols-3 gap-2 text-center">
+													<div className="grid grid-cols-4 gap-2 text-center">
+														<div>
+															<p className="text-xs text-gray-500">Jadwal</p>
+															<p className="font-semibold text-sm text-blue-600">
+																{item.jumlah_jadwal_masuk || 0}
+															</p>
+														</div>
 														<div>
 															<p className="text-xs text-gray-500">Total</p>
 															<p className="font-semibold text-sm">
@@ -628,10 +664,31 @@ export default function MonthlyAttendanceReport() {
 															</p>
 														</div>
 													</div>
-													<div className="mt-2 text-center">
-														<Badge variant="outline" className="text-xs">
-															{item.persentase_tepat_waktu}% Tepat Waktu
-														</Badge>
+													<div className="grid grid-cols-3 gap-2 text-center mt-2">
+														<div>
+															<p className="text-xs text-gray-500">
+																Tidak Presensi
+															</p>
+															<p className="font-semibold text-sm text-orange-600">
+																{item.tidak_presensi || 0}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">
+																% Tepat Waktu
+															</p>
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_tepat_waktu}%
+															</Badge>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">
+																% Kehadiran
+															</p>
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_kehadiran || 0}%
+															</Badge>
+														</div>
 													</div>
 												</CardContent>
 											</Card>
@@ -661,6 +718,9 @@ export default function MonthlyAttendanceReport() {
 														Departemen
 													</th>
 													<th className="text-center p-3 font-semibold text-sm">
+														Jadwal
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
 														Total
 													</th>
 													<th className="text-center p-3 font-semibold text-sm">
@@ -670,7 +730,13 @@ export default function MonthlyAttendanceReport() {
 														Terlambat
 													</th>
 													<th className="text-center p-3 font-semibold text-sm">
+														Tidak Presensi
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
 														% Tepat Waktu
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														% Kehadiran
 													</th>
 													<th className="text-center p-3 font-semibold text-sm">
 														Skor
@@ -698,6 +764,9 @@ export default function MonthlyAttendanceReport() {
 														<td className="p-3 text-sm">
 															{item.departemen_nama}
 														</td>
+														<td className="p-3 text-center font-semibold text-sm text-blue-600">
+															{item.jumlah_jadwal_masuk || 0}
+														</td>
 														<td className="p-3 text-center font-semibold text-sm">
 															{item.total_presensi}
 														</td>
@@ -707,9 +776,17 @@ export default function MonthlyAttendanceReport() {
 														<td className="p-3 text-center text-red-600 font-semibold text-sm">
 															{item.terlambat}
 														</td>
+														<td className="p-3 text-center text-orange-600 font-semibold text-sm">
+															{item.tidak_presensi || 0}
+														</td>
 														<td className="p-3 text-center">
 															<Badge variant="outline" className="text-xs">
 																{item.persentase_tepat_waktu}%
+															</Badge>
+														</td>
+														<td className="p-3 text-center">
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_kehadiran || 0}%
 															</Badge>
 														</td>
 														<td className="p-3 text-center">
@@ -811,6 +888,12 @@ export default function MonthlyAttendanceReport() {
 											</div>
 											<div className="flex justify-between md:justify-end md:gap-4">
 												<div className="text-center">
+													<p className="text-xs text-gray-600">Jadwal</p>
+													<p className="text-sm md:text-lg font-bold text-blue-600">
+														{item.jumlah_jadwal_masuk || 0}
+													</p>
+												</div>
+												<div className="text-center">
 													<p className="text-xs text-gray-600">Tepat Waktu</p>
 													<p className="text-sm md:text-lg font-bold text-green-600">
 														{item.tepat_waktu}
@@ -871,11 +954,25 @@ export default function MonthlyAttendanceReport() {
 											</div>
 											<div className="flex justify-between md:justify-end md:gap-4">
 												<div className="text-center">
+													<p className="text-xs text-gray-600">Jadwal</p>
+													<p className="text-sm md:text-lg font-bold text-blue-600">
+														{item.jumlah_jadwal_masuk || 0}
+													</p>
+												</div>
+												<div className="text-center">
 													<p className="text-xs text-gray-600">
 														Total Terlambat
 													</p>
 													<p className="text-sm md:text-lg font-bold text-red-600">
 														{item.total_terlambat}
+													</p>
+												</div>
+												<div className="text-center">
+													<p className="text-xs text-gray-600">
+														Tidak Presensi
+													</p>
+													<p className="text-sm md:text-lg font-bold text-orange-600">
+														{item.tidak_presensi || 0}
 													</p>
 												</div>
 												<div className="text-center">
@@ -927,6 +1024,13 @@ export default function MonthlyAttendanceReport() {
 								<li>
 									• <strong>Skor Minimum:</strong> 0 poin
 								</li>
+								<li>
+									• <strong>% Kehadiran:</strong> (Total Presensi / Jadwal
+									Masuk) × 100
+								</li>
+								<li>
+									• <strong>Tidak Presensi:</strong> Jadwal masuk tanpa presensi
+								</li>
 							</ul>
 						</div>
 						<div>
@@ -957,6 +1061,24 @@ export default function MonthlyAttendanceReport() {
 									<span>Perlu Perbaikan</span>
 								</div>
 							</div>
+
+							<h4 className="font-semibold mb-2 md:mb-3 text-sm md:text-base mt-4">
+								Informasi Tambahan:
+							</h4>
+							<ul className="space-y-1 md:space-y-2 text-xs md:text-sm">
+								<li>
+									• <strong>Jadwal Masuk:</strong> Jumlah jadwal dari tabel
+									jadwal_pegawai
+								</li>
+								<li>
+									• <strong>Tidak Presensi:</strong> Jadwal masuk tanpa catatan
+									presensi
+								</li>
+								<li>
+									• <strong>% Kehadiran:</strong> Persentase kehadiran
+									berdasarkan jadwal
+								</li>
+							</ul>
 						</div>
 					</div>
 				</CardContent>

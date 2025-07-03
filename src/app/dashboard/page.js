@@ -59,10 +59,10 @@ const QuickActions = () => {
 	const router = useRouter();
 	const actions = [
 		{
-			title: "Pengajuan KTA",
-			icon: IdCard,
-			href: "/dashboard/pengajuan-kta",
-			color: "from-green-500 to-emerald-500",
+			title: "Akreditasi",
+			icon: BookOpen,
+			href: "/dashboard/akreditasi",
+			color: "from-rose-500 to-pink-500",
 		},
 		{
 			title: "Tukar Dinas",
@@ -83,12 +83,6 @@ const QuickActions = () => {
 			color: "from-purple-500 to-pink-500",
 		},
 		{
-			title: "Akreditasi",
-			icon: BookOpen,
-			href: "/dashboard/akreditasi",
-			color: "from-rose-500 to-pink-500",
-		},
-		{
 			title: "Perbaikan IT",
 			icon: Ticket,
 			href: "/dashboard/ticket",
@@ -104,6 +98,12 @@ const QuickActions = () => {
 			title: "Rapat",
 			icon: Users,
 			href: "/dashboard/rapat",
+			color: "from-green-500 to-emerald-500",
+		},
+		{
+			title: "Pengajuan KTA",
+			icon: IdCard,
+			href: "/dashboard/pengajuan-kta",
 			color: "from-green-500 to-emerald-500",
 		},
 	];

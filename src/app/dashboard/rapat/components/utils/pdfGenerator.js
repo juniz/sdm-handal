@@ -2,14 +2,58 @@ import moment from "moment-timezone";
 
 export const generatePrintHTML = (filterDate, rapatList) => {
 	const tanggalFormatted = moment(filterDate).format("DD MMMM YYYY");
+	const hariFormatted = moment(filterDate).format("dddd").toUpperCase();
 	const namaRapat = rapatList.length > 0 ? rapatList[0].rapat : "";
 
+	// Fungsi untuk format tanggal Indonesia
+	const formatTanggalIndo = (tanggal) => {
+		const bulan = [
+			"",
+			"JANUARI",
+			"FEBRUARI",
+			"MARET",
+			"APRIL",
+			"MEI",
+			"JUNI",
+			"JULI",
+			"AGUSTUS",
+			"SEPTEMBER",
+			"OKTOBER",
+			"NOVEMBER",
+			"DESEMBER",
+		];
+		const date = moment(tanggal);
+		return `${date.format("DD")} ${
+			bulan[parseInt(date.format("MM"))]
+		} ${date.format("YYYY")}`;
+	};
+
 	return `
-		<!DOCTYPE html>
-		<html>
+		<!doctype html>
+		<html lang="en">
 		<head>
-			<title>Daftar Hadir - ${tanggalFormatted}</title>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1">
+			<title>REKAP ABSENSI RAPAT RSB NGANJUK</title>
+			<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
 			<style>
+				html, body {
+					width: 210mm;
+					height: 297mm;
+				}
+				table {
+					page-break-inside: auto;
+				}
+				tr {
+					page-break-inside: avoid;
+					page-break-after: auto;
+				}
+				thead {
+					display: table-header-group;
+				}
+				tfoot {
+					display: table-footer-group;
+				}
 				@media print {
 					@page { 
 						margin: 15mm; 
@@ -21,278 +65,169 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 						print-color-adjust: exact;
 					}
 				}
-				body {
-					font-family: Arial, sans-serif;
-					font-size: 11px;
-					line-height: 1.3;
-					color: black;
-					background: white;
-					margin: 0;
-					padding: 20px;
-				}
-				.header {
-					text-align: center;
-					margin-bottom: 40px;
-					font-weight: bold;
-					font-size: 12px;
-					line-height: 1.3;
-				}
-				.header div {
-					margin-bottom: 2px;
-				}
-				.header .underline {
-					text-decoration: underline;
-					margin-bottom: 15px;
-				}
-				.title {
-					text-align: center;
-					font-weight: bold;
-					font-size: 14px;
-					margin-bottom: 40px;
-				}
-				.info {
-					margin-bottom: 25px;
-					font-size: 11px;
-				}
-				.info-table {
-					width: 100%;
-					border: none;
-					border-collapse: collapse;
-				}
-				.info-table td {
-					padding: 3px 0;
-					vertical-align: top;
-				}
-				.main-table {
-					width: 100%;
-					border-collapse: collapse;
-					font-size: 9px;
-					margin-bottom: 40px;
-				}
-				.main-table th,
-				.main-table td {
-					border: 1px solid black;
-					padding: 6px;
-					text-align: left;
-					vertical-align: middle;
-				}
-				.main-table th {
-					background-color: white;
-					text-align: center;
-					font-weight: bold;
-					padding: 6px;
-				}
-				.main-table .center {
-					text-align: center;
-				}
-				.main-table .nama-cell {
-					font-weight: bold;
-					font-size: 9px;
-				}
-				.signature-cell {
-					height: 50px;
-					text-align: center;
-					position: relative;
-					padding: 4px;
-				}
-				.signature-container {
-					position: relative;
-					width: 100%;
-					height: 100%;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-				}
-				.signature-number {
-					position: absolute;
-					top: 2px;
-					left: 4px;
-					font-size: 8px;
-					color: black;
-				}
-				.signature-img {
-					max-width: 60px;
-					max-height: 35px;
-					object-fit: contain;
-					display: block;
-				}
-				.footer {
-					margin-top: 60px;
-					font-size: 10px;
-				}
-				.footer-table {
-					width: 100%;
-					border: none;
-					border-collapse: collapse;
-				}
-				.footer-left {
-					width: 50%;
-					text-align: left;
-					vertical-align: top;
-				}
-				.footer-right {
-					width: 50%;
-					text-align: center;
-					vertical-align: top;
-				}
-				.signature-line {
-					border-bottom: 1px dotted black;
-					width: 150px;
-					margin: 50px auto 0;
-				}
-				.kepala-rs {
-					font-size: 9px;
-					margin-bottom: 50px;
-				}
-				.nama-kepala {
-					font-weight: bold;
-					font-size: 9px;
-					margin-bottom: 3px;
-				}
-				.nrp-kepala {
-					font-size: 8px;
-				}
 			</style>
 		</head>
-		<body>
-			<div class="header">
-				<div>POLRI DAERAH JAWA TIMUR</div>
-				<div>BIDANG KEDOKTERAN DAN KESEHATAN</div>
-				<div class="underline">RUMAH SAKIT BHAYANGKARA TK. III NGANJUK</div>
+		<body class="fw-bold">
+			<div class="row">
+				<div class="col-5 text-center fw-bold" style="font-size:12px;">
+					POLRI DAERAH JAWA TIMUR<br>
+					BIDANG KEDOKTERAN DAN KESEHATAN<br>
+					<u>RUMAH SAKIT BHAYANGKARA TK. III NGANJUK</u>
+				</div>
+				<div class="col"></div>
+				<div class="col"></div>
 			</div>
-			
-			<div class="title">DAFTAR HADIR</div>
-			
-			<div class="info">
-				<table class="info-table">
-					<tr>
-						<td style="width: 12%;">HARI</td>
-						<td style="width: 38%;">: ${moment(filterDate)
-							.format("dddd")
-							.toUpperCase()}</td>
-						<td style="width: 12%;">ACARA</td>
-						<td style="width: 38%;">: ${
-							namaRapat.length > 30
-								? namaRapat.substring(0, 30) + "..."
-								: namaRapat
-						}</td>
-					</tr>
-					<tr>
-						<td>TANGGAL</td>
-						<td>: ${tanggalFormatted.toUpperCase()}</td>
-						<td>JUMLAH</td>
-						<td>: ${rapatList.length}</td>
-					</tr>
-				</table>
+			<div class="row p-3" style="font-size:12px;">
+				<div class="col-12 text-center">DAFTAR HADIR</div>
 			</div>
-			
-			<table class="main-table">
-				<thead>
-					<tr>
-						<th style="width: 6%;">NO</th>
-						<th style="width: 30%;">NAMA</th>
-						<th style="width: 44%;">NRP/INSTANSI/JABATAN</th>
-						<th style="width: 20%;">HADIR</th>
-					</tr>
-				</thead>
-				<tbody>
-					${rapatList
-						.map(
-							(rapat, index) => `
-						<tr>
-							<td class="center" style="font-size: 10px;">${index + 1}</td>
-							<td class="nama-cell">${rapat.nama.toUpperCase()}</td>
-							<td style="font-size: 9px;">${rapat.instansi.toUpperCase()}</td>
-							<td class="signature-cell">
-								${
-									rapat.tanda_tangan
-										? `<div class="signature-container">
-										<span class="signature-number">${index + 1}</span>
-										<img src="${rapat.tanda_tangan}" class="signature-img" />
-									</div>`
-										: `${index + 1}`
-								}
-							</td>
-						</tr>
-					`
-						)
-						.join("")}
-				</tbody>
-			</table>
-			
-			<div class="footer">
-				<table class="footer-table">
-					<tr>
-						<td class="footer-left">
-							<div>Mengetahui</div>
-							<div class="kepala-rs">KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK</div>
-							<div class="nama-kepala">dr. LUSIANTO MADYO NUGROHO M.M.Kes</div>
-							<div class="nrp-kepala">AJUN KOMISARIS BESAR POLISI NRP 72010480</div>
-						</td>
-						<td class="footer-right">
-							<div>PEMIMPIN ACARA</div>
-							<div class="signature-line"></div>
-						</td>
-					</tr>
-				</table>
+			<div class="row" style="font-size:12px;">
+				<div class="col-2">HARI</div>
+				<div class="col-4">: ${hariFormatted}</div>
+				<div class="col-1">ACARA</div>
+				<div class="col-5">: .......................................................</div>
 			</div>
+			<div class="row" style="font-size:12px;">
+				<div class="col-2">TANGGAL</div>
+				<div class="col-4">: ${formatTanggalIndo(filterDate)}</div>
+				<div class="col-1">JUMLAH</div>
+				<div class="col-5">: ${rapatList.length}</div>
+			</div>
+			<div class="row pt-3">
+				<div class="col-12">
+					<table class="table table-bordered border-dark" style="font-size:12px;">
+						<thead>
+							<tr>
+								<th class="text-center" style="width:10%">NO</th>
+								<th class="text-center" style="width:30%">NAMA</th>
+								<th class="text-center" style="width:30%">NRP/INSTANSI/JABATAN</th>
+								<th class="text-center" colspan="2" style="width:30%">HADIR</th>
+							</tr>
+						</thead>
+						<tbody>
+							${rapatList
+								.map(
+									(rapat, index) => `
+								<tr>
+									<td>${index + 1}</td>
+									<td>${rapat.nama.toUpperCase()}</td>
+									<td>${rapat.instansi.toUpperCase()}</td>
+									<td style="width:15%">
+										${
+											(index + 1) % 2 !== 0 && rapat.tanda_tangan
+												? `${index + 1}<img src="${
+														rapat.tanda_tangan
+												  }" width="80" height="50"/>`
+												: ""
+										}
+									</td>
+									<td style="width:15%">
+										${
+											(index + 1) % 2 === 0 && rapat.tanda_tangan
+												? `${index + 1}<img src="${
+														rapat.tanda_tangan
+												  }" width="80" height="50"/>`
+												: ""
+										}
+									</td>
+								</tr>
+							`
+								)
+								.join("")}
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<div class="row pt-3">
+				<div class="col-6 text-center" style="font-size:12px;">
+					Mengetahui<br>
+					KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK<br><br><br><br><br>
+					dr. LUSIANTO MADYO NUGROHO M.M.Kes<br>
+					<span style="text-decoration:overline">AJUN KOMISARIS BESAR POLISI NRP 72010480</span>
+				</div>
+				<div class="col-6 text-center" style="font-size:12px;">
+					PEMIMPIN ACARA<br>
+					<br><br><br><br><br>
+					........................................<br>
+				</div>
+			</div>
+			<script>
+				window.print();
+			</script>
+			<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
 		</body>
 		</html>
 	`;
 };
 
 export const generateDaftarHadirHTML = (filterDate, rapatList) => {
-	const tanggalFormatted = moment(filterDate).format("DD MMMM YYYY");
+	const hariFormatted = moment(filterDate).format("dddd").toUpperCase();
 	const namaRapat = rapatList.length > 0 ? rapatList[0].rapat : "";
 
+	// Fungsi untuk format tanggal Indonesia
+	const formatTanggalIndo = (tanggal) => {
+		const bulan = [
+			"",
+			"JANUARI",
+			"FEBRUARI",
+			"MARET",
+			"APRIL",
+			"MEI",
+			"JUNI",
+			"JULI",
+			"AGUSTUS",
+			"SEPTEMBER",
+			"OKTOBER",
+			"NOVEMBER",
+			"DESEMBER",
+		];
+		const date = moment(tanggal);
+		return `${date.format("DD")} ${
+			bulan[parseInt(date.format("MM"))]
+		} ${date.format("YYYY")}`;
+	};
+
 	return `
-		<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #ffffff; color: #000000; width: 210mm; min-height: 297mm; box-sizing: border-box;">
-			<!-- Header -->
-			<div style="text-align: center; margin-bottom: 40px;">
-				<div style="font-weight: bold; font-size: 12px; line-height: 1.3; color: #000000;">
-					<div style="margin-bottom: 2px;">POLRI DAERAH JAWA TIMUR</div>
-					<div style="margin-bottom: 2px;">BIDANG KEDOKTERAN DAN KESEHATAN</div>
-					<div style="text-decoration: underline; margin-bottom: 15px;">RUMAH SAKIT BHAYANGKARA TK. III NGANJUK</div>
+		<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #ffffff; color: #000000; width: 210mm; min-height: 297mm; box-sizing: border-box; font-weight: bold;">
+			<!-- Header dengan Bootstrap Grid -->
+			<div style="display: flex; width: 100%; margin-bottom: 30px;">
+				<div style="width: 41.66%; text-align: center; font-weight: bold; font-size: 12px;">
+					POLRI DAERAH JAWA TIMUR<br>
+					BIDANG KEDOKTERAN DAN KESEHATAN<br>
+					<u>RUMAH SAKIT BHAYANGKARA TK. III NGANJUK</u>
 				</div>
+				<div style="width: 29.17%;"></div>
+				<div style="width: 29.17%;"></div>
 			</div>
 			
 			<!-- Judul -->
-			<div style="text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 40px; color: #000000;">
+			<div style="text-align: center; font-weight: bold; font-size: 12px; margin-bottom: 30px; padding: 15px 0;">
 				DAFTAR HADIR
 			</div>
 			
 			<!-- Info Rapat -->
-			<div style="margin-bottom: 25px; font-size: 11px; color: #000000;">
-				<table style="width: 100%; border: none; border-collapse: collapse;">
-					<tr>
-						<td style="width: 12%; padding: 3px 0; color: #000000;">HARI</td>
-						<td style="width: 38%; padding: 3px 0; color: #000000;">: ${moment(filterDate)
-							.format("dddd")
-							.toUpperCase()}</td>
-						<td style="width: 12%; padding: 3px 0; color: #000000;">ACARA</td>
-						<td style="width: 38%; padding: 3px 0; color: #000000;">: ${
-							namaRapat.length > 30
-								? namaRapat.substring(0, 30) + "..."
-								: namaRapat
-						}</td>
-					</tr>
-					<tr>
-						<td style="padding: 3px 0; color: #000000;">TANGGAL</td>
-						<td style="padding: 3px 0; color: #000000;">: ${tanggalFormatted.toUpperCase()}</td>
-						<td style="padding: 3px 0; color: #000000;">JUMLAH</td>
-						<td style="padding: 3px 0; color: #000000;">: ${rapatList.length}</td>
-					</tr>
-				</table>
+			<div style="margin-bottom: 25px; font-size: 12px;">
+				<div style="display: flex; margin-bottom: 5px;">
+					<div style="width: 16.66%;">HARI</div>
+					<div style="width: 33.33%;">: ${hariFormatted}</div>
+					<div style="width: 8.33%;">ACARA</div>
+					<div style="width: 41.66%;">: .......................................................</div>
+				</div>
+				<div style="display: flex;">
+					<div style="width: 16.66%;">TANGGAL</div>
+					<div style="width: 33.33%;">: ${formatTanggalIndo(filterDate)}</div>
+					<div style="width: 8.33%;">JUMLAH</div>
+					<div style="width: 41.66%;">: ${rapatList.length}</div>
+				</div>
 			</div>
 			
 			<!-- Tabel Daftar Hadir -->
-			<table style="width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 40px; background-color: #ffffff;">
+			<table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 40px; background-color: #ffffff; border: 1px solid #000000;">
 				<thead>
 					<tr>
-						<th style="border: 1px solid #000000; padding: 6px; text-align: center; width: 6%; color: #000000; background-color: #ffffff; font-weight: bold;">NO</th>
-						<th style="border: 1px solid #000000; padding: 6px; text-align: center; width: 30%; color: #000000; background-color: #ffffff; font-weight: bold;">NAMA</th>
-						<th style="border: 1px solid #000000; padding: 6px; text-align: center; width: 44%; color: #000000; background-color: #ffffff; font-weight: bold;">NRP/INSTANSI/JABATAN</th>
-						<th style="border: 1px solid #000000; padding: 6px; text-align: center; width: 20%; color: #000000; background-color: #ffffff; font-weight: bold;">HADIR</th>
+						<th style="border: 1px solid #000000; padding: 8px; text-align: center; width: 10%; color: #000000; background-color: #ffffff; font-weight: bold;">NO</th>
+						<th style="border: 1px solid #000000; padding: 8px; text-align: center; width: 30%; color: #000000; background-color: #ffffff; font-weight: bold;">NAMA</th>
+						<th style="border: 1px solid #000000; padding: 8px; text-align: center; width: 30%; color: #000000; background-color: #ffffff; font-weight: bold;">NRP/INSTANSI/JABATAN</th>
+						<th style="border: 1px solid #000000; padding: 8px; text-align: center; width: 30%; color: #000000; background-color: #ffffff; font-weight: bold;" colspan="2">HADIR</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -300,25 +235,27 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 						.map(
 							(rapat, index) => `
 						<tr style="background-color: #ffffff;">
-							<td style="border: 1px solid #000000; padding: 8px; text-align: center; vertical-align: middle; color: #000000; background-color: #ffffff; font-size: 10px;">${
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${
 								index + 1
 							}</td>
-							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff; font-size: 9px; font-weight: bold;">${rapat.nama.toUpperCase()}</td>
-							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff; font-size: 9px;">${rapat.instansi.toUpperCase()}</td>
-							<td style="border: 1px solid #000000; padding: 4px; text-align: center; vertical-align: middle; height: 50px; color: #000000; background-color: #ffffff; position: relative;">
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${rapat.nama.toUpperCase()}</td>
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${rapat.instansi.toUpperCase()}</td>
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff; width: 15%;">
 								${
-									rapat.tanda_tangan
-										? `<div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-										<span style="position: absolute; top: 2px; left: 4px; font-size: 8px; color: #000000;">${
-											index + 1
-										}</span>
-										<img src="${
-											rapat.tanda_tangan
-										}" style="max-width: 60px; max-height: 35px; object-fit: contain; display: block;" crossorigin="anonymous" />
-									</div>`
-										: `<span style="font-size: 10px; color: #000000;">${
-												index + 1
-										  }</span>`
+									(index + 1) % 2 !== 0 && rapat.tanda_tangan
+										? `${index + 1}<img src="${
+												rapat.tanda_tangan
+										  }" style="width: 80px; height: 50px; object-fit: contain;" crossorigin="anonymous" />`
+										: ""
+								}
+							</td>
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff; width: 15%;">
+								${
+									(index + 1) % 2 === 0 && rapat.tanda_tangan
+										? `${index + 1}<img src="${
+												rapat.tanda_tangan
+										  }" style="width: 80px; height: 50px; object-fit: contain;" crossorigin="anonymous" />`
+										: ""
 								}
 							</td>
 						</tr>
@@ -329,22 +266,20 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 			</table>
 			
 			<!-- Footer -->
-			<div style="margin-top: 60px;">
-				<table style="width: 100%; border: none; font-size: 10px; border-collapse: collapse;">
-					<tr>
-						<td style="width: 50%; text-align: left; vertical-align: top; color: #000000;">
-							<div style="margin-bottom: 8px; color: #000000;">Mengetahui</div>
-							<div style="margin-bottom: 50px; color: #000000; font-size: 9px;">KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK</div>
-							<div style="font-weight: bold; margin-bottom: 3px; color: #000000; font-size: 9px;">dr. LUSIANTO MADYO NUGROHO M.M.Kes</div>
-							<div style="color: #000000; font-size: 8px;">AJUN KOMISARIS BESAR POLISI NRP 72010480</div>
-						</td>
-						<td style="width: 50%; text-align: center; vertical-align: top; color: #000000;">
-							<div style="margin-bottom: 8px; color: #000000;">PEMIMPIN ACARA</div>
-							<div style="margin-bottom: 50px;"></div>
-							<div style="border-bottom: 1px dotted #000000; width: 150px; margin: 0 auto;"></div>
-						</td>
-					</tr>
-				</table>
+			<div style="margin-top: 60px; padding-top: 15px;">
+				<div style="display: flex; width: 100%;">
+					<div style="width: 50%; text-align: center; font-size: 12px;">
+						Mengetahui<br>
+						KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK<br><br><br><br><br>
+						dr. LUSIANTO MADYO NUGROHO M.M.Kes<br>
+						<span style="text-decoration: overline;">AJUN KOMISARIS BESAR POLISI NRP 72010480</span>
+					</div>
+					<div style="width: 50%; text-align: center; font-size: 12px;">
+						PEMIMPIN ACARA<br>
+						<br><br><br><br><br>
+						........................................<br>
+					</div>
+				</div>
 			</div>
 		</div>
 	`;

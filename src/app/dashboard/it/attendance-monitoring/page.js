@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
 	Users,
 	Calendar,
@@ -33,6 +33,7 @@ export default function AttendanceMonitoringPage() {
 	const [selectedDepartment, setSelectedDepartment] = useState("ALL");
 	const [selectedStatus, setSelectedStatus] = useState("ALL");
 	const [searchTerm, setSearchTerm] = useState("");
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 	const [showFilters, setShowFilters] = useState(false);
 
 	// Pagination states
@@ -43,6 +44,15 @@ export default function AttendanceMonitoringPage() {
 	// Photo modal states
 	const [selectedPhoto, setSelectedPhoto] = useState(null);
 	const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 500); // 500ms delay
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
 
 	const fetchAttendanceData = async (reset = false) => {
 		if (reset) {
@@ -58,7 +68,7 @@ export default function AttendanceMonitoringPage() {
 				date: selectedDate,
 				department: selectedDepartment,
 				status: selectedStatus,
-				search: searchTerm,
+				search: debouncedSearchTerm,
 				limit: "50",
 				offset: offset.toString(),
 			});
@@ -90,8 +100,9 @@ export default function AttendanceMonitoringPage() {
 	};
 
 	useEffect(() => {
+		setCurrentPage(1); // Reset to first page when filters change
 		fetchAttendanceData(true);
-	}, [selectedDate, selectedDepartment, selectedStatus, searchTerm]);
+	}, [selectedDate, selectedDepartment, selectedStatus, debouncedSearchTerm]);
 
 	const handleLoadMore = () => {
 		if (!isLoadingMore && hasMore) {
@@ -107,6 +118,17 @@ export default function AttendanceMonitoringPage() {
 	const handlePhotoClick = (photoUrl, employeeName) => {
 		setSelectedPhoto({ url: photoUrl, name: employeeName });
 		setShowPhotoModal(true);
+	};
+
+	const handleClearSearch = () => {
+		setSearchTerm("");
+		setDebouncedSearchTerm("");
+	};
+
+	const handleSearchKeyDown = (e) => {
+		if (e.key === "Escape") {
+			handleClearSearch();
+		}
 	};
 
 	const getStatusBadge = (status, statusColor) => {
@@ -368,6 +390,11 @@ export default function AttendanceMonitoringPage() {
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
 								Cari Pegawai
+								{searchTerm !== debouncedSearchTerm && (
+									<span className="text-xs text-blue-600 ml-2">
+										(menunggu...)
+									</span>
+								)}
 							</label>
 							<div className="relative">
 								<Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -376,9 +403,37 @@ export default function AttendanceMonitoringPage() {
 									placeholder="Nama, NIK, atau Departemen..."
 									value={searchTerm}
 									onChange={(e) => setSearchTerm(e.target.value)}
-									className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									onKeyDown={handleSearchKeyDown}
+									className={`w-full pl-10 ${
+										searchTerm ? "pr-20" : "pr-4"
+									} py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										searchTerm !== debouncedSearchTerm
+											? "border-blue-300 bg-blue-50"
+											: "border-gray-300"
+									}`}
 								/>
+								<div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+									{searchTerm && searchTerm === debouncedSearchTerm && (
+										<button
+											onClick={handleClearSearch}
+											className="text-gray-400 hover:text-gray-600 transition-colors"
+											title="Hapus pencarian"
+										>
+											<XCircle className="w-4 h-4" />
+										</button>
+									)}
+									{searchTerm !== debouncedSearchTerm && (
+										<RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+									)}
+								</div>
 							</div>
+							{searchTerm && (
+								<p className="text-xs text-gray-500 mt-1">
+									{searchTerm === debouncedSearchTerm
+										? `Mencari: "${debouncedSearchTerm}"`
+										: "Mengetik..."}
+								</p>
+							)}
 						</div>
 					</div>
 				</div>
