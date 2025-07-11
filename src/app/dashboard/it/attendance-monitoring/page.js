@@ -154,14 +154,14 @@ export default function AttendanceMonitoringPage() {
 			return (
 				<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
 					<CheckCircle className="w-3 h-3 mr-1" />
-					Checkout
+					Pulang
 				</span>
 			);
 		} else {
 			return (
 				<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
 					<AlertCircle className="w-3 h-3 mr-1" />
-					Belum Checkout
+					Belum Pulang
 				</span>
 			);
 		}
@@ -207,11 +207,8 @@ export default function AttendanceMonitoringPage() {
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
 					<div>
 						<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-							Monitoring Presensi IT
+							Monitoring Presensi Hari Ini
 						</h1>
-						<p className="text-gray-600">
-							Pantau presensi seluruh pegawai secara real-time
-						</p>
 					</div>
 					<div className="flex gap-2 mt-3 sm:mt-0">
 						<button
@@ -229,7 +226,7 @@ export default function AttendanceMonitoringPage() {
 				</div>
 
 				{/* Statistics Cards */}
-				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+				<div className="hidden md:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
 					<div className="bg-white p-4 rounded-lg border border-gray-200">
 						<div className="flex items-center justify-between mb-2">
 							<div className="p-2 bg-blue-100 rounded-lg">
@@ -275,7 +272,7 @@ export default function AttendanceMonitoringPage() {
 						<p className="text-2xl font-bold text-gray-900">
 							{statistics.sudah_checkout || 0}
 						</p>
-						<p className="text-sm text-gray-600">Sudah Checkout</p>
+						<p className="text-sm text-gray-600">Sudah Pulang</p>
 					</div>
 
 					<div className="bg-white p-4 rounded-lg border border-gray-200">
@@ -287,7 +284,7 @@ export default function AttendanceMonitoringPage() {
 						<p className="text-2xl font-bold text-gray-900">
 							{statistics.belum_checkout || 0}
 						</p>
-						<p className="text-sm text-gray-600">Belum Checkout</p>
+						<p className="text-sm text-gray-600">Belum Pulang</p>
 					</div>
 
 					<div className="bg-white p-4 rounded-lg border border-gray-200">
@@ -461,10 +458,13 @@ export default function AttendanceMonitoringPage() {
 									Jam Pulang
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+									Keterlambatan
+								</th>
+								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Status
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Checkout
+									Pulang
 								</th>
 								<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 									Foto
@@ -504,6 +504,15 @@ export default function AttendanceMonitoringPage() {
 										{attendance.jam_pulang
 											? moment(attendance.jam_pulang).format("HH:mm")
 											: "-"}
+									</td>
+									<td className="px-6 py-4 whitespace-nowrap">
+										{attendance.keterlambatan ? (
+											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+												{attendance.keterlambatan}
+											</span>
+										) : (
+											<span className="text-sm text-gray-500">-</span>
+										)}
 									</td>
 									<td className="px-6 py-4 whitespace-nowrap">
 										{getStatusBadge(attendance.status, attendance.status_color)}
@@ -578,10 +587,14 @@ export default function AttendanceMonitoringPage() {
 								</p>
 							</div>
 							<div>
-								<p className="text-xs text-gray-500 mb-1">Durasi</p>
-								<p className="text-sm font-medium text-gray-900">
-									{attendance.durasi || "-"}
-								</p>
+								<p className="text-xs text-gray-500 mb-1">Keterlambatan</p>
+								{attendance.keterlambatan ? (
+									<span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+										{attendance.keterlambatan}
+									</span>
+								) : (
+									<p className="text-sm text-gray-500">-</p>
+								)}
 							</div>
 						</div>
 

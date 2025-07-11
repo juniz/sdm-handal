@@ -6,25 +6,12 @@ import {
 	Calendar,
 	Clock,
 	Users,
-	MapPin,
-	Settings,
-	AlertCircle,
-	CheckCircle,
-	XCircle,
-	PlusCircle,
-	ArrowRight,
-	TrendingUp,
-	BarChart3,
-	Activity,
-	Bell,
 	BookOpen,
 	Briefcase,
 	IdCard,
 	NotebookPen,
 	Ticket,
 	Shield,
-	Eye,
-	AlertTriangle,
 	MenuIcon,
 	RefreshCcw,
 } from "lucide-react";
@@ -148,48 +135,55 @@ const AdminMenu = () => {
 	const router = useRouter();
 	const adminActions = [
 		{
-			title: "Monitoring Presensi",
+			title: "Hari Ini",
 			description: "Monitor presensi seluruh pegawai",
-			icon: Users,
+			icon: Clock,
 			href: "/dashboard/it/attendance-monitoring",
 			color: "from-purple-500 to-violet-500",
 		},
 		{
-			title: "Error Logs",
-			description: "Monitor error aplikasi",
-			icon: AlertTriangle,
-			href: "/dashboard/admin/error-logs",
-			color: "from-red-500 to-orange-500",
+			title: "Bulanan",
+			description: "Monitor presensi bulanan seluruh pegawai",
+			icon: Calendar,
+			href: "/dashboard/reports/monthly-attendance",
+			color: "from-orange-500 to-red-500",
 		},
-		{
-			title: "Location Settings",
-			description: "Konfigurasi lokasi presensi",
-			icon: MapPin,
-			href: "/dashboard/admin/location-settings",
-			color: "from-green-500 to-emerald-500",
-		},
-		{
-			title: "Security Monitoring",
-			description: "Monitor keamanan sistem",
-			icon: Eye,
-			href: "/dashboard/admin/security-monitoring",
-			color: "from-indigo-500 to-blue-500",
-		},
-		{
-			title: "System Settings",
-			description: "Konfigurasi sistem",
-			icon: Settings,
-			href: "/dashboard/admin/settings",
-			color: "from-gray-500 to-slate-500",
-		},
+		// {
+		// 	title: "Error Logs",
+		// 	description: "Monitor error aplikasi",
+		// 	icon: AlertTriangle,
+		// 	href: "/dashboard/admin/error-logs",
+		// 	color: "from-red-500 to-orange-500",
+		// },
+		// {
+		// 	title: "Location Settings",
+		// 	description: "Konfigurasi lokasi presensi",
+		// 	icon: MapPin,
+		// 	href: "/dashboard/admin/location-settings",
+		// 	color: "from-green-500 to-emerald-500",
+		// },
+		// {
+		// 	title: "Security Monitoring",
+		// 	description: "Monitor keamanan sistem",
+		// 	icon: Eye,
+		// 	href: "/dashboard/admin/security-monitoring",
+		// 	color: "from-indigo-500 to-blue-500",
+		// },
+		// {
+		// 	title: "System Settings",
+		// 	description: "Konfigurasi sistem",
+		// 	icon: Settings,
+		// 	href: "/dashboard/admin/settings",
+		// 	color: "from-gray-500 to-slate-500",
+		// },
 	];
 
 	return (
 		<Card className="border-0 shadow-md bg-gradient-to-br from-red-50 to-orange-50">
 			<CardHeader className="pb-2">
 				<CardTitle className="text-lg font-semibold flex items-center gap-2">
-					<Shield className="w-5 h-5 text-red-500" />
-					Admin Panel
+					<Users className="w-5 h-5 text-red-500" />
+					Monitoring Presensi
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="relative">
@@ -276,7 +270,8 @@ export default function DashboardPage() {
 						</div>
 					</div>
 				) : (
-					userDepartment === "IT" && <AdminMenu />
+					(userDepartment === "IT" && <AdminMenu />) ||
+					(userDepartment === "SPI" && <AdminMenu />)
 				)}
 
 				{/* Aksi Cepat */}

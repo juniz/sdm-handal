@@ -39,13 +39,13 @@ export default function MonthlyAttendanceReport() {
 
 	// Separate applied filters from form inputs
 	const [appliedFilters, setAppliedFilters] = useState({
-		month: moment().format("YYYY-MM"),
+		month: moment().subtract(1, "month").format("YYYY-MM"),
 		department: "ALL",
 		search: "",
 	});
 
 	const [formFilters, setFormFilters] = useState({
-		month: moment().format("YYYY-MM"),
+		month: moment().subtract(1, "month").format("YYYY-MM"),
 		department: "ALL",
 		search: "",
 	});
@@ -143,7 +143,7 @@ export default function MonthlyAttendanceReport() {
 
 	const handleResetFilters = () => {
 		const defaultFilters = {
-			month: moment().format("YYYY-MM"),
+			month: moment().subtract(1, "month").format("YYYY-MM"),
 			department: "ALL",
 			search: "",
 		};
@@ -280,17 +280,44 @@ export default function MonthlyAttendanceReport() {
 								Periode Bulan
 							</label>
 							<div className="relative">
-								<Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+								<Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
+								<style>
+									{`
+										.month-input::-webkit-calendar-picker-indicator {
+											display: none;
+										}
+										.month-input::-moz-calendar-picker-indicator {
+											display: none;
+										}
+									`}
+								</style>
+
 								<Input
 									type="month"
 									value={formFilters.month}
 									onChange={(e) =>
 										handleFormFilterChange("month", e.target.value)
 									}
-									className="pl-10 text-sm font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+									className="month-input pl-10 pr-4 py-2.5 text-sm font-medium bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-center md:text-left cursor-pointer w-full hover:bg-gray-50 transition-colors"
+									style={{
+										WebkitAppearance: "none",
+										MozAppearance: "none",
+										appearance: "none",
+									}}
+									onClick={(e) => {
+										e.target.focus();
+										try {
+											if (e.target.showPicker) {
+												e.target.showPicker();
+											}
+										} catch (err) {
+											// Fallback untuk browser yang tidak mendukung showPicker
+											console.log("showPicker not supported");
+										}
+									}}
 								/>
 							</div>
-							<p className="text-xs text-gray-500">
+							<p className="text-xs text-gray-500 text-start md:text-left">
 								{moment(formFilters.month).format("MMMM YYYY")}
 							</p>
 						</div>
@@ -306,7 +333,7 @@ export default function MonthlyAttendanceReport() {
 									handleFormFilterChange("department", value)
 								}
 							>
-								<SelectTrigger className="text-sm bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
+								<SelectTrigger className="w-full text-sm bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500">
 									<div className="flex items-center gap-2">
 										<Building2 className="h-4 w-4 text-gray-400" />
 										<SelectValue placeholder="Pilih Departemen">
@@ -471,7 +498,7 @@ export default function MonthlyAttendanceReport() {
 
 			{/* Summary Statistics */}
 			{data?.summary && (
-				<div className="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4 mx-3 md:mx-0">
+				<div className="hidden md:grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4 mx-3 md:mx-0">
 					<Card>
 						<CardContent className="p-3 md:p-6">
 							<div className="flex items-center justify-between">
