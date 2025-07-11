@@ -73,6 +73,11 @@ export default function DashboardLayout({ children }) {
 			href: "/dashboard/ticket-assignment",
 		},
 		{
+			icon: FileText,
+			label: "Pengajuan Development",
+			href: "/dashboard/development",
+		},
+		{
 			icon: CreditCard,
 			label: "Pengajuan KTA",
 			href: "/dashboard/pengajuan-kta",
