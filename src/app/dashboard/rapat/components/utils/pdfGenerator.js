@@ -1,9 +1,26 @@
 import moment from "moment-timezone";
 
+// Fungsi untuk mengurutkan data rapat dengan prioritas nama tertentu
+const sortRapatList = (rapatList) => {
+	const priorityName = "dr. LUSIANTO MADYO NUGROHO M.M.Kes";
+
+	return [...rapatList].sort((a, b) => {
+		// Jika nama a adalah prioritas, taruh di atas
+		if (a.nama === priorityName) return -1;
+		// Jika nama b adalah prioritas, taruh di atas
+		if (b.nama === priorityName) return 1;
+		// Untuk yang lain, urutkan berdasarkan nama secara alfabetis
+		return a.nama.localeCompare(b.nama);
+	});
+};
+
 export const generatePrintHTML = (filterDate, rapatList) => {
+	// Urutkan data dengan prioritas nama tertentu
+	const sortedRapatList = sortRapatList(rapatList);
+
 	const tanggalFormatted = moment(filterDate).format("DD MMMM YYYY");
 	const hariFormatted = moment(filterDate).format("dddd").toUpperCase();
-	const namaRapat = rapatList.length > 0 ? rapatList[0].rapat : "";
+	const namaRapat = sortedRapatList.length > 0 ? sortedRapatList[0].rapat : "";
 
 	// Fungsi untuk format tanggal Indonesia
 	const formatTanggalIndo = (tanggal) => {
@@ -90,7 +107,7 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 				<div class="col-2">TANGGAL</div>
 				<div class="col-4">: ${formatTanggalIndo(filterDate)}</div>
 				<div class="col-1">JUMLAH</div>
-				<div class="col-5">: ${rapatList.length}</div>
+				<div class="col-5">: ${sortedRapatList.length}</div>
 			</div>
 			<div class="row pt-3">
 				<div class="col-12">
@@ -104,12 +121,12 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 							</tr>
 						</thead>
 						<tbody>
-							${rapatList
+							${sortedRapatList
 								.map(
 									(rapat, index) => `
 								<tr>
 									<td>${index + 1}</td>
-									<td>${rapat.nama.toUpperCase()}</td>
+									<td>${rapat.nama}</td>
 									<td>${rapat.instansi.toUpperCase()}</td>
 									<td style="width:15%">
 										${
@@ -160,8 +177,11 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 };
 
 export const generateDaftarHadirHTML = (filterDate, rapatList) => {
+	// Urutkan data dengan prioritas nama tertentu
+	const sortedRapatList = sortRapatList(rapatList);
+
 	const hariFormatted = moment(filterDate).format("dddd").toUpperCase();
-	const namaRapat = rapatList.length > 0 ? rapatList[0].rapat : "";
+	const namaRapat = sortedRapatList.length > 0 ? sortedRapatList[0].rapat : "";
 
 	// Fungsi untuk format tanggal Indonesia
 	const formatTanggalIndo = (tanggal) => {
@@ -216,7 +236,7 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 					<div style="width: 16.66%;">TANGGAL</div>
 					<div style="width: 33.33%;">: ${formatTanggalIndo(filterDate)}</div>
 					<div style="width: 8.33%;">JUMLAH</div>
-					<div style="width: 41.66%;">: ${rapatList.length}</div>
+					<div style="width: 41.66%;">: ${sortedRapatList.length}</div>
 				</div>
 			</div>
 			
@@ -231,14 +251,16 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 					</tr>
 				</thead>
 				<tbody>
-					${rapatList
+					${sortedRapatList
 						.map(
 							(rapat, index) => `
 						<tr style="background-color: #ffffff;">
 							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${
 								index + 1
 							}</td>
-							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${rapat.nama.toUpperCase()}</td>
+							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${
+								rapat.nama
+							}</td>
 							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff;">${rapat.instansi.toUpperCase()}</td>
 							<td style="border: 1px solid #000000; padding: 8px; text-align: left; vertical-align: middle; color: #000000; background-color: #ffffff; width: 15%;">
 								${
@@ -286,6 +308,9 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 };
 
 export const exportToPDF = async (filterDate, rapatList) => {
+	// Urutkan data sebelum dikirim ke fungsi generateDaftarHadirHTML
+	const sortedRapatList = sortRapatList(rapatList);
+
 	try {
 		// Import libraries
 		const html2canvas = (await import("html2canvas")).default;
@@ -293,7 +318,7 @@ export const exportToPDF = async (filterDate, rapatList) => {
 
 		// Buat element HTML untuk daftar hadir
 		const element = document.createElement("div");
-		element.innerHTML = generateDaftarHadirHTML(filterDate, rapatList);
+		element.innerHTML = generateDaftarHadirHTML(filterDate, sortedRapatList);
 
 		// Style element untuk PDF
 		element.style.position = "absolute";
@@ -356,7 +381,7 @@ export const exportToPDF = async (filterDate, rapatList) => {
 
 		// Fallback: buka window print
 		try {
-			await openPrintWindow(filterDate, rapatList);
+			await openPrintWindow(filterDate, sortedRapatList);
 		} catch (fallbackError) {
 			console.error("Print fallback failed:", fallbackError);
 			alert(
@@ -367,6 +392,9 @@ export const exportToPDF = async (filterDate, rapatList) => {
 };
 
 export const openPrintWindow = async (filterDate, rapatList) => {
+	// Urutkan data sebelum dikirim ke fungsi generatePrintHTML
+	const sortedRapatList = sortRapatList(rapatList);
+
 	// Buat window baru untuk print
 	const printWindow = window.open("", "_blank");
 
@@ -375,7 +403,7 @@ export const openPrintWindow = async (filterDate, rapatList) => {
 		return;
 	}
 
-	const htmlContent = generatePrintHTML(filterDate, rapatList);
+	const htmlContent = generatePrintHTML(filterDate, sortedRapatList);
 
 	printWindow.document.write(htmlContent);
 	printWindow.document.close();
