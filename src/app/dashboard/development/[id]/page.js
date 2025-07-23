@@ -29,6 +29,11 @@ import {
 } from "lucide-react";
 import moment from "moment";
 import { getClientToken } from "@/lib/client-auth";
+import {
+	ApprovalPanel,
+	AssignmentPanel,
+	ProgressTracker,
+} from "@/components/development";
 
 export default function DevelopmentRequestDetail() {
 	const params = useParams();
@@ -64,7 +69,7 @@ export default function DevelopmentRequestDetail() {
 			});
 			if (response.ok) {
 				const userData = await response.json();
-				setUser(userData);
+				setUser(userData.user); // API mengembalikan { user: {...} }
 			}
 		} catch (err) {
 			console.error("Error fetching user:", err);
@@ -145,6 +150,120 @@ export default function DevelopmentRequestDetail() {
 		}
 	};
 
+	const handleApprovalAction = async (action, reason) => {
+		try {
+			// Get authentication token
+			const token = getClientToken();
+
+			const headers = {
+				"Content-Type": "application/json",
+			};
+
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
+			const response = await fetch(`/api/development/${params.id}/approval`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify({
+					action,
+					reason,
+				}),
+			});
+
+			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || "Gagal memproses approval");
+			}
+
+			// Refresh data after approval
+			await fetchRequestDetail();
+
+			// Show success message
+			alert(result.message);
+		} catch (err) {
+			console.error("Error in approval action:", err);
+			alert("Gagal memproses approval: " + err.message);
+			throw err; // Re-throw to let ApprovalPanel handle the error state
+		}
+	};
+
+	const handleAssignmentAction = async (assignmentData) => {
+		try {
+			// Get authentication token
+			const token = getClientToken();
+
+			const headers = {
+				"Content-Type": "application/json",
+			};
+
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
+			const response = await fetch(`/api/development/${params.id}/assign`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify(assignmentData),
+			});
+
+			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || "Gagal memproses assignment");
+			}
+
+			// Refresh data after assignment
+			await fetchRequestDetail();
+
+			// Show success message
+			alert(result.message);
+		} catch (err) {
+			console.error("Error in assignment action:", err);
+			alert("Gagal memproses assignment: " + err.message);
+			throw err; // Re-throw to let AssignmentPanel handle the error state
+		}
+	};
+
+	const handleProgressUpdate = async (progressData) => {
+		try {
+			// Get authentication token
+			const token = getClientToken();
+
+			const headers = {
+				"Content-Type": "application/json",
+			};
+
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
+			const response = await fetch(`/api/development/${params.id}/progress`, {
+				method: "POST",
+				headers,
+				body: JSON.stringify(progressData),
+			});
+
+			const result = await response.json();
+
+			if (!response.ok) {
+				throw new Error(result.error || "Gagal update progress");
+			}
+
+			// Refresh data after progress update
+			await fetchRequestDetail();
+
+			// Show success message
+			alert(result.message);
+		} catch (err) {
+			console.error("Error in progress update:", err);
+			alert("Gagal update progress: " + err.message);
+			throw err; // Re-throw to let ProgressTracker handle the error state
+		}
+	};
+
 	const getStatusBadge = (status, statusColor) => {
 		const colors = {
 			"#28a745": "bg-green-100 text-green-800 border-green-200",
@@ -188,12 +307,60 @@ export default function DevelopmentRequestDetail() {
 
 	const formatDate = (dateString) => {
 		if (!dateString) return "-";
-		return moment(dateString).format("DD MMM YYYY, HH:mm");
+		// Jika tanggal sudah berupa string yang di-format dari API (mengandung nama bulan Indonesia)
+		if (
+			typeof dateString === "string" &&
+			(dateString.includes("Januari") ||
+				dateString.includes("Februari") ||
+				dateString.includes("Maret") ||
+				dateString.includes("April") ||
+				dateString.includes("Mei") ||
+				dateString.includes("Juni") ||
+				dateString.includes("Juli") ||
+				dateString.includes("Agustus") ||
+				dateString.includes("September") ||
+				dateString.includes("Oktober") ||
+				dateString.includes("November") ||
+				dateString.includes("Desember"))
+		) {
+			return dateString; // Sudah di-format dari API
+		}
+		// Jika masih berupa raw date, format dengan moment
+		try {
+			return moment(dateString).format("DD MMM YYYY, HH:mm");
+		} catch (error) {
+			console.error("Error formatting date:", error);
+			return dateString; // Fallback return original string
+		}
 	};
 
 	const getTimeAgo = (dateString) => {
 		if (!dateString) return "";
-		return moment(dateString).fromNow();
+		// Jika tanggal sudah berupa string yang di-format dari API (mengandung nama bulan Indonesia)
+		if (
+			typeof dateString === "string" &&
+			(dateString.includes("Januari") ||
+				dateString.includes("Februari") ||
+				dateString.includes("Maret") ||
+				dateString.includes("April") ||
+				dateString.includes("Mei") ||
+				dateString.includes("Juni") ||
+				dateString.includes("Juli") ||
+				dateString.includes("Agustus") ||
+				dateString.includes("September") ||
+				dateString.includes("Oktober") ||
+				dateString.includes("November") ||
+				dateString.includes("Desember"))
+		) {
+			return ""; // Tidak bisa calculate time ago dari string yang sudah di-format
+		}
+		// Jika masih berupa raw date, hitung time ago dengan moment
+		try {
+			return moment(dateString).fromNow();
+		} catch (error) {
+			console.error("Error calculating time ago:", error);
+			return "";
+		}
 	};
 
 	const canEdit = () => {
@@ -349,6 +516,30 @@ export default function DevelopmentRequestDetail() {
 				)}
 			</div>
 
+			{/* Approval Panel - Only for IT Users */}
+			<ApprovalPanel
+				request={request}
+				user={user}
+				onApprovalAction={handleApprovalAction}
+				isLoading={isLoading}
+			/>
+
+			{/* Assignment Panel - Only for IT Users */}
+			<AssignmentPanel
+				request={request}
+				user={user}
+				onAssignmentAction={handleAssignmentAction}
+				isLoading={isLoading}
+			/>
+
+			{/* Progress Tracker - For assigned developer and IT users */}
+			<ProgressTracker
+				request={request}
+				user={user}
+				onProgressUpdate={handleProgressUpdate}
+				isLoading={isLoading}
+			/>
+
 			{/* Tabs */}
 			<div className="bg-white rounded-lg border border-gray-200 mb-6">
 				<div className="border-b border-gray-200">
@@ -419,9 +610,7 @@ export default function DevelopmentRequestDetail() {
 											</label>
 											<p className="mt-1 text-sm text-gray-900">
 												{request.expected_completion_date
-													? moment(request.expected_completion_date).format(
-															"DD MMM YYYY"
-													  )
+													? formatDate(request.expected_completion_date)
 													: "Tidak ditentukan"}
 											</p>
 										</div>

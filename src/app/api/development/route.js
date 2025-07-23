@@ -31,7 +31,7 @@ export async function GET(request) {
 
 		if (my_requests && currentUser) {
 			whereConditions.push("dr.user_id = ?");
-			params.push(currentUser.nik);
+			params.push(currentUser.username);
 		} else if (user_id) {
 			whereConditions.push("dr.user_id = ?");
 			params.push(user_id);
@@ -109,7 +109,7 @@ export async function GET(request) {
 				COALESCE(attachments_count.total_attachments, 0) as attachments_count
 			FROM development_requests dr
 			LEFT JOIN pegawai p ON dr.user_id = p.nik
-			LEFT JOIN departemen d ON dr.departement_id = d.dep_id
+			LEFT JOIN departemen d ON dr.departemen = d.dep_id
 			LEFT JOIN module_types mt ON dr.module_type_id = mt.type_id
 			LEFT JOIN development_priorities dp ON dr.priority_id = dp.priority_id
 			LEFT JOIN development_statuses ds ON dr.current_status_id = ds.status_id
@@ -132,7 +132,7 @@ export async function GET(request) {
 			SELECT COUNT(*) as total
 			FROM development_requests dr
 			LEFT JOIN pegawai p ON dr.user_id = p.nik
-			LEFT JOIN departemen d ON dr.departement_id = d.dep_id
+			LEFT JOIN departemen d ON dr.departemen = d.dep_id
 			LEFT JOIN module_types mt ON dr.module_type_id = mt.type_id
 			LEFT JOIN development_priorities dp ON dr.priority_id = dp.priority_id
 			LEFT JOIN development_statuses ds ON dr.current_status_id = ds.status_id
@@ -182,29 +182,38 @@ export async function GET(request) {
 		const totalPages = Math.ceil(total / limit);
 		const hasMore = offset + limit < total;
 
+		// Helper function to format date safely
+		const formatDate = (dateValue) => {
+			if (!dateValue) return null;
+			try {
+				const date = new Date(dateValue);
+				if (isNaN(date.getTime())) return null;
+				return date.toLocaleString("id-ID", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Jakarta",
+				});
+			} catch (error) {
+				console.error("Error formatting date:", error);
+				return null;
+			}
+		};
+
 		return NextResponse.json({
 			status: "success",
 			data: {
 				requests: requests.map((req) => ({
 					...req,
-					submission_date: req.submission_date
-						? new Date(req.submission_date).toLocaleString("id-ID")
-						: null,
-					approved_date: req.approved_date
-						? new Date(req.approved_date).toLocaleString("id-ID")
-						: null,
-					development_start_date: req.development_start_date
-						? new Date(req.development_start_date).toLocaleString("id-ID")
-						: null,
-					deployment_date: req.deployment_date
-						? new Date(req.deployment_date).toLocaleString("id-ID")
-						: null,
-					completed_date: req.completed_date
-						? new Date(req.completed_date).toLocaleString("id-ID")
-						: null,
-					closed_date: req.closed_date
-						? new Date(req.closed_date).toLocaleString("id-ID")
-						: null,
+					submission_date: formatDate(req.submission_date),
+					approved_date: formatDate(req.approved_date),
+					development_start_date: formatDate(req.development_start_date),
+					deployment_date: formatDate(req.deployment_date),
+					completed_date: formatDate(req.completed_date),
+					closed_date: formatDate(req.closed_date),
+					expected_completion_date: formatDate(req.expected_completion_date),
 				})),
 				statistics: statsResult[0],
 				masterData: {
@@ -295,8 +304,8 @@ export async function POST(request) {
 		const [
 			userResult,
 		] = await connection.execute(
-			"SELECT departement_id FROM pegawai WHERE nik = ?",
-			[currentUser.nik]
+			"SELECT departemen FROM pegawai WHERE nik = ?",
+			[currentUser.username]
 		);
 
 		if (userResult.length === 0) {
@@ -307,7 +316,7 @@ export async function POST(request) {
 			);
 		}
 
-		const departement_id = userResult[0].departement_id;
+		const departement_id = userResult[0].departemen;
 
 		// Get default status (Draft or Submitted)
 		const [statusResult] = await connection.execute(
@@ -324,9 +333,19 @@ export async function POST(request) {
 
 		const default_status_id = statusResult[0].status_id;
 
+		// Generate nomor request
+		const currentDate = new Date();
+		const dateString = currentDate.toISOString().slice(0, 10).replace(/-/g, "");
+		const timeString = currentDate.toTimeString().slice(0, 8).replace(/:/g, "");
+		const no_request = `REQ-${dateString}-${timeString}-${Math.random()
+			.toString(36)
+			.substr(2, 4)
+			.toUpperCase()}`;
+
 		// Insert new request
 		const insertQuery = `
 			INSERT INTO development_requests (
+				no_request,
 				user_id,
 				departement_id,
 				module_type_id,
@@ -337,11 +356,12 @@ export async function POST(request) {
 				proposed_solution,
 				expected_completion_date,
 				current_status_id
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`;
 
 		const [result] = await connection.execute(insertQuery, [
-			currentUser.nik,
+			no_request,
+			currentUser.username,
 			departement_id,
 			module_type_id,
 			priority_id,
@@ -353,14 +373,6 @@ export async function POST(request) {
 			default_status_id,
 		]);
 
-		// Get the generated request number
-		const [
-			requestResult,
-		] = await connection.execute(
-			"SELECT no_request FROM development_requests WHERE request_id = ?",
-			[result.insertId]
-		);
-
 		await connection.end();
 
 		return NextResponse.json({
@@ -368,7 +380,7 @@ export async function POST(request) {
 			message: "Pengajuan pengembangan berhasil dibuat",
 			data: {
 				request_id: result.insertId,
-				no_request: requestResult[0].no_request,
+				no_request: no_request,
 			},
 		});
 	} catch (error) {

@@ -143,9 +143,24 @@ export async function GET(request, { params }) {
 
 		await connection.end();
 
-		// Format dates
-		const formatDate = (dateString) => {
-			return dateString ? new Date(dateString).toLocaleString("id-ID") : null;
+		// Helper function to format date safely
+		const formatDate = (dateValue) => {
+			if (!dateValue) return null;
+			try {
+				const date = new Date(dateValue);
+				if (isNaN(date.getTime())) return null;
+				return date.toLocaleString("id-ID", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Jakarta",
+				});
+			} catch (error) {
+				console.error("Error formatting date:", error);
+				return null;
+			}
 		};
 
 		const formattedRequest = {

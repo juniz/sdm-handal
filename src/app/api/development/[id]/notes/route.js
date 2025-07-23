@@ -28,12 +28,30 @@ export async function GET(request, { params }) {
 
 		await connection.end();
 
+		// Helper function to format date safely
+		const formatDate = (dateValue) => {
+			if (!dateValue) return null;
+			try {
+				const date = new Date(dateValue);
+				if (isNaN(date.getTime())) return null;
+				return date.toLocaleString("id-ID", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Jakarta",
+				});
+			} catch (error) {
+				console.error("Error formatting date:", error);
+				return null;
+			}
+		};
+
 		// Format dates
 		const formattedNotes = notesResult.map((note) => ({
 			...note,
-			created_date: note.created_date
-				? new Date(note.created_date).toLocaleString("id-ID")
-				: null,
+			created_date: formatDate(note.created_date),
 		}));
 
 		return NextResponse.json({
@@ -160,9 +178,7 @@ export async function POST(request, { params }) {
 		const newNote = newNoteResult[0];
 		const formattedNote = {
 			...newNote,
-			created_date: newNote.created_date
-				? new Date(newNote.created_date).toLocaleString("id-ID")
-				: null,
+			created_date: formatDate(newNote.created_date),
 		};
 
 		return NextResponse.json({

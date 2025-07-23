@@ -73,29 +73,100 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 
 	const formatDate = (dateString) => {
 		if (!dateString) return null;
-		return moment(dateString).format("DD MMM YYYY");
+		// Jika tanggal sudah berupa string yang di-format dari API (mengandung nama bulan Indonesia)
+		if (
+			typeof dateString === "string" &&
+			(dateString.includes("Januari") ||
+				dateString.includes("Februari") ||
+				dateString.includes("Maret") ||
+				dateString.includes("April") ||
+				dateString.includes("Mei") ||
+				dateString.includes("Juni") ||
+				dateString.includes("Juli") ||
+				dateString.includes("Agustus") ||
+				dateString.includes("September") ||
+				dateString.includes("Oktober") ||
+				dateString.includes("November") ||
+				dateString.includes("Desember"))
+		) {
+			// Konversi format Indonesia ke format yang lebih singkat
+			return dateString.replace(/(\d+)\s+(\w+)\s+(\d+).*/, "$1 $2 $3");
+		}
+		try {
+			return moment(dateString).format("DD MMM YYYY");
+		} catch (error) {
+			console.error("Error formatting date:", error);
+			return dateString;
+		}
 	};
 
 	const getTimeAgo = (dateString) => {
 		if (!dateString) return null;
-		return moment(dateString).fromNow();
+		// Jika tanggal sudah berupa string yang di-format dari API (mengandung nama bulan Indonesia)
+		if (
+			typeof dateString === "string" &&
+			(dateString.includes("Januari") ||
+				dateString.includes("Februari") ||
+				dateString.includes("Maret") ||
+				dateString.includes("April") ||
+				dateString.includes("Mei") ||
+				dateString.includes("Juni") ||
+				dateString.includes("Juli") ||
+				dateString.includes("Agustus") ||
+				dateString.includes("September") ||
+				dateString.includes("Oktober") ||
+				dateString.includes("November") ||
+				dateString.includes("Desember"))
+		) {
+			return ""; // Tidak bisa calculate time ago dari string yang sudah di-format
+		}
+		try {
+			return moment(dateString).fromNow();
+		} catch (error) {
+			console.error("Error calculating time ago:", error);
+			return "";
+		}
 	};
 
 	const isOverdue = () => {
 		if (!request.expected_completion_date) return false;
-		const now = moment();
-		const expected = moment(request.expected_completion_date);
-		const isInProgress = [
-			"Assigned",
-			"In Development",
-			"Development Complete",
-			"In Testing",
-			"Testing Complete",
-			"In Deployment",
-			"UAT",
-		].includes(request.current_status);
+		// Jika tanggal sudah berupa string yang di-format dari API, tidak bisa di-compare
+		if (
+			typeof request.expected_completion_date === "string" &&
+			(request.expected_completion_date.includes("Januari") ||
+				request.expected_completion_date.includes("Februari") ||
+				request.expected_completion_date.includes("Maret") ||
+				request.expected_completion_date.includes("April") ||
+				request.expected_completion_date.includes("Mei") ||
+				request.expected_completion_date.includes("Juni") ||
+				request.expected_completion_date.includes("Juli") ||
+				request.expected_completion_date.includes("Agustus") ||
+				request.expected_completion_date.includes("September") ||
+				request.expected_completion_date.includes("Oktober") ||
+				request.expected_completion_date.includes("November") ||
+				request.expected_completion_date.includes("Desember"))
+		) {
+			return false; // Tidak bisa calculate overdue dari string yang sudah di-format
+		}
 
-		return isInProgress && now.isAfter(expected);
+		try {
+			const now = moment();
+			const expected = moment(request.expected_completion_date);
+			const isInProgress = [
+				"Assigned",
+				"In Development",
+				"Development Complete",
+				"In Testing",
+				"Testing Complete",
+				"In Deployment",
+				"UAT",
+			].includes(request.current_status);
+
+			return isInProgress && now.isAfter(expected);
+		} catch (error) {
+			console.error("Error checking overdue:", error);
+			return false;
+		}
 	};
 
 	return (
