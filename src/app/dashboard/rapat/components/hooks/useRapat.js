@@ -1,35 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import moment from "moment-timezone";
 
 export const useRapat = () => {
 	const [rapatList, setRapatList] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [filterDate, setFilterDate] = useState(moment().format("YYYY-MM-DD"));
+	const [filterNamaRapat, setFilterNamaRapat] = useState("");
+	const [debouncedNamaRapat, setDebouncedNamaRapat] = useState("");
 	const [isToday, setIsToday] = useState(true);
 	const [errors, setErrors] = useState({});
 
 	// Fetch data rapat
-	const fetchRapat = async (date = filterDate) => {
-		setLoading(true);
-		try {
-			const response = await fetch(`/api/rapat?tanggal=${date}`);
-			const data = await response.json();
+	const fetchRapat = useCallback(
+		async (date = filterDate, namaRapat = debouncedNamaRapat) => {
+			setLoading(true);
+			try {
+				const params = new URLSearchParams({
+					tanggal: date,
+				});
 
-			if (data.status === "success") {
-				setRapatList(data.data);
-				setIsToday(data.metadata?.filter?.isToday ?? false);
-			} else {
-				throw new Error(data.error || "Gagal mengambil data rapat");
+				if (namaRapat.trim()) {
+					params.append("nama_rapat", namaRapat.trim());
+				}
+
+				const response = await fetch(`/api/rapat?${params.toString()}`);
+				const data = await response.json();
+
+				if (data.status === "success") {
+					setRapatList(data.data);
+					setIsToday(data.metadata?.filter?.isToday ?? false);
+				} else {
+					throw new Error(data.error || "Gagal mengambil data rapat");
+				}
+			} catch (error) {
+				console.error("Error fetching rapat:", error);
+				throw error;
+			} finally {
+				setLoading(false);
 			}
-		} catch (error) {
-			console.error("Error fetching rapat:", error);
-			throw error;
-		} finally {
-			setLoading(false);
-		}
-	};
+		},
+		[filterDate, debouncedNamaRapat]
+	);
 
 	// Validasi form
 	const validateForm = (formData, signPadRef) => {
@@ -139,16 +152,27 @@ export const useRapat = () => {
 		fetchRapat();
 	}, []);
 
+	// Debounce effect untuk nama rapat
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedNamaRapat(filterNamaRapat);
+		}, 500); // 500ms delay
+
+		return () => clearTimeout(timer);
+	}, [filterNamaRapat]);
+
 	// Effect untuk fetch data saat filter berubah
 	useEffect(() => {
-		fetchRapat(filterDate);
-	}, [filterDate]);
+		fetchRapat(filterDate, debouncedNamaRapat);
+	}, [filterDate, debouncedNamaRapat, fetchRapat]);
 
 	return {
 		rapatList,
 		loading,
 		filterDate,
 		setFilterDate,
+		filterNamaRapat,
+		setFilterNamaRapat,
 		isToday,
 		errors,
 		setErrors,

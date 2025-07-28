@@ -30,10 +30,11 @@ export async function GET(request) {
 			);
 		}
 
-		// Ambil parameter tanggal dari URL, default ke hari ini jika tidak ada
+		// Ambil parameter dari URL
 		const { searchParams } = new URL(request.url);
 		const today = moment().format("YYYY-MM-DD");
 		const tanggal = searchParams.get("tanggal") || today;
+		const namaRapat = searchParams.get("nama_rapat") || "";
 
 		// Buat query berdasarkan filter
 		let query = {
@@ -42,6 +43,14 @@ export async function GET(request) {
 				tanggal: moment(tanggal).format("YYYY-MM-DD"),
 			},
 		};
+
+		// Tambahkan filter nama rapat jika ada
+		if (namaRapat.trim()) {
+			query.where.rapat = {
+				operator: "LIKE",
+				value: `%${namaRapat.trim()}%`,
+			};
+		}
 
 		const result = await select(query);
 
@@ -61,6 +70,7 @@ export async function GET(request) {
 			metadata: {
 				filter: {
 					tanggal,
+					nama_rapat: namaRapat,
 					isToday: tanggal === today,
 				},
 			},

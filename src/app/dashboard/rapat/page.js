@@ -24,6 +24,8 @@ const RapatPage = () => {
 		loading,
 		filterDate,
 		setFilterDate,
+		filterNamaRapat,
+		setFilterNamaRapat,
 		isToday,
 		errors,
 		validateForm,
@@ -210,6 +212,8 @@ const RapatPage = () => {
 				<FilterAccordion
 					filterDate={filterDate}
 					setFilterDate={setFilterDate}
+					filterNamaRapat={filterNamaRapat}
+					setFilterNamaRapat={setFilterNamaRapat}
 					isOpen={isFilterOpen}
 					setIsOpen={setIsFilterOpen}
 					onAddClick={handleAddClick}
@@ -225,10 +229,14 @@ const RapatPage = () => {
 					<div className="text-center py-12">
 						<FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
 						<h3 className="text-xl font-medium text-gray-600">
-							Tidak ada rapat pada tanggal ini
+							{filterNamaRapat
+								? `Tidak ada rapat dengan nama "${filterNamaRapat}" pada tanggal ini`
+								: "Tidak ada rapat pada tanggal ini"}
 						</h3>
 						<p className="text-gray-500 mt-2">
-							Pilih tanggal lain atau tambah rapat baru
+							{filterNamaRapat
+								? "Coba ubah filter pencarian atau tambah rapat baru"
+								: "Pilih tanggal lain atau tambah rapat baru"}
 						</p>
 					</div>
 				) : (
@@ -239,6 +247,7 @@ const RapatPage = () => {
 								rapat={rapat}
 								onEdit={handleEdit}
 								onDelete={handleDelete}
+								searchTerm={filterNamaRapat}
 							/>
 						))}
 					</div>

@@ -8,6 +8,9 @@ import {
 	Plus,
 	Download,
 	Calendar,
+	Search,
+	X,
+	Loader2,
 } from "lucide-react";
 import moment from "moment-timezone";
 import { exportToPDF } from "./utils/pdfGenerator";
@@ -15,6 +18,8 @@ import { exportToPDF } from "./utils/pdfGenerator";
 const FilterAccordion = ({
 	filterDate,
 	setFilterDate,
+	filterNamaRapat,
+	setFilterNamaRapat,
 	isOpen,
 	setIsOpen,
 	onAddClick,
@@ -40,6 +45,11 @@ const FilterAccordion = ({
 							Hari Ini
 						</span>
 					)}
+					{filterNamaRapat && (
+						<span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
+							{rapatList.length} hasil
+						</span>
+					)}
 				</div>
 				{isOpen ? (
 					<ChevronUp className="w-4 h-4 text-gray-500" />
@@ -58,6 +68,7 @@ const FilterAccordion = ({
 						className="overflow-hidden"
 					>
 						<div className="p-4 space-y-4">
+							{/* Filter Tanggal */}
 							<div>
 								<label className="block text-sm text-gray-600 mb-1">
 									Tanggal
@@ -69,6 +80,43 @@ const FilterAccordion = ({
 									className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 								/>
 							</div>
+
+							{/* Filter Nama Rapat */}
+							<div>
+								<label className="block text-sm text-gray-600 mb-1">
+									Nama Rapat
+								</label>
+								<div className="relative">
+									<input
+										type="text"
+										placeholder="Cari nama rapat..."
+										value={filterNamaRapat}
+										onChange={(e) => setFilterNamaRapat(e.target.value)}
+										className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+									/>
+									{loading && filterNamaRapat && (
+										<Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
+									)}
+									{!loading && filterNamaRapat && (
+										<button
+											onClick={() => setFilterNamaRapat("")}
+											className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									)}
+									{!loading && !filterNamaRapat && (
+										<Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+									)}
+								</div>
+								{filterNamaRapat && (
+									<p className="text-xs text-gray-500 mt-1">
+										Mencari: "{filterNamaRapat}" • {rapatList.length} hasil
+										ditemukan
+									</p>
+								)}
+							</div>
+
 							<div className="border-t"></div>
 							<div className="flex flex-col gap-2">
 								<button
@@ -91,13 +139,16 @@ const FilterAccordion = ({
 									</button>
 								)}
 
-								{!isToday && (
+								{(!isToday || filterNamaRapat) && (
 									<button
-										onClick={() => setFilterDate(moment().format("YYYY-MM-DD"))}
+										onClick={() => {
+											setFilterDate(moment().format("YYYY-MM-DD"));
+											setFilterNamaRapat("");
+										}}
 										className="text-sm text-blue-500 hover:text-blue-600 px-4 py-2 rounded-lg border border-blue-500 hover:border-blue-600 transition-colors w-full flex items-center justify-center gap-2"
 									>
 										<Calendar className="w-4 h-4" />
-										<span>Tampilkan Hari Ini</span>
+										<span>Reset Filter</span>
 									</button>
 								)}
 							</div>
