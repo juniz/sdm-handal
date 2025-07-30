@@ -244,14 +244,9 @@ const PengajuanFormModal = ({
 												<SelectValue placeholder="Pilih shift Anda" />
 											</SelectTrigger>
 											<SelectContent>
-												{shiftData.map((shift, index) => (
-													<SelectItem
-														key={`shift1-${shift.shift || index}`}
-														value={shift.shift}
-													>
-														{shift.shift}
-													</SelectItem>
-												))}
+												<SelectItem value="Pagi">Pagi</SelectItem>
+												<SelectItem value="Siang">Siang</SelectItem>
+												<SelectItem value="Malam">Malam</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -333,14 +328,17 @@ const PengajuanFormModal = ({
 												<SelectValue placeholder="Pilih shift pengganti" />
 											</SelectTrigger>
 											<SelectContent>
-												{shiftData.map((shift, index) => (
+												<SelectItem value="Pagi">Pagi</SelectItem>
+												<SelectItem value="Siang">Siang</SelectItem>
+												<SelectItem value="Malam">Malam</SelectItem>
+												{/* {shiftData.map((shift, index) => (
 													<SelectItem
 														key={`shift2-${shift.shift || index}`}
 														value={shift.shift}
 													>
 														{shift.shift}
 													</SelectItem>
-												))}
+												))} */}
 											</SelectContent>
 										</Select>
 									</div>
