@@ -105,14 +105,24 @@ export async function GET(request) {
 				dr.deployment_date,
 				dr.completed_date,
 				dr.closed_date,
+				da.assigned_to as assigned_developer,
+				dev_user.nama as assigned_developer_name,
 				COALESCE(notes_count.total_notes, 0) as notes_count,
 				COALESCE(attachments_count.total_attachments, 0) as attachments_count
 			FROM development_requests dr
 			LEFT JOIN pegawai p ON dr.user_id = p.nik
-			LEFT JOIN departemen d ON dr.departemen = d.dep_id
+			LEFT JOIN departemen d ON dr.departement_id = d.dep_id
 			LEFT JOIN module_types mt ON dr.module_type_id = mt.type_id
 			LEFT JOIN development_priorities dp ON dr.priority_id = dp.priority_id
 			LEFT JOIN development_statuses ds ON dr.current_status_id = ds.status_id
+			LEFT JOIN (
+				SELECT request_id, assigned_to
+				FROM development_assignments
+				WHERE is_active = true
+				ORDER BY assignment_date DESC
+				LIMIT 1
+			) da ON dr.request_id = da.request_id
+			LEFT JOIN pegawai dev_user ON da.assigned_to = dev_user.nik
 			LEFT JOIN (
 				SELECT request_id, COUNT(*) as total_notes
 				FROM development_notes
@@ -132,7 +142,7 @@ export async function GET(request) {
 			SELECT COUNT(*) as total
 			FROM development_requests dr
 			LEFT JOIN pegawai p ON dr.user_id = p.nik
-			LEFT JOIN departemen d ON dr.departemen = d.dep_id
+			LEFT JOIN departemen d ON dr.departement_id = d.dep_id
 			LEFT JOIN module_types mt ON dr.module_type_id = mt.type_id
 			LEFT JOIN development_priorities dp ON dr.priority_id = dp.priority_id
 			LEFT JOIN development_statuses ds ON dr.current_status_id = ds.status_id
@@ -146,6 +156,35 @@ export async function GET(request) {
 			offset,
 		]);
 		const [countResult] = await connection.execute(countQuery, params);
+
+		// Get progress data for all requests
+		if (requests.length > 0) {
+			const requestIds = requests.map((req) => req.request_id);
+			const [progressResult] = await connection.execute(
+				`SELECT 
+					request_id, 
+					progress_percentage 
+				FROM development_progress dp1
+				WHERE request_id IN (${requestIds.map(() => "?").join(",")})
+				AND update_date = (
+					SELECT MAX(update_date) 
+					FROM development_progress dp2 
+					WHERE dp2.request_id = dp1.request_id
+				)`,
+				requestIds
+			);
+
+			// Create progress lookup map
+			const progressMap = {};
+			progressResult.forEach((progress) => {
+				progressMap[progress.request_id] = progress.progress_percentage;
+			});
+
+			// Add progress data to requests
+			requests.forEach((request) => {
+				request.progress_percentage = progressMap[request.request_id] || 0;
+			});
+		}
 
 		// Get statistics
 		const [statsResult] = await connection.execute(`

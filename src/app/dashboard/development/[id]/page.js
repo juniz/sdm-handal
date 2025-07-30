@@ -504,14 +504,21 @@ export default function DevelopmentRequestDetail() {
 					<div className="mt-4 pt-4 border-t border-gray-200">
 						<div className="flex items-center justify-between text-sm text-gray-600 mb-2">
 							<span>Progress Pengembangan</span>
-							<span>{request.progress_percentage || 0}%</span>
+							<span className="font-semibold text-blue-600">
+								{request.progress_percentage || 0}%
+							</span>
 						</div>
-						<div className="w-full bg-gray-200 rounded-full h-2">
+						<div className="w-full bg-gray-200 rounded-full h-3">
 							<div
-								className="bg-blue-600 h-2 rounded-full transition-all"
+								className="bg-blue-600 h-3 rounded-full transition-all duration-300"
 								style={{ width: `${request.progress_percentage || 0}%` }}
 							/>
 						</div>
+						{request.progress_percentage > 0 && (
+							<div className="text-xs text-gray-500 mt-1">
+								Progress terakhir: {request.progress_percentage}%
+							</div>
+						)}
 					</div>
 				)}
 			</div>
