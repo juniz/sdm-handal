@@ -98,7 +98,7 @@ export async function POST(request, { params }) {
 		// Check if user can update progress
 		const [requestResult] = await connection.execute(
 			`SELECT 
-				dr.current_status_id,
+				dr.current_status_id, 
 				ds.status_name as current_status,
 				da.assigned_to
 			FROM development_requests dr

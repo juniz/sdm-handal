@@ -87,8 +87,17 @@ export default function RootLayout({ children }) {
 						__html: `
 							// Setup global error handler
 							if (typeof window !== 'undefined') {
+								// Check if debug mode is enabled
+								const isDebugEnabled = '${process.env.NEXT_PUBLIC_DEBUG}' === 'true';
+								
 								// Handle unhandled JavaScript errors
 								window.addEventListener('error', (event) => {
+									// Only log errors if debug mode is enabled
+									if (!isDebugEnabled) {
+										console.warn('Error logging disabled. Set NEXT_PUBLIC_DEBUG=true to enable error logging.');
+										return;
+									}
+									
 									const errorData = {
 										error_type: 'UnhandledError',
 										error_message: event.message,
@@ -119,6 +128,12 @@ export default function RootLayout({ children }) {
 
 								// Handle unhandled promise rejections
 								window.addEventListener('unhandledrejection', (event) => {
+									// Only log errors if debug mode is enabled
+									if (!isDebugEnabled) {
+										console.warn('Error logging disabled. Set NEXT_PUBLIC_DEBUG=true to enable error logging.');
+										return;
+									}
+									
 									const errorData = {
 										error_type: 'UnhandledPromiseRejection',
 										error_message: event.reason?.message || String(event.reason),

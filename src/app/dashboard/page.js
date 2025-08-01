@@ -20,6 +20,7 @@ import { AttendanceStats } from "@/components/AttendanceStats";
 import { Button } from "@/components/ui/button";
 import { NotificationAlert } from "@/components/notifications";
 import { useRouter } from "next/navigation";
+import adminType from "@/types/adminType";
 
 const activities = [
 	{
@@ -148,34 +149,6 @@ const AdminMenu = () => {
 			href: "/dashboard/reports/monthly-attendance",
 			color: "from-orange-500 to-red-500",
 		},
-		// {
-		// 	title: "Error Logs",
-		// 	description: "Monitor error aplikasi",
-		// 	icon: AlertTriangle,
-		// 	href: "/dashboard/admin/error-logs",
-		// 	color: "from-red-500 to-orange-500",
-		// },
-		// {
-		// 	title: "Location Settings",
-		// 	description: "Konfigurasi lokasi presensi",
-		// 	icon: MapPin,
-		// 	href: "/dashboard/admin/location-settings",
-		// 	color: "from-green-500 to-emerald-500",
-		// },
-		// {
-		// 	title: "Security Monitoring",
-		// 	description: "Monitor keamanan sistem",
-		// 	icon: Eye,
-		// 	href: "/dashboard/admin/security-monitoring",
-		// 	color: "from-indigo-500 to-blue-500",
-		// },
-		// {
-		// 	title: "System Settings",
-		// 	description: "Konfigurasi sistem",
-		// 	icon: Settings,
-		// 	href: "/dashboard/admin/settings",
-		// 	color: "from-gray-500 to-slate-500",
-		// },
 	];
 
 	return (
@@ -270,12 +243,14 @@ export default function DashboardPage() {
 						</div>
 					</div>
 				) : (
-					(userDepartment === "IT" && <AdminMenu />) ||
-					(userDepartment === "SPI" && <AdminMenu />)
+					(userDepartment === adminType.IT && <AdminMenu />) ||
+					(userDepartment === adminType.SPI && <AdminMenu />)
 				)}
 
 				{/* Aksi Cepat */}
-				<QuickActions />
+				{process.env.NEXT_PUBLIC_MENU_ADMIN === "true" ? (
+					<QuickActions />
+				) : null}
 
 				{/* Statistik Presensi */}
 				<AttendanceStats />

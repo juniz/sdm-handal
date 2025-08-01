@@ -51,6 +51,18 @@ function parseUserAgent(userAgent) {
 // POST - Log new error
 export async function POST(request) {
 	try {
+		// Check if debug mode is enabled
+		const isDebugEnabled = process.env.DEBUG === "true";
+
+		// If debug is disabled, return early without logging
+		if (!isDebugEnabled) {
+			return NextResponse.json({
+				success: true,
+				message:
+					"Error logging disabled. Set DEBUG=true to enable error logging.",
+			});
+		}
+
 		const body = await request.json();
 		const {
 			error_type,
