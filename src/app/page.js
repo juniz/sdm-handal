@@ -203,7 +203,7 @@ export default function LoginPage() {
 
 				{/* Footer */}
 				<p className="text-center text-sm text-blue-600/80 mt-6">
-					© {new Date().getFullYear()} IT Bhayangkara Nganjuk.
+					© {new Date().getFullYear()} IT {process.env.NEXT_PUBLIC_SATKER_NAME}.
 				</p>
 			</div>
 		</div>
