@@ -104,18 +104,22 @@ export default function LoginPage() {
 			<div className="w-full max-w-md z-10">
 				{/* Logo dan Header */}
 				<div className="flex flex-col items-center mb-8">
-					<div className="w-24 h-24 relative mb-4">
-						<Image
-							src="/logo.png"
-							alt="SDM Handal Logo"
-							width={96}
-							height={96}
-							className="drop-shadow-xl"
-						/>
-					</div>
-					<h1 className="text-3xl font-bold text-blue-800 mb-2">SDM Handal</h1>
+					{process.env.NEXT_PUBLIC_APP_LOGO === "true" && (
+						<div className="w-24 h-24 relative mb-4">
+							<Image
+								src="/logo.png"
+								alt="SDM Handal Logo"
+								width={96}
+								height={96}
+								className="drop-shadow-xl"
+							/>
+						</div>
+					)}
+					<h1 className="text-3xl font-bold text-blue-800 mb-2">
+						{process.env.NEXT_PUBLIC_APP_NAME}
+					</h1>
 					<p className="text-blue-600 text-center max-w-xs">
-						Sistem Informasi Manajemen SDM Terintegrasi
+						{process.env.NEXT_PUBLIC_APP_DESCRIPTION}
 					</p>
 				</div>
 

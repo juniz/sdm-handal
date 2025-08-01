@@ -40,6 +40,9 @@ const nextConfig = {
 				hostname: "webapps.rsbhayangkaranganjuk.com",
 			},
 			{
+				hostname: "webapps.rsbhayangkaramakassar.com",
+			},
+			{
 				hostname: "localhost",
 			},
 			{
