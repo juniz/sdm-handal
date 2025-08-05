@@ -147,6 +147,7 @@ const useTicketAssignment = () => {
 				},
 				body: JSON.stringify({
 					ticket_id: ticketId,
+					action: "release",
 				}),
 			});
 
@@ -169,7 +170,7 @@ const useTicketAssignment = () => {
 	const updateTicketStatus = async (ticketId, status, notes) => {
 		try {
 			const response = await fetch("/api/ticket-assignment", {
-				method: "PATCH",
+				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",
 				},
@@ -177,6 +178,7 @@ const useTicketAssignment = () => {
 					ticket_id: ticketId,
 					status: status,
 					notes: notes,
+					action: "update_status",
 				}),
 			});
 

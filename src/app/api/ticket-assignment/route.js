@@ -38,7 +38,6 @@ const recordStatusHistory = async (
 	}
 };
 
-// GET - Ambil daftar ticket untuk assignment (khusus user IT)
 export async function GET(request) {
 	try {
 		// Ambil data user dari JWT token
@@ -68,7 +67,7 @@ export async function GET(request) {
 		const status = searchParams.get("status");
 		const priority = searchParams.get("priority");
 		const category = searchParams.get("category");
-		const assignedTo = searchParams.get("assigned_to");
+		const assigned_to = searchParams.get("assigned_to");
 		const search = searchParams.get("search");
 		const page = parseInt(searchParams.get("page")) || 1;
 		const limit = parseInt(searchParams.get("limit")) || 10;
@@ -96,16 +95,12 @@ export async function GET(request) {
 		}
 
 		// Filter berdasarkan assigned_to jika ada
-		if (assignedTo) {
-			if (assignedTo === "unassigned") {
-				whereConditions.push("t.assigned_to IS NULL");
-			} else {
-				whereConditions.push("t.assigned_to = ?");
-				queryParams.push(assignedTo);
-			}
+		if (assigned_to) {
+			whereConditions.push("at.assigned_to = ?");
+			queryParams.push(assigned_to);
 		}
 
-		// Filter pencarian
+		// Filter pencarian berdasarkan nomor ticket, judul, atau deskripsi
 		if (search) {
 			whereConditions.push(
 				"(t.no_ticket LIKE ? OR t.title LIKE ? OR t.description LIKE ?)"
@@ -119,7 +114,7 @@ export async function GET(request) {
 				? `WHERE ${whereConditions.join(" AND ")}`
 				: "";
 
-		// Query untuk mengambil data ticket dengan assignment info dan count notes
+		// Query untuk mengambil data ticket yang sudah di-assign
 		const ticketsQuery = `
 			SELECT 
 				t.ticket_id,
@@ -127,7 +122,6 @@ export async function GET(request) {
 				t.user_id,
 				t.category_id,
 				t.priority_id,
-				ta.assigned_to,
 				p.nama as user_name,
 				d.nama as departemen_name,
 				c.category_name,
@@ -139,10 +133,10 @@ export async function GET(request) {
 				t.resolved_date,
 				t.closed_date,
 				s.status_name as current_status,
-				assigned_pegawai.nama as assigned_to_name,
-				ta.assigned_date,
-				ta.released_date,
-				assigned_by_pegawai.nama as assigned_by_name,
+				at.assigned_to,
+				at.assigned_date,
+				at.released_date,
+				assigned_p.nama as assigned_to_name,
 				COALESCE(notes_count.total_notes, 0) as notes_count
 			FROM tickets t
 			LEFT JOIN pegawai p ON t.user_id = p.nik
@@ -150,22 +144,15 @@ export async function GET(request) {
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
-			LEFT JOIN assignments_ticket ta ON t.ticket_id = ta.ticket_id AND ta.released_date IS NULL
-			LEFT JOIN pegawai assigned_pegawai ON ta.assigned_to = assigned_pegawai.nik
-			LEFT JOIN pegawai assigned_by_pegawai ON ta.assigned_by = assigned_by_pegawai.nik
+			INNER JOIN assignments_ticket at ON t.ticket_id = at.ticket_id AND at.released_date IS NULL
+			LEFT JOIN pegawai assigned_p ON at.assigned_to = assigned_p.nik
 			LEFT JOIN (
 				SELECT ticket_id, COUNT(*) as total_notes
 				FROM ticket_notes
 				GROUP BY ticket_id
 			) notes_count ON t.ticket_id = notes_count.ticket_id
 			${whereClause}
-			ORDER BY 
-				CASE 
-					WHEN ta.assigned_to IS NULL THEN 0 
-					ELSE 1 
-				END,
-				pr.priority_level DESC,
-				t.submission_date DESC
+			ORDER BY t.submission_date DESC
 			LIMIT ? OFFSET ?
 		`;
 
@@ -180,10 +167,11 @@ export async function GET(request) {
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
+			INNER JOIN assignments_ticket at ON t.ticket_id = at.ticket_id AND at.released_date IS NULL
 			${whereClause}
 		`;
 
-		const countParams = queryParams.slice(0, -2);
+		const countParams = queryParams.slice(0, -2); // Remove limit and offset
 		const [{ total }] = await rawQuery(countQuery, countParams);
 
 		// Format tanggal
@@ -192,12 +180,7 @@ export async function GET(request) {
 			submission_date: moment(ticket.submission_date).format(
 				"DD MMMM YYYY HH:mm"
 			),
-			assigned_date: ticket.assigned_date
-				? moment(ticket.assigned_date).format("DD MMMM YYYY HH:mm")
-				: null,
-			released_date: ticket.released_date
-				? moment(ticket.released_date).format("DD MMMM YYYY HH:mm")
-				: null,
+			assigned_date: moment(ticket.assigned_date).format("DD MMMM YYYY HH:mm"),
 			resolved_date: ticket.resolved_date
 				? moment(ticket.resolved_date).format("DD MMMM YYYY HH:mm")
 				: null,
@@ -218,7 +201,7 @@ export async function GET(request) {
 			},
 		});
 	} catch (error) {
-		console.error("Error fetching tickets for assignment:", error);
+		console.error("Error fetching assigned tickets:", error);
 		return NextResponse.json(
 			{
 				status: "error",
@@ -229,7 +212,6 @@ export async function GET(request) {
 	}
 }
 
-// POST - Assign ticket ke pegawai IT
 export async function POST(request) {
 	try {
 		// Ambil data user dari JWT token
@@ -285,52 +267,58 @@ export async function POST(request) {
 			);
 		}
 
-		// Cek apakah pegawai yang ditugaskan ada dan dari departemen IT
-		const assignedEmployee = await rawQuery(
-			"SELECT p.nik, p.nama, d.dep_id FROM pegawai p LEFT JOIN departemen d ON p.departemen = d.dep_id WHERE p.nik = ? AND d.dep_id = 'IT'",
-			[assigned_to]
-		);
+		// Cek apakah ticket sudah di-assign
+		const existingAssignment = await selectFirst({
+			table: "assignments_ticket",
+			where: { ticket_id, released_date: null },
+		});
 
-		if (assignedEmployee.length === 0) {
+		if (existingAssignment) {
 			return NextResponse.json(
 				{
 					status: "error",
-					error:
-						"Pegawai yang ditugaskan tidak ditemukan atau bukan dari departemen IT",
+					error: "Ticket sudah ditugaskan",
 				},
 				{ status: 400 }
 			);
 		}
 
-		// Get status "Assigned"
-		// const assignedStatus = await selectFirst({
-		// 	table: "assignments_ticket",
-		// 	where: { ticket_id: ticket_id },
-		// });
+		// Cek apakah assigned_to adalah pegawai IT
+		const assignedEmployee = await selectFirst({
+			table: "pegawai",
+			where: { nik: assigned_to, departemen: "IT" },
+		});
 
-		// if (!assignedStatus) {
-		// 	return NextResponse.json(
-		// 		{
-		// 			status: "error",
-		// 			error: "Status 'Assigned' tidak ditemukan",
-		// 		},
-		// 		{ status: 500 }
-		// 	);
-		// }
+		if (!assignedEmployee) {
+			return NextResponse.json(
+				{
+					status: "error",
+					error: "Pegawai tidak ditemukan atau bukan dari departemen IT",
+				},
+				{ status: 400 }
+			);
+		}
+
+		// Get status "In Progress"
+		const inProgressStatus = await selectFirst({
+			table: "statuses_ticket",
+			where: { status_name: "In Progress" },
+		});
+
+		if (!inProgressStatus) {
+			return NextResponse.json(
+				{
+					status: "error",
+					error: "Status 'In Progress' tidak ditemukan",
+				},
+				{ status: 500 }
+			);
+		}
 
 		// Simpan old status untuk history
 		const oldStatusId = existingTicket.current_status_id;
 
-		// Update ticket dengan assigned_to dan status
-		await update({
-			table: "tickets",
-			data: {
-				current_status_id: 2,
-			},
-			where: { ticket_id },
-		});
-
-		// Insert ke assignments_ticket
+		// Insert assignment
 		await insert({
 			table: "assignments_ticket",
 			data: {
@@ -341,8 +329,22 @@ export async function POST(request) {
 			},
 		});
 
-		// Record status history (old status -> Assigned)
-		await recordStatusHistory(ticket_id, oldStatusId, 2, user.username);
+		// Update ticket status ke In Progress
+		await update({
+			table: "tickets",
+			data: {
+				current_status_id: inProgressStatus.status_id,
+			},
+			where: { ticket_id },
+		});
+
+		// Record status history (Open -> In Progress)
+		await recordStatusHistory(
+			ticket_id,
+			oldStatusId,
+			inProgressStatus.status_id,
+			user.username
+		);
 
 		return NextResponse.json({
 			status: "success",
@@ -360,7 +362,7 @@ export async function POST(request) {
 	}
 }
 
-// PUT - Release assignment (set released_date)
+// PUT - Handle both release assignment and update status
 export async function PUT(request) {
 	try {
 		// Ambil data user dari JWT token
@@ -387,132 +389,95 @@ export async function PUT(request) {
 		}
 
 		const body = await request.json();
-		const { ticket_id } = body;
+		const { ticket_id, status, notes, action } = body;
 
-		// Validasi input
-		if (!ticket_id) {
-			return NextResponse.json(
-				{
-					status: "error",
-					error: "Ticket ID harus diisi",
+		// Jika action adalah 'release', gunakan logic release assignment
+		if (action === "release") {
+			if (!ticket_id) {
+				return NextResponse.json(
+					{
+						status: "error",
+						error: "Ticket ID harus diisi",
+					},
+					{ status: 400 }
+				);
+			}
+
+			// Cek apakah assignment ada
+			const existingAssignment = await selectFirst({
+				table: "assignments_ticket",
+				where: { ticket_id, released_date: null },
+			});
+
+			if (!existingAssignment) {
+				return NextResponse.json(
+					{
+						status: "error",
+						error: "Assignment aktif tidak ditemukan",
+					},
+					{ status: 404 }
+				);
+			}
+
+			// Get ticket untuk mendapatkan current status
+			const existingTicket = await selectFirst({
+				table: "tickets",
+				where: { ticket_id },
+			});
+
+			// Get status "Open"
+			const openStatus = await selectFirst({
+				table: "statuses_ticket",
+				where: { status_name: "Open" },
+			});
+
+			if (!openStatus) {
+				return NextResponse.json(
+					{
+						status: "error",
+						error: "Status 'Open' tidak ditemukan",
+					},
+					{ status: 500 }
+				);
+			}
+
+			// Update assignment dengan released_date
+			await update({
+				table: "assignments_ticket",
+				data: {
+					released_date: moment().format("YYYY-MM-DD HH:mm:ss"),
+					released_by: user.username,
 				},
-				{ status: 400 }
+				where: { assignment_id: existingAssignment.assignment_id },
+			});
+
+			// Simpan old status untuk history
+			const oldStatusId = existingTicket.current_status_id;
+
+			// Update ticket untuk menghapus assigned_to dan ubah status ke Open
+			await update({
+				table: "tickets",
+				data: {
+					current_status_id: openStatus.status_id,
+				},
+				where: { ticket_id },
+			});
+
+			// Record status history (Assigned -> Open)
+			await recordStatusHistory(
+				ticket_id,
+				oldStatusId,
+				openStatus.status_id,
+				user.username
 			);
+
+			return NextResponse.json({
+				status: "success",
+				message: "Assignment berhasil dilepas",
+			});
 		}
 
-		// Cek apakah assignment ada
-		const existingAssignment = await selectFirst({
-			table: "assignments_ticket",
-			where: { ticket_id, released_date: null },
-		});
-
-		if (!existingAssignment) {
-			return NextResponse.json(
-				{
-					status: "error",
-					error: "Assignment aktif tidak ditemukan",
-				},
-				{ status: 404 }
-			);
-		}
-
-		// Get ticket untuk mendapatkan current status
-		const existingTicket = await selectFirst({
-			table: "tickets",
-			where: { ticket_id },
-		});
-
-		// Get status "Open"
-		const openStatus = await selectFirst({
-			table: "statuses_ticket",
-			where: { status_name: "Open" },
-		});
-
-		if (!openStatus) {
-			return NextResponse.json(
-				{
-					status: "error",
-					error: "Status 'Open' tidak ditemukan",
-				},
-				{ status: 500 }
-			);
-		}
-
-		// Update assignment dengan released_date
-		await update({
-			table: "assignments_ticket",
-			data: {
-				released_date: moment().format("YYYY-MM-DD HH:mm:ss"),
-			},
-			where: { assignment_id: existingAssignment.assignment_id },
-		});
-
-		// Simpan old status untuk history
-		const oldStatusId = existingTicket.current_status_id;
-
-		// Update ticket untuk menghapus assigned_to dan ubah status ke Open
-		await update({
-			table: "tickets",
-			data: {
-				current_status_id: openStatus.status_id,
-			},
-			where: { ticket_id },
-		});
-
-		// Record status history (Assigned -> Open)
-		await recordStatusHistory(
-			ticket_id,
-			oldStatusId,
-			openStatus.status_id,
-			user.username
-		);
-
-		return NextResponse.json({
-			status: "success",
-			message: "Assignment berhasil dilepas",
-		});
-	} catch (error) {
-		console.error("Error releasing assignment:", error);
-		return NextResponse.json(
-			{
-				status: "error",
-				error: "Gagal melepas assignment: " + error.message,
-			},
-			{ status: 500 }
-		);
-	}
-}
-
-// PATCH - Update status ticket oleh pegawai IT
-export async function PATCH(request) {
-	try {
-		// Ambil data user dari JWT token
-		const user = await getUser();
-		if (!user) {
-			return NextResponse.json(
-				{
-					status: "error",
-					error: "Unauthorized - Token tidak valid",
-				},
-				{ status: 401 }
-			);
-		}
-
-		// Validasi user adalah bagian dari departemen IT
-		if (user.departemen !== "IT") {
-			return NextResponse.json(
-				{
-					status: "error",
-					error: "Akses ditolak - Hanya untuk departemen IT",
-				},
-				{ status: 403 }
-			);
-		}
-
-		const body = await request.json();
-		const { ticket_id, status, notes } = body;
-
-		// Validasi input
+		// Jika action adalah 'update_status' atau tidak ada action, gunakan logic update status
 		if (!ticket_id || !status) {
 			return NextResponse.json(
 				{
