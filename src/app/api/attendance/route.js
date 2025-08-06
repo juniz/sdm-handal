@@ -891,26 +891,25 @@ export async function POST(request) {
 			// OPTIMIZED: Gunakan transaction untuk konsistensi data
 			try {
 				const result = await withTransaction(async (transaction) => {
+					let securityResult = null;
+
 					// Simpan security log (hanya jika diaktifkan)
 					if (process.env.ENABLE_SECURITY_LOGS === "true") {
-						const securityResult = await transactionHelpers.insert(
-							transaction,
-							{
-								table: "security_logs",
-								data: {
-									id_pegawai: idPegawai,
-									tanggal: moment().format("YYYY-MM-DD"),
-									action_type: "CHECKIN",
-									confidence_level: securityValidation.confidence,
-									risk_level: securityValidation.riskLevel,
-									warnings: JSON.stringify(securityData.warnings || []),
-									gps_accuracy: securityData.accuracy || null,
-									latitude: latitude,
-									longitude: longitude,
-									created_at: currentTime,
-								},
-							}
-						);
+						securityResult = await transactionHelpers.insert(transaction, {
+							table: "security_logs",
+							data: {
+								id_pegawai: idPegawai,
+								tanggal: moment().format("YYYY-MM-DD"),
+								action_type: "CHECKIN",
+								confidence_level: securityValidation.confidence,
+								risk_level: securityValidation.riskLevel,
+								warnings: JSON.stringify(securityData.warnings || []),
+								gps_accuracy: securityData.accuracy || null,
+								latitude: latitude,
+								longitude: longitude,
+								created_at: currentTime,
+							},
+						});
 					}
 
 					// Simpan data presensi
