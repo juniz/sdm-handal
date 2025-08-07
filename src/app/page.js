@@ -107,7 +107,7 @@ export default function LoginPage() {
 					{process.env.NEXT_PUBLIC_APP_LOGO === "true" && (
 						<div className="w-24 h-24 relative mb-4">
 							<Image
-								src="/logo.png"
+								src={process.env.NEXT_PUBLIC_APP_LOGO_PATH || "/logo.png"}
 								alt="SDM Handal Logo"
 								width={96}
 								height={96}
