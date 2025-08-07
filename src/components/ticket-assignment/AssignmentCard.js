@@ -12,6 +12,7 @@ import {
 	RefreshCw,
 	Settings,
 	MessageSquare,
+	CheckCircle,
 } from "lucide-react";
 import { TicketDetailProvider } from "@/components/common";
 
@@ -53,6 +54,7 @@ const AssignmentCard = ({
 	onRelease,
 	onUpdateStatus,
 	currentUser,
+	isCompleted = false,
 }) => {
 	const isAssigned = ticket.assigned_to;
 	const isMyAssignment = ticket.assigned_to === currentUser?.username;
@@ -62,7 +64,9 @@ const AssignmentCard = ({
 		<motion.div
 			initial={{ opacity: 0, y: 20 }}
 			animate={{ opacity: 1, y: 0 }}
-			className="bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-shadow"
+			className={`bg-white rounded-lg p-4 shadow-sm border hover:shadow-md transition-shadow ${
+				isCompleted ? "opacity-75" : ""
+			}`}
 		>
 			<div className="flex items-start justify-between mb-3">
 				<div className="flex items-center gap-2">
@@ -107,37 +111,42 @@ const AssignmentCard = ({
 						</button>
 					</TicketDetailProvider>
 
-					{/* Update Status Button - Only show for assigned tickets */}
-					{isAssigned && (
-						<button
-							onClick={() => onUpdateStatus(ticket)}
-							className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-purple-500 hover:bg-purple-600 sm:bg-purple-600 sm:hover:bg-purple-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
-							title="Update Status"
-						>
-							<Settings className="w-4 h-4 sm:mr-1" />
-							<span className="hidden sm:inline">Update Status</span>
-						</button>
-					)}
+					{/* Action Buttons - Only show for active tickets */}
+					{!isCompleted && (
+						<>
+							{/* Update Status Button - Only show for assigned tickets */}
+							{isAssigned && (
+								<button
+									onClick={() => onUpdateStatus(ticket)}
+									className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-purple-500 hover:bg-purple-600 sm:bg-purple-600 sm:hover:bg-purple-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
+									title="Update Status"
+								>
+									<Settings className="w-4 h-4 sm:mr-1" />
+									<span className="hidden sm:inline">Update Status</span>
+								</button>
+							)}
 
-					{/* Assignment/Release Buttons */}
-					{!isAssigned ? (
-						<button
-							onClick={() => onAssign(ticket)}
-							className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-green-500 hover:bg-green-600 sm:bg-green-600 sm:hover:bg-green-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
-							title="Assign Ticket"
-						>
-							<UserCheck className="w-4 h-4 sm:mr-1" />
-							<span className="hidden sm:inline">Assign</span>
-						</button>
-					) : (
-						<button
-							onClick={() => onRelease(ticket)}
-							className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-red-500 hover:bg-red-600 sm:bg-red-600 sm:hover:bg-red-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
-							title="Release Assignment"
-						>
-							<UserX className="w-4 h-4 sm:mr-1" />
-							<span className="hidden sm:inline">Release</span>
-						</button>
+							{/* Assignment/Release Buttons */}
+							{!isAssigned ? (
+								<button
+									onClick={() => onAssign(ticket)}
+									className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-green-500 hover:bg-green-600 sm:bg-green-600 sm:hover:bg-green-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
+									title="Assign Ticket"
+								>
+									<UserCheck className="w-4 h-4 sm:mr-1" />
+									<span className="hidden sm:inline">Assign</span>
+								</button>
+							) : (
+								<button
+									onClick={() => onRelease(ticket)}
+									className="flex items-center justify-center p-1 sm:px-3 sm:py-1.5 text-white bg-red-500 hover:bg-red-600 sm:bg-red-600 sm:hover:bg-red-700 rounded-md text-sm font-medium transition-colors min-w-[32px] sm:min-w-auto"
+									title="Release Assignment"
+								>
+									<UserX className="w-4 h-4 sm:mr-1" />
+									<span className="hidden sm:inline">Release</span>
+								</button>
+							)}
+						</>
 					)}
 				</div>
 			</div>
@@ -190,6 +199,23 @@ const AssignmentCard = ({
 						<User className="w-4 h-4 text-gray-400 flex-shrink-0" />
 						<span className="truncate text-xs sm:text-sm">
 							Oleh: {ticket.assigned_by_name}
+						</span>
+					</div>
+				)}
+				{/* Completion dates for completed tickets */}
+				{isCompleted && ticket.resolved_date && (
+					<div className="flex items-center gap-2 text-sm">
+						<CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+						<span className="truncate text-xs sm:text-sm text-green-700">
+							Resolved: {ticket.resolved_date}
+						</span>
+					</div>
+				)}
+				{isCompleted && ticket.closed_date && (
+					<div className="flex items-center gap-2 text-sm">
+						<Clock className="w-4 h-4 text-gray-500 flex-shrink-0" />
+						<span className="truncate text-xs sm:text-sm text-gray-600">
+							Closed: {ticket.closed_date}
 						</span>
 					</div>
 				)}

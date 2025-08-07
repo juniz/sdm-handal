@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UserCheck, FileText, AlertCircle } from "lucide-react";
+import {
+	UserCheck,
+	FileText,
+	AlertCircle,
+	CheckCircle,
+	Clock,
+} from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import moment from "moment-timezone";
 import "moment/locale/id";
@@ -51,6 +57,7 @@ const TicketAssignmentPage = () => {
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [selectedTicketForStatus, setSelectedTicketForStatus] = useState(null);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState("active"); // "active" atau "completed"
 
 	// Check if user is from IT department
 	const [isAuthorized, setIsAuthorized] = useState(null);
@@ -74,6 +81,17 @@ const TicketAssignmentPage = () => {
 
 		checkAuth();
 	}, []);
+
+	// Filter tickets berdasarkan tab yang aktif
+	const filteredTickets = tickets.filter((ticket) => {
+		if (activeTab === "active") {
+			// Ticket yang masih berjalan (Open, In Progress, On Hold)
+			return !["Closed", "Resolved"].includes(ticket.current_status);
+		} else {
+			// Ticket yang sudah selesai (Closed, Resolved)
+			return ["Closed", "Resolved"].includes(ticket.current_status);
+		}
+	});
 
 	const handleAssign = (ticket) => {
 		setSelectedTicket(ticket);
@@ -197,15 +215,63 @@ const TicketAssignmentPage = () => {
 					itEmployees={itEmployees}
 				/>
 
+				{/* Tabs */}
+				<div className="border-b border-gray-200">
+					<nav className="-mb-px flex space-x-8">
+						<button
+							onClick={() => setActiveTab("active")}
+							className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+								activeTab === "active"
+									? "border-blue-500 text-blue-600"
+									: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+							}`}
+						>
+							<Clock className="w-4 h-4" />
+							Ticket Berjalan
+							<span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+								{
+									tickets.filter(
+										(t) => !["Closed", "Resolved"].includes(t.current_status)
+									).length
+								}
+							</span>
+						</button>
+						<button
+							onClick={() => setActiveTab("completed")}
+							className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+								activeTab === "completed"
+									? "border-green-500 text-green-600"
+									: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+							}`}
+						>
+							<CheckCircle className="w-4 h-4" />
+							Ticket Selesai
+							<span className="ml-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+								{
+									tickets.filter((t) =>
+										["Closed", "Resolved"].includes(t.current_status)
+									).length
+								}
+							</span>
+						</button>
+					</nav>
+				</div>
+
 				{/* Content */}
 				{loading ? (
 					<LoadingSkeleton />
-				) : tickets.length === 0 ? (
-					<EmptyState />
+				) : filteredTickets.length === 0 ? (
+					<EmptyState
+						message={
+							activeTab === "active"
+								? "Tidak ada ticket yang sedang berjalan"
+								: "Tidak ada ticket yang sudah selesai"
+						}
+					/>
 				) : (
 					<>
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-							{tickets.map((ticket) => (
+							{filteredTickets.map((ticket) => (
 								<AssignmentCard
 									key={ticket.ticket_id}
 									ticket={ticket}
@@ -213,6 +279,7 @@ const TicketAssignmentPage = () => {
 									onRelease={handleRelease}
 									onUpdateStatus={handleUpdateStatus}
 									currentUser={currentUser}
+									isCompleted={activeTab === "completed"}
 								/>
 							))}
 						</div>

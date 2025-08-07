@@ -114,7 +114,7 @@ export async function GET(request) {
 				? `WHERE ${whereConditions.join(" AND ")}`
 				: "";
 
-		// Query untuk mengambil data ticket yang sudah di-assign
+		// Query untuk mengambil data ticket yang sudah di-assign (termasuk yang sudah selesai)
 		const ticketsQuery = `
 			SELECT 
 				t.ticket_id,
@@ -144,14 +144,15 @@ export async function GET(request) {
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
-			INNER JOIN assignments_ticket at ON t.ticket_id = at.ticket_id AND at.released_date IS NULL
+			LEFT JOIN assignments_ticket at ON t.ticket_id = at.ticket_id
 			LEFT JOIN pegawai assigned_p ON at.assigned_to = assigned_p.nik
 			LEFT JOIN (
 				SELECT ticket_id, COUNT(*) as total_notes
 				FROM ticket_notes
 				GROUP BY ticket_id
 			) notes_count ON t.ticket_id = notes_count.ticket_id
-			${whereClause}
+			WHERE (at.released_date IS NULL OR s.status_name IN ('Closed', 'Resolved'))
+			${whereClause ? `AND ${whereClause.replace("WHERE ", "")}` : ""}
 			ORDER BY t.submission_date DESC
 			LIMIT ? OFFSET ?
 		`;
@@ -167,8 +168,9 @@ export async function GET(request) {
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
-			INNER JOIN assignments_ticket at ON t.ticket_id = at.ticket_id AND at.released_date IS NULL
-			${whereClause}
+			LEFT JOIN assignments_ticket at ON t.ticket_id = at.ticket_id
+			WHERE (at.released_date IS NULL OR s.status_name IN ('Closed', 'Resolved'))
+			${whereClause ? `AND ${whereClause.replace("WHERE ", "")}` : ""}
 		`;
 
 		const countParams = queryParams.slice(0, -2); // Remove limit and offset
@@ -180,7 +182,9 @@ export async function GET(request) {
 			submission_date: moment(ticket.submission_date).format(
 				"DD MMMM YYYY HH:mm"
 			),
-			assigned_date: moment(ticket.assigned_date).format("DD MMMM YYYY HH:mm"),
+			assigned_date: ticket.assigned_date
+				? moment(ticket.assigned_date).format("DD MMMM YYYY HH:mm")
+				: null,
 			resolved_date: ticket.resolved_date
 				? moment(ticket.resolved_date).format("DD MMMM YYYY HH:mm")
 				: null,
