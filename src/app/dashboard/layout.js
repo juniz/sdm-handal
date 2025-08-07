@@ -61,34 +61,43 @@ export default function DashboardLayout({ children }) {
 	}, []);
 
 	// Base menu items untuk semua user
-	const baseMenuItems = [
-		{ icon: Home, label: "Dashboard", href: "/dashboard" },
-		{ icon: User, label: "Profil", href: "/dashboard/profile" },
-		{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
-		{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
-		{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
-		{
-			icon: UserCheck,
-			label: "Assignment IT",
-			href: "/dashboard/ticket-assignment",
-		},
-		{
-			icon: FileText,
-			label: "Pengajuan Development",
-			href: "/dashboard/development",
-		},
-		{
-			icon: CreditCard,
-			label: "Pengajuan KTA",
-			href: "/dashboard/pengajuan-kta",
-		},
-		{
-			icon: RefreshCcw,
-			label: "Tukar Dinas",
-			href: "/dashboard/pengajuan-tukar-dinas",
-		},
-		{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
-	];
+	const baseMenuItems =
+		process.env.NEXT_PUBLIC_MENU_ADMIN === "true"
+			? [
+					{ icon: Home, label: "Dashboard", href: "/dashboard" },
+					{ icon: User, label: "Profil", href: "/dashboard/profile" },
+					{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
+					{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
+					{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
+					{
+						icon: UserCheck,
+						label: "Assignment IT",
+						href: "/dashboard/ticket-assignment",
+					},
+					{
+						icon: FileText,
+						label: "Pengajuan Development",
+						href: "/dashboard/development",
+					},
+					{
+						icon: CreditCard,
+						label: "Pengajuan KTA",
+						href: "/dashboard/pengajuan-kta",
+					},
+					{
+						icon: RefreshCcw,
+						label: "Tukar Dinas",
+						href: "/dashboard/pengajuan-tukar-dinas",
+					},
+					{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
+			  ]
+			: [
+					{ icon: Home, label: "Dashboard", href: "/dashboard" },
+					{ icon: User, label: "Profil", href: "/dashboard/profile" },
+					{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
+					{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
+					{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
+			  ];
 
 	// Admin menu items
 	const adminMenuItems = [
