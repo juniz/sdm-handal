@@ -59,7 +59,7 @@ export async function GET(request) {
 		// Query untuk izin/sakit
 		const leaveQuery = `
 			SELECT COUNT(*) as total_izin
-			FROM pengajuan_izin
+			FROM pengajuan_cuti
 			WHERE nik = ?
 			AND tanggal_awal BETWEEN ? AND ?
 			AND status = 'Disetujui'

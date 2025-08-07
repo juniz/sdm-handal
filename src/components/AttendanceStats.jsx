@@ -150,7 +150,7 @@ export function AttendanceStats() {
 						textColor="text-yellow-600"
 					/>
 					<StatBox
-						label="Izin"
+						label="Cuti"
 						value={stats.stats.leave}
 						bgColor="bg-red-50"
 						textColor="text-red-600"
