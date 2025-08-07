@@ -11,6 +11,11 @@ import useNotifications from "@/hooks/useNotifications";
 import { useUser } from "@/hooks/useUser";
 
 const NotificationAlert = () => {
+	// Disable notifications jika environment variable diset ke true
+	if (process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS === "true") {
+		return null;
+	}
+
 	const { notifications, markAsRead } = useNotifications();
 	const { user } = useUser();
 

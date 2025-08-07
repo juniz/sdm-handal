@@ -119,110 +119,57 @@ Sistem error logging dapat dikontrol melalui environment variable untuk mengopti
 - **Lokasi**: Dashboard page (`src/app/dashboard/page.js`)
 - **Catatan**: Harus menggunakan `=== 'true'` untuk pengecekan yang benar
 
+### 4. `NEXT_PUBLIC_DISABLE_NOTIFICATIONS` (Client-side)
+
+Environment variable untuk mendisable semua komponen notifikasi di aplikasi.
+
+**Nilai yang tersedia:**
+
+- `true` - Menonaktifkan semua notifikasi
+- `false` - Mengaktifkan notifikasi (default)
+
+**Komponen yang terpengaruh:**
+
+- `NotificationAlert` - Alert banner di dashboard
+- `NotificationBell` - Bell icon di desktop header
+- `FloatingNotification` - Floating button di mobile
+
+**Contoh penggunaan:**
+
+```bash
+# Development - notifikasi aktif
+NEXT_PUBLIC_DISABLE_NOTIFICATIONS=false
+
+# Production - notifikasi nonaktif
+NEXT_PUBLIC_DISABLE_NOTIFICATIONS=true
+
+# Staging - notifikasi aktif untuk testing
+NEXT_PUBLIC_DISABLE_NOTIFICATIONS=false
+```
+
+**Implementasi di komponen:**
+
+```jsx
+const NotificationComponent = () => {
+	// Disable notifications jika environment variable diset ke true
+	if (process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS === "true") {
+		return null;
+	}
+
+	// ... rest of component logic
+};
+```
+
+**Catatan:**
+
+- Menggunakan prefix `NEXT_PUBLIC_` untuk client-side access
+- Perubahan memerlukan restart aplikasi
+- Semua komponen notification akan otomatis hidden jika diset ke `true`
+
 ## Konfigurasi
 
 ### Development Environment
 
-```bash
-# .env.local
-DEBUG=true
-NEXT_PUBLIC_DEBUG=true
-NEXT_PUBLIC_MENU_ADMIN=true
 ```
 
-### Production Environment
-
-```bash
-# .env.production
-DEBUG=false
-NEXT_PUBLIC_DEBUG=false
-NEXT_PUBLIC_MENU_ADMIN=false
 ```
-
-### Staging Environment
-
-```bash
-# .env.staging
-DEBUG=true
-NEXT_PUBLIC_DEBUG=true
-NEXT_PUBLIC_MENU_ADMIN=true
-```
-
-## Cara Kerja
-
-### Client-Side (Browser)
-
-1. Global error handler mengecek `NEXT_PUBLIC_DEBUG`
-2. Jika `false`: Error tidak dikirim ke server, hanya console warning
-3. Jika `true`: Error dikirim ke `/api/error-logs`
-
-### Server-Side (API)
-
-1. API endpoint mengecek `DEBUG`
-2. Jika `false`: Return success tanpa menyimpan ke database
-3. Jika `true`: Error disimpan ke database seperti biasa
-
-### Menu Admin Control
-
-1. Dashboard mengecek `NEXT_PUBLIC_MENU_ADMIN === 'true'`
-2. Jika `false`: QuickActions menu tidak ditampilkan
-3. Jika `true`: QuickActions menu ditampilkan
-
-## Contoh Response
-
-### Debug Disabled (Client)
-
-```javascript
-// Console warning
-console.warn(
-	"Error logging disabled. Set NEXT_PUBLIC_DEBUG=true to enable error logging."
-);
-```
-
-### Debug Disabled (Server)
-
-```json
-{
-	"success": true,
-	"message": "Error logging disabled. Set DEBUG=true to enable error logging."
-}
-```
-
-## Troubleshooting
-
-### Menu Admin masih muncul meski NEXT_PUBLIC_MENU_ADMIN=false
-
-**Penyebab**: Environment variable tidak dikenali sebagai boolean
-**Solusi**:
-
-```javascript
-// ❌ Salah - akan selalu truthy jika variable ada
-{
-	process.env.NEXT_PUBLIC_MENU_ADMIN ? <Component /> : null;
-}
-
-// ✅ Benar - mengecek nilai boolean yang tepat
-{
-	process.env.NEXT_PUBLIC_MENU_ADMIN === "true" ? <Component /> : null;
-}
-```
-
-### Error tidak muncul di admin panel
-
-1. Pastikan `DEBUG=true` di environment
-2. Restart server setelah ubah environment variable
-3. Cek browser console untuk client-side errors
-
-### Error masih tersimpan meski DEBUG=false
-
-1. Pastikan environment variable sudah benar
-2. Cek apakah ada cache di browser
-3. Restart development server
-
-## Best Practices
-
-1. **Development**: Selalu set `DEBUG=true` dan `NEXT_PUBLIC_MENU_ADMIN=true`
-2. **Production**: Selalu set `DEBUG=false` dan `NEXT_PUBLIC_MENU_ADMIN=false`
-3. **Staging**: Set `DEBUG=true` dan `NEXT_PUBLIC_MENU_ADMIN=true` untuk testing
-4. **Environment Variable Check**: Selalu gunakan `=== 'true'` untuk boolean check
-5. **Monitoring**: Gunakan tools external untuk production monitoring

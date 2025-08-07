@@ -29,6 +29,7 @@ module.exports = {
 				HOST: "0.0.0.0",
 				UV_THREADPOOL_SIZE: 16,
 				NEXT_PUBLIC_DISABLE_STATIC_CACHE: "true",
+				NEXT_PUBLIC_DISABLE_NOTIFICATIONS: "false",
 			},
 			env_development: {
 				NODE_ENV: "development",
@@ -36,6 +37,7 @@ module.exports = {
 				HOST: "0.0.0.0",
 				UV_THREADPOOL_SIZE: 8,
 				NEXT_PUBLIC_DISABLE_STATIC_CACHE: "true",
+				NEXT_PUBLIC_DISABLE_NOTIFICATIONS: "false",
 			},
 			env_production: {
 				NODE_ENV: "production",
@@ -43,6 +45,7 @@ module.exports = {
 				HOST: "0.0.0.0",
 				UV_THREADPOOL_SIZE: 16,
 				NEXT_PUBLIC_DISABLE_STATIC_CACHE: "true",
+				NEXT_PUBLIC_DISABLE_NOTIFICATIONS: "true",
 			},
 			log_file: "./logs/combined.log",
 			out_file: "./logs/out.log",
