@@ -926,15 +926,15 @@ export async function POST(request) {
 					});
 
 					// Simpan data lokasi
-					const geoResult = await transactionHelpers.insert(transaction, {
-						table: "geolocation_presensi",
-						data: {
-							id: idPegawai,
-							tanggal: moment().format("YYYY-MM-DD"),
-							latitude,
-							longitude,
-						},
-					});
+					// const geoResult = await transactionHelpers.insert(transaction, {
+					// 	table: "geolocation_presensi",
+					// 	data: {
+					// 		id: idPegawai,
+					// 		tanggal: moment().format("YYYY-MM-DD"),
+					// 		latitude,
+					// 		longitude,
+					// 	},
+					// });
 
 					return {
 						presensi: presensiResult,
