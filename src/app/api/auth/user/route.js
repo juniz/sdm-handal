@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { selectFirst } from "@/lib/db-helper";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-const BASE_URL = "https://simrs.rsbhayangkaranganjuk.com/webapps/penggajian/";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_IMAGE_URL;
 
 export async function GET() {
 	try {
