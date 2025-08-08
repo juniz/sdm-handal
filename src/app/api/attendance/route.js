@@ -938,7 +938,7 @@ export async function POST(request) {
 
 					return {
 						presensi: presensiResult,
-						geolocation: geoResult,
+						geolocation: true,
 						security: securityResult,
 						status,
 						keterlambatan,
