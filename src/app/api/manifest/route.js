@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
+	const version = process.env.NEXT_PUBLIC_PWA_VERSION;
+	const withVersion = (src) =>
+		version ? `${src}?v=${encodeURIComponent(version)}` : src;
+
 	const manifest = {
 		name: process.env.NEXT_PUBLIC_APP_NAME || "SDM Handal",
 		short_name: process.env.NEXT_PUBLIC_APP_SHORT_NAME || "SDM Handal",
@@ -13,51 +17,68 @@ export async function GET() {
 		theme_color: process.env.NEXT_PUBLIC_APP_THEME_COLOR || "#2563eb",
 		orientation: process.env.NEXT_PUBLIC_APP_ORIENTATION || "portrait",
 		icons: [
+			// Android biasanya mengutamakan 192 dan 512 – pastikan ada di awal array
 			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_72 || "/icons/icon-72x72.png",
-				sizes: "72x72",
-				type: "image/png",
-				purpose: "any maskable",
-			},
-			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_96 || "/icons/icon-96x96.png",
-				sizes: "96x96",
-				type: "image/png",
-				purpose: "any maskable",
-			},
-			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_128 || "/icons/icon-128x128.png",
-				sizes: "128x128",
-				type: "image/png",
-				purpose: "any maskable",
-			},
-			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_144 || "/icons/icon-144x144.png",
-				sizes: "144x144",
-				type: "image/png",
-				purpose: "any maskable",
-			},
-			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_152 || "/icons/icon-152x152.png",
-				sizes: "152x152",
-				type: "image/png",
-				purpose: "any maskable",
-			},
-			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_192 || "/icons/icon-192x192.png",
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_192 || "/icons/icon-192x192.png"
+				),
 				sizes: "192x192",
 				type: "image/png",
 				purpose: "any maskable",
 			},
 			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_384 || "/icons/icon-384x384.png",
-				sizes: "384x384",
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_512 || "/icons/icon-512x512.png"
+				),
+				sizes: "512x512",
 				type: "image/png",
 				purpose: "any maskable",
 			},
 			{
-				src: process.env.NEXT_PUBLIC_APP_ICON_512 || "/icons/icon-512x512.png",
-				sizes: "512x512",
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_72 || "/icons/icon-72x72.png"
+				),
+				sizes: "72x72",
+				type: "image/png",
+				purpose: "any maskable",
+			},
+			{
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_96 || "/icons/icon-96x96.png"
+				),
+				sizes: "96x96",
+				type: "image/png",
+				purpose: "any maskable",
+			},
+			{
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_128 || "/icons/icon-128x128.png"
+				),
+				sizes: "128x128",
+				type: "image/png",
+				purpose: "any maskable",
+			},
+			{
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_144 || "/icons/icon-144x144.png"
+				),
+				sizes: "144x144",
+				type: "image/png",
+				purpose: "any maskable",
+			},
+			{
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_152 || "/icons/icon-152x152.png"
+				),
+				sizes: "152x152",
+				type: "image/png",
+				purpose: "any maskable",
+			},
+			{
+				src: withVersion(
+					process.env.NEXT_PUBLIC_APP_ICON_384 || "/icons/icon-384x384.png"
+				),
+				sizes: "384x384",
 				type: "image/png",
 				purpose: "any maskable",
 			},

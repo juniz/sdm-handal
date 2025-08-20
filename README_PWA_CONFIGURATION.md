@@ -144,6 +144,16 @@ Jika tidak diset, akan menggunakan default icons dari `/icons/`:
 - **Tipe**: String
 - **Deskripsi**: URL App Store (auto-generated jika tidak diset)
 
+### Cache Busting untuk Android
+
+#### 19. `NEXT_PUBLIC_PWA_VERSION`
+
+- **Tipe**: String/Number
+- **Default**: tidak diset
+- **Deskripsi**: Versi untuk cache-busting. Jika diisi, semua `icons` di manifest akan ditambahkan query `?v=VERSION` sehingga Android mengambil icon terbaru saat install/update PWA.
+- **Contoh**:
+  - `NEXT_PUBLIC_PWA_VERSION=2` lalu deploy, kemudian reinstall PWA di Android.
+
 ## Konfigurasi Environment
 
 ### Development Environment
@@ -156,6 +166,7 @@ NEXT_PUBLIC_APP_DESCRIPTION=Aplikasi Manajemen SDM - Development
 NEXT_PUBLIC_APP_THEME_COLOR=#dc2626
 NEXT_PUBLIC_APP_BACKGROUND_COLOR=#fef2f2
 NEXT_PUBLIC_FAVICON_PATH=/favicon-dev.ico
+NEXT_PUBLIC_PWA_VERSION=dev1
 ```
 
 ### Production Environment
@@ -170,6 +181,7 @@ NEXT_PUBLIC_APP_BACKGROUND_COLOR=#ffffff
 NEXT_PUBLIC_FAVICON_PATH=/favicon.ico
 NEXT_PUBLIC_APP_ANDROID_PACKAGE=com.rsbhayangkaranganjuk.sdmhandal
 NEXT_PUBLIC_APP_IOS_APP_STORE_ID=1234567890
+NEXT_PUBLIC_PWA_VERSION=1
 ```
 
 ### Staging Environment
@@ -182,6 +194,7 @@ NEXT_PUBLIC_APP_DESCRIPTION=Aplikasi Manajemen SDM - Staging
 NEXT_PUBLIC_APP_THEME_COLOR=#f59e0b
 NEXT_PUBLIC_APP_BACKGROUND_COLOR=#fffbeb
 NEXT_PUBLIC_FAVICON_PATH=/favicon-staging.ico
+NEXT_PUBLIC_PWA_VERSION=stg1
 ```
 
 ## Contoh Manifest Output
@@ -200,45 +213,13 @@ NEXT_PUBLIC_FAVICON_PATH=/favicon-staging.ico
 	"orientation": "portrait",
 	"icons": [
 		{
-			"src": "/icons/icon-72x72.png",
+			"src": "/icons/icon-72x72.png?v=1",
 			"sizes": "72x72",
 			"type": "image/png",
 			"purpose": "any maskable"
 		}
 		// ... more icons
 	]
-}
-```
-
-### Advanced Manifest dengan Related Apps
-
-```json
-{
-  "name": "SDM Handal",
-  "short_name": "SDM Handal",
-  "description": "Aplikasi Manajemen SDM RS Bhayangkara Nganjuk",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "orientation": "portrait",
-  "scope": "/",
-  "lang": "id",
-  "dir": "ltr",
-  "categories": ["business", "productivity"],
-  "icons": [...],
-  "related_applications": [
-    {
-      "platform": "play",
-      "url": "https://play.google.com/store/apps/details?id=com.example.sdmhandal",
-      "id": "com.example.sdmhandal"
-    },
-    {
-      "platform": "itunes",
-      "url": "https://apps.apple.com/app/id1234567890",
-      "id": "1234567890"
-    }
-  ]
 }
 ```
 
@@ -328,11 +309,12 @@ NEXT_PUBLIC_FAVICON_PATH=/favicon-staging.ico
 2. Pastikan semua required fields ada
 3. Cek service worker berfungsi
 
-### Icon tidak muncul
+### Icon tidak muncul atau tidak sesuai di Android
 
-1. Pastikan path icon benar
-2. Cek file icon ada di public folder
-3. Validasi format dan ukuran icon
+1. Pastikan `NEXT_PUBLIC_APP_ICON_192` dan `NEXT_PUBLIC_APP_ICON_512` di-set dengan benar
+2. Naikkan `NEXT_PUBLIC_PWA_VERSION` untuk memaksa refresh icon (cache-busting)
+3. Uninstall PWA lalu install ulang di Android
+4. Cek DevTools Application > Manifest untuk melihat icon yang dipakai
 
 ## Monitoring
 
