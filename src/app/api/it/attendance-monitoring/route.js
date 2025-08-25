@@ -30,11 +30,16 @@ export async function GET(request) {
 			[userId]
 		);
 
-		if (!userCheck[0] || userCheck[0].departemen !== "IT") {
-			return NextResponse.json(
-				{ error: "Akses ditolak. Hanya untuk departemen IT." },
-				{ status: 403 }
-			);
+		if (!userCheck[0]) {
+			if (
+				userCheck[0].departemen !== process.env.NEXT_PUBLIC_DEPARTMENT_SPI &&
+				userCheck[0].departemen !== process.env.NEXT_PUBLIC_DEPARTMENT_IT
+			) {
+				return NextResponse.json(
+					{ error: "Akses ditolak. Hanya untuk departemen IT." },
+					{ status: 403 }
+				);
+			}
 		}
 
 		// Get query parameters
