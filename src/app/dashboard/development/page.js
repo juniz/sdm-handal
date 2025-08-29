@@ -46,6 +46,7 @@ export default function DevelopmentRequestsPage() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 	const [showFilters, setShowFilters] = useState(false);
+	const [showStats, setShowStats] = useState(false);
 
 	// Pagination states
 	const [currentPage, setCurrentPage] = useState(1);
@@ -233,121 +234,226 @@ export default function DevelopmentRequestsPage() {
 	}
 
 	return (
-		<div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+		<div className="max-w-7xl mx-auto px-2 sm:px-4 py-3 sm:py-6">
 			{/* Header */}
-			<div className="mb-6">
-				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-					<div>
-						<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+			<div className="mb-4 sm:mb-6">
+				<div className="flex flex-col space-y-3 sm:space-y-0 sm:flex-row sm:items-center sm:justify-between mb-4">
+					<div className="text-center sm:text-left">
+						<h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">
 							Pengajuan Pengembangan Modul IT
 						</h1>
-						<p className="text-gray-600">
+						<p className="text-sm sm:text-base text-gray-600">
 							Kelola pengajuan pengembangan software dan modul sistem
 						</p>
 					</div>
-					<div className="flex gap-2 mt-3 sm:mt-0">
+					<div className="flex gap-2 justify-center sm:justify-end">
 						<button
 							onClick={handleRefresh}
-							className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-w-0 flex-1 sm:flex-initial"
 						>
-							<RefreshCw className="w-4 h-4" />
-							<span className="hidden sm:inline">Refresh</span>
+							<RefreshCw className="w-4 h-4 flex-shrink-0" />
+							<span className="text-sm sm:text-base">Refresh</span>
 						</button>
 						<button
 							onClick={() => setShowCreateModal(true)}
-							className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-w-0 flex-1 sm:flex-initial"
 						>
-							<Plus className="w-4 h-4" />
-							<span className="hidden sm:inline">Pengajuan Baru</span>
+							<Plus className="w-4 h-4 flex-shrink-0" />
+							<span className="text-sm sm:text-base">Buat Baru</span>
 						</button>
 					</div>
 				</div>
 
-				{/* Statistics Cards - Hidden on mobile */}
-				<div className="hidden md:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-blue-100 rounded-lg">
-								<Users className="w-5 h-5 text-blue-600" />
+				{/* Statistics Cards - Mobile Accordion and Desktop */}
+				<div className="mb-4 sm:mb-6">
+					{/* Mobile Stats Accordion */}
+					<div className="sm:hidden bg-white rounded-lg border border-gray-200 mb-4">
+						<button
+							onClick={() => setShowStats(!showStats)}
+							className="flex items-center justify-between w-full p-3 text-left"
+						>
+							<div className="flex items-center gap-2">
+								<div className="p-1.5 bg-blue-100 rounded-lg">
+									<TrendingUp className="w-4 h-4 text-blue-600" />
+								</div>
+								<span className="font-medium text-gray-900">Statistik</span>
 							</div>
-						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.total_requests || 0}
-						</p>
-						<p className="text-sm text-gray-600">Total Pengajuan</p>
+							<ChevronDown
+								className={`w-4 h-4 text-gray-500 transition-transform ${
+									showStats ? "rotate-180" : ""
+								}`}
+							/>
+						</button>
+
+						{showStats && (
+							<div className="p-3 pt-0 border-t border-gray-100">
+								<div className="grid grid-cols-2 gap-3">
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-blue-100 rounded-lg">
+												<Users className="w-3 h-3 text-blue-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.total_requests || 0}
+										</p>
+										<p className="text-xs text-gray-600">Total</p>
+									</div>
+
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-yellow-100 rounded-lg">
+												<Clock className="w-3 h-3 text-yellow-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.pending_review || 0}
+										</p>
+										<p className="text-xs text-gray-600">Review</p>
+									</div>
+
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-orange-100 rounded-lg">
+												<TrendingUp className="w-3 h-3 text-orange-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.in_progress || 0}
+										</p>
+										<p className="text-xs text-gray-600">Progress</p>
+									</div>
+
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-green-100 rounded-lg">
+												<CheckCircle className="w-3 h-3 text-green-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.completed || 0}
+										</p>
+										<p className="text-xs text-gray-600">Selesai</p>
+									</div>
+
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-red-100 rounded-lg">
+												<X className="w-3 h-3 text-red-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.rejected || 0}
+										</p>
+										<p className="text-xs text-gray-600">Ditolak</p>
+									</div>
+
+									<div className="bg-gray-50 p-3 rounded-lg">
+										<div className="flex items-center justify-between mb-2">
+											<div className="p-1.5 bg-purple-100 rounded-lg">
+												<Calendar className="w-3 h-3 text-purple-600" />
+											</div>
+										</div>
+										<p className="text-lg font-bold text-gray-900">
+											{statistics.avg_completion_days || 0}
+										</p>
+										<p className="text-xs text-gray-600">Rata-rata Hari</p>
+									</div>
+								</div>
+							</div>
+						)}
 					</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-yellow-100 rounded-lg">
-								<Clock className="w-5 h-5 text-yellow-600" />
+					{/* Desktop Stats Grid */}
+					<div className="hidden sm:grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-blue-100 rounded-lg">
+									<Users className="w-5 h-5 text-blue-600" />
+								</div>
 							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.total_requests || 0}
+							</p>
+							<p className="text-sm text-gray-600">Total</p>
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.pending_review || 0}
-						</p>
-						<p className="text-sm text-gray-600">Menunggu Review</p>
-					</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-orange-100 rounded-lg">
-								<TrendingUp className="w-5 h-5 text-orange-600" />
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-yellow-100 rounded-lg">
+									<Clock className="w-5 h-5 text-yellow-600" />
+								</div>
 							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.pending_review || 0}
+							</p>
+							<p className="text-sm text-gray-600">Review</p>
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.in_progress || 0}
-						</p>
-						<p className="text-sm text-gray-600">Dalam Pengembangan</p>
-					</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-green-100 rounded-lg">
-								<CheckCircle className="w-5 h-5 text-green-600" />
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-orange-100 rounded-lg">
+									<TrendingUp className="w-5 h-5 text-orange-600" />
+								</div>
 							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.in_progress || 0}
+							</p>
+							<p className="text-sm text-gray-600">Progress</p>
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.completed || 0}
-						</p>
-						<p className="text-sm text-gray-600">Selesai</p>
-					</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-red-100 rounded-lg">
-								<X className="w-5 h-5 text-red-600" />
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-green-100 rounded-lg">
+									<CheckCircle className="w-5 h-5 text-green-600" />
+								</div>
 							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.completed || 0}
+							</p>
+							<p className="text-sm text-gray-600">Selesai</p>
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.rejected || 0}
-						</p>
-						<p className="text-sm text-gray-600">Ditolak</p>
-					</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-purple-100 rounded-lg">
-								<Calendar className="w-5 h-5 text-purple-600" />
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-red-100 rounded-lg">
+									<X className="w-5 h-5 text-red-600" />
+								</div>
 							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.rejected || 0}
+							</p>
+							<p className="text-sm text-gray-600">Ditolak</p>
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{statistics.avg_completion_days || 0}
-						</p>
-						<p className="text-sm text-gray-600">Rata-rata Hari</p>
+
+						<div className="bg-white p-4 rounded-lg border border-gray-200">
+							<div className="flex items-center justify-between mb-2">
+								<div className="p-2 bg-purple-100 rounded-lg">
+									<Calendar className="w-5 h-5 text-purple-600" />
+								</div>
+							</div>
+							<p className="text-2xl font-bold text-gray-900">
+								{statistics.avg_completion_days || 0}
+							</p>
+							<p className="text-sm text-gray-600">Rata-rata Hari</p>
+						</div>
 					</div>
 				</div>
 			</div>
 
 			{/* Filters */}
-			<div className="bg-white rounded-lg border border-gray-200 mb-6">
-				<div className="p-4 border-b border-gray-200">
+			<div className="bg-white rounded-lg border border-gray-200 mb-4 sm:mb-6">
+				<div className="p-3 sm:p-4 border-b border-gray-200 lg:hidden">
 					<button
 						onClick={() => setShowFilters(!showFilters)}
-						className="flex items-center gap-2 text-gray-700 hover:text-gray-900 lg:hidden"
+						className="flex items-center gap-2 text-gray-700 hover:text-gray-900 w-full justify-between"
 					>
-						<Filter className="w-4 h-4" />
-						<span>Filter & Pencarian</span>
+						<div className="flex items-center gap-2">
+							<Filter className="w-4 h-4" />
+							<span className="text-sm sm:text-base font-medium">
+								Filter & Pencarian
+							</span>
+						</div>
 						<ChevronDown
 							className={`w-4 h-4 transition-transform ${
 								showFilters ? "rotate-180" : ""
@@ -356,18 +462,20 @@ export default function DevelopmentRequestsPage() {
 					</button>
 				</div>
 
-				<div className={`p-4 ${showFilters ? "block" : "hidden"} lg:block`}>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+				<div
+					className={`p-3 sm:p-4 ${showFilters ? "block" : "hidden"} lg:block`}
+				>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
 						{/* Status Filter */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+						<div className="sm:col-span-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
 								Status
 							</label>
 							<div className="relative">
 								<select
 									value={selectedStatus}
 									onChange={(e) => setSelectedStatus(e.target.value)}
-									className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
 								>
 									<option value="ALL">Semua Status</option>
 									{masterData.statuses.map((status) => (
@@ -381,15 +489,15 @@ export default function DevelopmentRequestsPage() {
 						</div>
 
 						{/* Priority Filter */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+						<div className="sm:col-span-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
 								Prioritas
 							</label>
 							<div className="relative">
 								<select
 									value={selectedPriority}
 									onChange={(e) => setSelectedPriority(e.target.value)}
-									className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
 								>
 									<option value="ALL">Semua Prioritas</option>
 									{masterData.priorities.map((priority) => (
@@ -406,15 +514,15 @@ export default function DevelopmentRequestsPage() {
 						</div>
 
 						{/* Module Type Filter */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+						<div className="sm:col-span-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
 								Jenis Modul
 							</label>
 							<div className="relative">
 								<select
 									value={selectedModuleType}
 									onChange={(e) => setSelectedModuleType(e.target.value)}
-									className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+									className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
 								>
 									<option value="ALL">Semua Jenis</option>
 									{masterData.moduleTypes.map((type) => (
@@ -428,8 +536,8 @@ export default function DevelopmentRequestsPage() {
 						</div>
 
 						{/* Department Filter */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+						<div className="sm:col-span-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
 								Departemen
 							</label>
 							<div className="relative">
@@ -437,7 +545,7 @@ export default function DevelopmentRequestsPage() {
 								<select
 									value={selectedDepartment}
 									onChange={(e) => setSelectedDepartment(e.target.value)}
-									className="w-full pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+									className="w-full pl-10 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
 								>
 									<option value="ALL">Semua Departemen</option>
 									{masterData.departments.map((dept) => (
@@ -451,8 +559,8 @@ export default function DevelopmentRequestsPage() {
 						</div>
 
 						{/* Search */}
-						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+						<div className="sm:col-span-2 lg:col-span-1">
+							<label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
 								Pencarian
 								{searchTerm !== debouncedSearchTerm && (
 									<span className="text-xs text-blue-600 ml-2">
@@ -469,7 +577,7 @@ export default function DevelopmentRequestsPage() {
 									onChange={(e) => setSearchTerm(e.target.value)}
 									className={`w-full pl-10 ${
 										searchTerm ? "pr-10" : "pr-4"
-									} py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+									} py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
 										searchTerm !== debouncedSearchTerm
 											? "border-blue-300 bg-blue-50"
 											: "border-gray-300"
@@ -490,7 +598,7 @@ export default function DevelopmentRequestsPage() {
 			</div>
 
 			{/* Request List */}
-			<div className="space-y-4">
+			<div className="space-y-3 sm:space-y-4">
 				{requests.map((request) => (
 					<RequestCard
 						key={request.request_id}
@@ -509,20 +617,20 @@ export default function DevelopmentRequestsPage() {
 
 			{/* Load More Button */}
 			{hasMore && (
-				<div className="text-center mt-8">
+				<div className="text-center mt-6 sm:mt-8">
 					<button
 						onClick={handleLoadMore}
 						disabled={isLoadingMore}
-						className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm sm:text-base w-full sm:w-auto"
 					>
 						{isLoadingMore ? (
 							<>
-								<RefreshCw className="w-4 h-4 animate-spin" />
+								<RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
 								<span>Memuat...</span>
 							</>
 						) : (
 							<>
-								<TrendingUp className="w-4 h-4" />
+								<TrendingUp className="w-4 h-4 flex-shrink-0" />
 								<span>Muat Lebih Banyak</span>
 							</>
 						)}
@@ -532,17 +640,17 @@ export default function DevelopmentRequestsPage() {
 
 			{/* No Data */}
 			{requests.length === 0 && !isLoading && (
-				<div className="text-center py-12">
-					<Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-					<h3 className="text-lg font-semibold text-gray-900 mb-2">
+				<div className="text-center py-8 sm:py-12 px-4">
+					<Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400 mx-auto mb-3 sm:mb-4" />
+					<h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">
 						Tidak Ada Pengajuan
 					</h3>
-					<p className="text-gray-600 mb-4">
+					<p className="text-sm sm:text-base text-gray-600 mb-4 max-w-md mx-auto">
 						Belum ada pengajuan pengembangan untuk filter yang dipilih
 					</p>
 					<button
 						onClick={() => setShowCreateModal(true)}
-						className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+						className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base w-full sm:w-auto"
 					>
 						Buat Pengajuan Pertama
 					</button>
