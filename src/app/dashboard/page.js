@@ -14,6 +14,7 @@ import {
 	Shield,
 	MenuIcon,
 	RefreshCcw,
+	FileText,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -92,6 +93,12 @@ const QuickActions = () => {
 			title: "Pengajuan KTA",
 			icon: IdCard,
 			href: "/dashboard/pengajuan-kta",
+			color: "from-green-500 to-emerald-500",
+		},
+		{
+			title: "Pengajuan Development",
+			icon: FileText,
+			href: "/dashboard/development",
 			color: "from-green-500 to-emerald-500",
 		},
 	];
