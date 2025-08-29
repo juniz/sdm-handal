@@ -81,25 +81,25 @@ const QuickActions = () => {
 			title: "Penugasan IT",
 			icon: Users,
 			href: "/dashboard/ticket-assignment",
-			color: "from-green-500 to-emerald-500",
+			color: "from-emerald-500 to-teal-500",
 		},
 		{
 			title: "Rapat",
 			icon: Users,
 			href: "/dashboard/rapat",
-			color: "from-green-500 to-emerald-500",
+			color: "from-cyan-500 to-blue-500",
 		},
 		{
 			title: "Pengajuan KTA",
 			icon: IdCard,
 			href: "/dashboard/pengajuan-kta",
-			color: "from-green-500 to-emerald-500",
+			color: "from-amber-500 to-orange-500",
 		},
 		{
-			title: "Pengajuan Development",
+			title: "Pengajuan Pengembangan",
 			icon: FileText,
 			href: "/dashboard/development",
-			color: "from-green-500 to-emerald-500",
+			color: "from-violet-500 to-purple-500",
 		},
 	];
 
@@ -126,7 +126,7 @@ const QuickActions = () => {
 									>
 										<action.icon className="w-4 h-4" />
 									</div>
-									<span className="font-medium text-gray-900 text-xs text-center leading-tight">
+									<span className="font-medium text-gray-900 text-[10px] text-center leading-tight">
 										{action.title}
 									</span>
 								</div>
