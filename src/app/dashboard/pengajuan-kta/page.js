@@ -43,6 +43,8 @@ import {
 	XCircle,
 	Trash2,
 	AlertTriangle,
+	Search,
+	RotateCcw,
 } from "lucide-react";
 import moment from "moment-timezone";
 import "moment/locale/id";
@@ -62,6 +64,11 @@ export default function PengajuanKTAPage() {
 	const [showDetailDialog, setShowDetailDialog] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [pengajuanToDelete, setPengajuanToDelete] = useState(null);
+	const [visibleData, setVisibleData] = useState([]);
+	const [searchNama, setSearchNama] = useState("");
+	const [searchJenis, setSearchJenis] = useState("ALL");
+	const [searchStatus, setSearchStatus] = useState("ALL");
+	const [filtersApplied, setFiltersApplied] = useState(false);
 
 	// Form state
 	const [formData, setFormData] = useState({
@@ -108,6 +115,34 @@ export default function PengajuanKTAPage() {
 		}
 	};
 
+	const handleSearch = () => {
+		const namaQuery = searchNama.trim().toLowerCase();
+		const jenisQuery = searchJenis === "ALL" ? "" : searchJenis;
+		const statusQuery = searchStatus === "ALL" ? "" : searchStatus;
+
+		const filtered = (pengajuanData || []).filter((item) => {
+			const matchNama = namaQuery
+				? (item.nama || "").toLowerCase().includes(namaQuery)
+				: true;
+			const matchJenis = jenisQuery ? item.jenis === jenisQuery : true;
+			const matchStatus = statusQuery ? item.status === statusQuery : true;
+			return matchNama && matchJenis && matchStatus;
+		});
+
+		setVisibleData(filtered);
+		setFiltersApplied(
+			Boolean(namaQuery) || Boolean(jenisQuery) || Boolean(statusQuery)
+		);
+	};
+
+	const handleResetFilters = () => {
+		setSearchNama("");
+		setSearchJenis("ALL");
+		setSearchStatus("ALL");
+		setVisibleData(pengajuanData || []);
+		setFiltersApplied(false);
+	};
+
 	const fetchData = async () => {
 		try {
 			setLoading(true);
@@ -116,6 +151,7 @@ export default function PengajuanKTAPage() {
 			if (response.ok) {
 				const result = await response.json();
 				setPengajuanData(result.data || []);
+				setVisibleData(result.data || []);
 			} else {
 				const errorData = await response.json();
 				toast.error(errorData.message || "Gagal mengambil data pengajuan KTA");
@@ -304,6 +340,76 @@ export default function PengajuanKTAPage() {
 				)}
 			</div>
 
+			{/* Filter Section */}
+			<Card className="">
+				<CardContent className="pt-6">
+					<div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+						<div className="md:col-span-5">
+							<Label htmlFor="filter_nama">Cari Nama</Label>
+							<Input
+								id="filter_nama"
+								placeholder="Masukkan nama pemohon"
+								value={searchNama}
+								onChange={(e) => setSearchNama(e.target.value)}
+							/>
+						</div>
+						<div className="md:col-span-3">
+							<Label htmlFor="filter_jenis">Jenis</Label>
+							<Select
+								value={searchJenis}
+								onValueChange={(val) => setSearchJenis(val)}
+							>
+								<SelectTrigger id="filter_jenis" className="w-full">
+									<SelectValue placeholder="Semua jenis" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="ALL">Semua</SelectItem>
+									<SelectItem value="Baru">Baru</SelectItem>
+									<SelectItem value="Ganti">Ganti</SelectItem>
+									<SelectItem value="Hilang">Hilang</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="md:col-span-3">
+							<Label htmlFor="filter_status">Status</Label>
+							<Select
+								value={searchStatus}
+								onValueChange={(val) => setSearchStatus(val)}
+							>
+								<SelectTrigger id="filter_status" className="w-full">
+									<SelectValue placeholder="Semua status" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="ALL">Semua</SelectItem>
+									<SelectItem value="pending">Pending</SelectItem>
+									<SelectItem value="disetujui">Disetujui</SelectItem>
+									<SelectItem value="ditolak">Ditolak</SelectItem>
+									<SelectItem value="proses">Proses</SelectItem>
+									<SelectItem value="selesai">Selesai</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="md:col-span-4 flex gap-2">
+							<Button
+								onClick={handleSearch}
+								className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700"
+							>
+								<Search className="w-4 h-4 mr-2" />
+								Cari
+							</Button>
+							<Button
+								variant="outline"
+								onClick={handleResetFilters}
+								className="flex-1 md:flex-none"
+							>
+								<RotateCcw className="w-4 h-4 mr-2" />
+								Reset
+							</Button>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* Form Pengajuan Modal */}
 			<Dialog open={showFormDialog} onOpenChange={setShowFormDialog}>
 				<DialogContent className="max-w-md">
@@ -415,10 +521,14 @@ export default function PengajuanKTAPage() {
 					<CardTitle>Data Pengajuan KTA</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{pengajuanData.length === 0 ? (
+					{visibleData.length === 0 ? (
 						<div className="text-center py-8">
 							<CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-							<p className="text-gray-500">Belum ada data pengajuan KTA</p>
+							<p className="text-gray-500">
+								{filtersApplied
+									? "Tidak ada data sesuai filter"
+									: "Belum ada data pengajuan KTA"}
+							</p>
 						</div>
 					) : (
 						<>
@@ -447,7 +557,7 @@ export default function PengajuanKTAPage() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{pengajuanData.map((item, index) => (
+										{visibleData.map((item, index) => (
 											<TableRow key={item.id}>
 												<TableCell>{index + 1}</TableCell>
 												<TableCell className="font-mono text-blue-600">
@@ -533,7 +643,7 @@ export default function PengajuanKTAPage() {
 
 							{/* Mobile Card View */}
 							<div className="md:hidden space-y-4">
-								{pengajuanData.map((item, index) => (
+								{visibleData.map((item, index) => (
 									<Card key={item.id} className="p-4">
 										<div className="space-y-3">
 											{/* Header dengan nomor dan status */}
