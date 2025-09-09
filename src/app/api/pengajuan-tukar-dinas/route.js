@@ -99,7 +99,7 @@ export async function GET(request) {
 				ORDER BY pt.tanggal DESC
 			`);
 		} else {
-			// User biasa hanya bisa lihat pengajuan sendiri
+			// User biasa bisa lihat pengajuan dimana mereka adalah pemohon (nik) atau penanggung jawab (nik_pj)
 			pengajuanData = await rawQuery(
 				`
 				SELECT 
@@ -111,10 +111,10 @@ export async function GET(request) {
 				LEFT JOIN pegawai p1 ON pt.nik = p1.nik
 				LEFT JOIN pegawai p2 ON pt.nik_ganti = p2.nik
 				LEFT JOIN pegawai p3 ON pt.nik_pj = p3.nik
-				WHERE pt.nik = ?
+				WHERE pt.nik = ? OR pt.nik_pj = ?
 				ORDER BY pt.tanggal DESC
 			`,
-				[userNik]
+				[userNik, userNik]
 			);
 		}
 
@@ -299,7 +299,7 @@ export async function POST(request) {
 	}
 }
 
-// PUT - Update status pengajuan (untuk IT/HRD)
+// PUT - Update status pengajuan (untuk nik_pj yang bersangkutan)
 export async function PUT(request) {
 	try {
 		// Ambil data user dari JWT token
@@ -309,45 +309,6 @@ export async function PUT(request) {
 		}
 
 		const userNik = user.username; // NIK dari JWT token
-
-		// Ambil data user untuk cek department
-		const userData = await rawQuery(
-			`
-			SELECT p.departemen, d.nama as departemen_name 
-			FROM pegawai p
-			LEFT JOIN departemen d ON p.departemen = d.dep_id
-			WHERE p.nik = ?
-		`,
-			[userNik]
-		);
-
-		if (userData.length === 0) {
-			return NextResponse.json(
-				{ message: "Data pegawai tidak ditemukan" },
-				{ status: 404 }
-			);
-		}
-
-		const userDepartment = userData[0].departemen;
-		const userDepartmentName = userData[0].departemen_name;
-
-		// Cek apakah user dari IT atau HRD
-		const isITorHRD =
-			userDepartment === "IT" ||
-			userDepartment === "HRD" ||
-			userDepartmentName?.toLowerCase().includes("it") ||
-			userDepartmentName?.toLowerCase().includes("teknologi") ||
-			userDepartmentName?.toLowerCase().includes("hrd") ||
-			userDepartmentName?.toLowerCase().includes("human resource");
-
-		// Hanya IT/HRD yang bisa update status
-		if (!isITorHRD) {
-			return NextResponse.json(
-				{ message: "Tidak memiliki akses untuk mengupdate status" },
-				{ status: 403 }
-			);
-		}
-
 		const { id, status, alasan_ditolak } = await request.json();
 
 		// Validasi input
@@ -355,6 +316,32 @@ export async function PUT(request) {
 			return NextResponse.json(
 				{ message: "ID dan status harus diisi" },
 				{ status: 400 }
+			);
+		}
+
+		// Ambil data pengajuan untuk validasi nik_pj
+		const pengajuanData = await rawQuery(
+			`SELECT nik_pj FROM pengajuan_tudin WHERE id = ?`,
+			[id]
+		);
+
+		if (pengajuanData.length === 0) {
+			return NextResponse.json(
+				{ message: "Pengajuan tidak ditemukan" },
+				{ status: 404 }
+			);
+		}
+
+		const pengajuan = pengajuanData[0];
+
+		// Validasi: hanya nik_pj yang bisa update status
+		if (pengajuan.nik_pj !== userNik) {
+			return NextResponse.json(
+				{
+					message:
+						"Hanya penanggung jawab (nik_pj) yang dapat mengupdate status pengajuan ini",
+				},
+				{ status: 403 }
 			);
 		}
 

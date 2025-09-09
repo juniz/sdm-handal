@@ -38,6 +38,11 @@ const usePengajuanTukarDinas = () => {
 		alasan_ditolak: "",
 	});
 
+	// Filter states
+	const [searchTerm, setSearchTerm] = useState("");
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+
 	// Initialize data on mount
 	useEffect(() => {
 		fetchData();
@@ -337,17 +342,48 @@ const usePengajuanTukarDinas = () => {
 		setShowDeleteDialog(true);
 	};
 
-	// Pagination logic
-	const totalPages = Math.ceil(pengajuanData.length / itemsPerPage);
+	// Filter data based on search term and status
+	const filteredData = pengajuanData.filter((item) => {
+		const matchesSearch =
+			debouncedSearchTerm === "" ||
+			(item.nama_pemohon &&
+				item.nama_pemohon
+					.toLowerCase()
+					.includes(debouncedSearchTerm.toLowerCase())) ||
+			(item.nik &&
+				item.nik.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+
+		const matchesStatus =
+			statusFilter === "all" || item.status === statusFilter;
+
+		return matchesSearch && matchesStatus;
+	});
+
+	// Pagination logic with filtered data
+	const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 	const startIndex = (currentPage - 1) * itemsPerPage;
 	const endIndex = startIndex + itemsPerPage;
-	const currentData = pengajuanData.slice(startIndex, endIndex);
+	const currentData = filteredData.slice(startIndex, endIndex);
 
 	const handlePageChange = (page) => {
 		if (page >= 1 && page <= totalPages) {
 			setCurrentPage(page);
 		}
 	};
+
+	// Debounce search term
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchTerm(searchTerm);
+		}, 300);
+
+		return () => clearTimeout(timer);
+	}, [searchTerm]);
+
+	// Reset pagination when filters change
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [debouncedSearchTerm, statusFilter]);
 
 	// Get pegawai name by NIK
 	const getPegawaiName = (nik) => {
@@ -396,6 +432,13 @@ const usePengajuanTukarDinas = () => {
 		// Update data
 		updateData,
 		setUpdateData,
+
+		// Filter states
+		searchTerm,
+		setSearchTerm,
+		statusFilter,
+		setStatusFilter,
+		filteredData,
 
 		// Functions
 		handleSubmit,

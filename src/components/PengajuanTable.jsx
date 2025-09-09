@@ -18,11 +18,22 @@ const PengajuanTable = ({
 	currentPage = 1,
 	itemsPerPage = 10,
 	userDepartment = "USER",
+	currentUserNik = null,
 	onView,
 	onEdit,
 	onDelete,
 }) => {
 	const startIndex = (currentPage - 1) * itemsPerPage;
+
+	// Helper function to determine user's role in pengajuan
+	const getUserRole = (item) => {
+		if (currentUserNik === item.nik) {
+			return { role: "Pemohon", color: "bg-blue-100 text-blue-800" };
+		} else if (currentUserNik === item.nik_pj) {
+			return { role: "Penanggung Jawab", color: "bg-green-100 text-green-800" };
+		}
+		return null;
+	};
 
 	const getStatusBadge = (status) => {
 		const statusConfig = {
@@ -98,6 +109,7 @@ const PengajuanTable = ({
 							{userDepartment === "IT_HRD" && (
 								<TableHead key="pemohon">Pemohon</TableHead>
 							)}
+							{currentUserNik && <TableHead key="role">Role</TableHead>}
 							<TableHead key="dinas-asal">Dinas Asal</TableHead>
 							<TableHead key="pengganti">Pengganti</TableHead>
 							<TableHead key="dinas-ganti">Dinas Ganti</TableHead>
@@ -124,6 +136,22 @@ const PengajuanTable = ({
 								{userDepartment === "IT_HRD" && (
 									<TableCell key={`pemohon-${item.id}`}>
 										{item.nama_pemohon || item.nik}
+									</TableCell>
+								)}
+								{currentUserNik && (
+									<TableCell key={`role-${item.id}`}>
+										{(() => {
+											const userRole = getUserRole(item);
+											return userRole ? (
+												<span
+													className={`px-2 py-1 rounded-md text-xs font-medium ${userRole.color}`}
+												>
+													{userRole.role}
+												</span>
+											) : (
+												<span className="text-gray-400 text-xs">-</span>
+											);
+										})()}
 									</TableCell>
 								)}
 								<TableCell key={`dinas-asal-${item.id}`}>
@@ -162,7 +190,7 @@ const PengajuanTable = ({
 											<Eye className="w-4 h-4" />
 										</Button>
 
-										{userDepartment === "IT_HRD" && (
+										{currentUserNik === item.nik_pj && (
 											<Button
 												key={`edit-${item.id}`}
 												size="sm"
@@ -205,6 +233,17 @@ const PengajuanTable = ({
 											#{startIndex + index + 1}
 										</span>
 										{getStatusBadge(item.status)}
+										{currentUserNik &&
+											(() => {
+												const userRole = getUserRole(item);
+												return userRole ? (
+													<span
+														className={`px-2 py-1 rounded-md text-xs font-medium ${userRole.color}`}
+													>
+														{userRole.role}
+													</span>
+												) : null;
+											})()}
 									</div>
 									{item.no_pengajuan && (
 										<div className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
@@ -286,7 +325,7 @@ const PengajuanTable = ({
 									Lihat
 								</Button>
 
-								{userDepartment === "IT_HRD" && (
+								{currentUserNik === item.nik_pj && (
 									<Button
 										key={`mobile-edit-${item.id}`}
 										size="sm"

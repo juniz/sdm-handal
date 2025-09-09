@@ -125,7 +125,52 @@ export async function POST(request, { params }) {
 			);
 		}
 
+		// Safe date formatter (local to POST)
+		const safeFormatDate = (dateValue) => {
+			if (!dateValue) return null;
+			try {
+				const date = new Date(dateValue);
+				if (isNaN(date.getTime())) return null;
+				return date.toLocaleString("id-ID", {
+					year: "numeric",
+					month: "long",
+					day: "numeric",
+					hour: "2-digit",
+					minute: "2-digit",
+					timeZone: "Asia/Jakarta",
+				});
+			} catch (error) {
+				console.error("Error formatting date:", error);
+				return null;
+			}
+		};
+
 		const connection = await createConnection();
+
+		// Ensure created_by always has a valid NIK
+		let createdByNik = currentUser?.nik ?? null;
+		if (!createdByNik) {
+			const [
+				nikRows,
+			] = await connection.execute(
+				"SELECT nik FROM pegawai WHERE id = ? OR nik = ? LIMIT 1",
+				[currentUser?.id ?? null, currentUser?.username ?? null]
+			);
+			if (nikRows && nikRows.length > 0) {
+				createdByNik = nikRows[0].nik;
+			}
+		}
+
+		if (!createdByNik) {
+			await connection.end();
+			return NextResponse.json(
+				{
+					status: "error",
+					error: "Data pengguna tidak valid (NIK tidak ditemukan)",
+				},
+				{ status: 400 }
+			);
+		}
 
 		// Check if request exists
 		const [
@@ -153,7 +198,7 @@ export async function POST(request, { params }) {
 			id,
 			note.trim(),
 			note_type,
-			currentUser.nik,
+			createdByNik,
 		]);
 
 		// Get the newly created note with user info
@@ -178,7 +223,7 @@ export async function POST(request, { params }) {
 		const newNote = newNoteResult[0];
 		const formattedNote = {
 			...newNote,
-			created_date: formatDate(newNote.created_date),
+			created_date: safeFormatDate(newNote.created_date),
 		};
 
 		return NextResponse.json({

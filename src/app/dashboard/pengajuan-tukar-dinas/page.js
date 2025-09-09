@@ -10,6 +10,7 @@ import PengajuanFormModal from "@/components/PengajuanFormModal";
 import PengajuanTable from "@/components/PengajuanTable";
 import PengajuanPagination from "@/components/PengajuanPagination";
 import PengajuanDialogs from "@/components/PengajuanDialogs";
+import PengajuanFilters from "@/components/PengajuanFilters";
 import usePengajuanTukarDinas from "@/hooks/usePengajuanTukarDinas";
 
 // Set locale ke Indonesia
@@ -31,6 +32,7 @@ export default function PengajuanTukarDinasPage() {
 
 		// User states
 		userDepartment,
+		currentUserNik,
 
 		// Dialog states
 		selectedPengajuan,
@@ -53,6 +55,13 @@ export default function PengajuanTukarDinasPage() {
 		// Update data
 		updateData,
 		setUpdateData,
+
+		// Filter states
+		searchTerm,
+		setSearchTerm,
+		statusFilter,
+		setStatusFilter,
+		filteredData,
 
 		// Functions
 		handleSubmit,
@@ -81,8 +90,9 @@ export default function PengajuanTukarDinasPage() {
 						<span className="leading-tight">Pengajuan Tukar Dinas</span>
 					</h1>
 					<p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2 leading-relaxed">
-						Kelola pengajuan tukar dinas/shift pegawai. Pengajuan dengan status
-						proses dapat dihapus.
+						Kelola pengajuan tukar dinas/shift pegawai. Menampilkan pengajuan
+						dimana Anda adalah pemohon atau penanggung jawab. Pengajuan dengan
+						status proses dapat dihapus.
 					</p>
 				</div>
 
@@ -110,28 +120,76 @@ export default function PengajuanTukarDinasPage() {
 				userLoading={userLoading}
 			/>
 
+			{/* Filter Component */}
+			<PengajuanFilters
+				searchTerm={searchTerm}
+				setSearchTerm={setSearchTerm}
+				statusFilter={statusFilter}
+				setStatusFilter={setStatusFilter}
+				onClearFilters={() => {
+					setSearchTerm("");
+					setStatusFilter("all");
+				}}
+			/>
+
 			{/* Tabel Data */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Data Pengajuan Tukar Dinas</CardTitle>
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+						<CardTitle>Data Pengajuan Tukar Dinas</CardTitle>
+						<div className="text-sm text-gray-600">
+							Menampilkan {currentData.length} dari {filteredData.length}{" "}
+							pengajuan
+							{filteredData.length !== pengajuanData.length && (
+								<span className="text-blue-600 ml-1">
+									(difilter dari {pengajuanData.length} total)
+								</span>
+							)}
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent>
-					<PengajuanTable
-						data={currentData}
-						currentPage={currentPage}
-						itemsPerPage={itemsPerPage}
-						userDepartment={userDepartment}
-						onView={handleView}
-						onEdit={handleEdit}
-						onDelete={handleDelete}
-					/>
+					{filteredData.length === 0 ? (
+						<div className="text-center py-12">
+							<Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+							<p className="text-gray-500 mb-2">
+								{searchTerm || statusFilter !== "all"
+									? "Tidak ada pengajuan yang sesuai dengan filter"
+									: "Belum ada data pengajuan tukar dinas"}
+							</p>
+							{(searchTerm || statusFilter !== "all") && (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => {
+										setSearchTerm("");
+										setStatusFilter("all");
+									}}
+									className="mt-2"
+								>
+									Hapus Filter
+								</Button>
+							)}
+						</div>
+					) : (
+						<PengajuanTable
+							data={currentData}
+							currentPage={currentPage}
+							itemsPerPage={itemsPerPage}
+							userDepartment={userDepartment}
+							currentUserNik={currentUserNik}
+							onView={handleView}
+							onEdit={handleEdit}
+							onDelete={handleDelete}
+						/>
+					)}
 				</CardContent>
 			</Card>
 
 			{/* Pagination */}
 			<PengajuanPagination
 				currentPage={currentPage}
-				totalItems={pengajuanData.length}
+				totalItems={filteredData.length}
 				itemsPerPage={itemsPerPage}
 				onPageChange={handlePageChange}
 			/>
@@ -149,6 +207,7 @@ export default function PengajuanTukarDinasPage() {
 				showDetailDialog={showDetailDialog}
 				setShowDetailDialog={setShowDetailDialog}
 				userDepartment={userDepartment}
+				currentUserNik={currentUserNik}
 				// Delete Dialog
 				showDeleteDialog={showDeleteDialog}
 				setShowDeleteDialog={setShowDeleteDialog}

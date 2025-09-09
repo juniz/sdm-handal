@@ -41,6 +41,7 @@ const PengajuanDialogs = ({
 	showDetailDialog,
 	setShowDetailDialog,
 	userDepartment,
+	currentUserNik,
 
 	// Delete Dialog
 	showDeleteDialog,
@@ -341,7 +342,7 @@ const PengajuanDialogs = ({
 						>
 							Tutup
 						</Button>
-						{userDepartment === "IT_HRD" && selectedPengajuan && (
+						{currentUserNik === selectedPengajuan?.nik_pj && selectedPengajuan && (
 							<Button
 								onClick={() => {
 									setUpdateData({
