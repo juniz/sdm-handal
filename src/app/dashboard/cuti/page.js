@@ -66,6 +66,8 @@ function PengajuanCutiForm() {
 		const newErrors = {};
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
+		const yesterday = new Date(today);
+		yesterday.setDate(yesterday.getDate() - 1);
 
 		if (!date.tanggal_awal) {
 			newErrors.tanggal_awal = "Tanggal awal wajib diisi";
@@ -191,7 +193,11 @@ function PengajuanCutiForm() {
 						onChange={(value) => handleDateChange(value, "tanggal_awal")}
 						placeholder="Pilih tanggal awal"
 						error={errors.tanggal_awal}
-						minDate={new Date()}
+						minDate={(() => {
+							const today = new Date();
+							today.setHours(0, 0, 0, 0);
+							return today;
+						})()}
 					/>
 				</motion.div>
 
