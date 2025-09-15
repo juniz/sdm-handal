@@ -112,21 +112,21 @@ const QuickActions = () => {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="relative">
-				<div className="flex gap-1.5 p-2 rounded-md bg-blue-100 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+				<div className="grid grid-cols-4 gap-3 p-2">
 					{actions.map((action) => (
 						<button
 							key={action.title}
 							onClick={() => router.push(action.href)}
-							className="flex-none w-[100px] group relative overflow-hidden rounded-lg p-0.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+							className="group relative overflow-hidden rounded-lg p-0.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] h-20"
 						>
-							<div className="relative bg-white/90 rounded-[7px] py-2 px-1">
-								<div className="flex flex-col items-center gap-1.5">
+							<div className="relative bg-white/90 rounded-[7px] h-full flex flex-col justify-center items-center px-2 py-1">
+								<div className="flex flex-col items-center justify-center gap-1.5 h-full">
 									<div
-										className={`rounded-md bg-gradient-to-br ${action.color} p-1.5 text-white`}
+										className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm flex items-center justify-center`}
 									>
 										<action.icon className="w-4 h-4" />
 									</div>
-									<span className="font-medium text-gray-900 text-[10px] text-center leading-tight">
+									<span className="font-medium text-gray-900 text-[10px] text-center leading-tight max-w-full break-words">
 										{action.title}
 									</span>
 								</div>
