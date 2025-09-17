@@ -2,8 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { TrendingUp, Loader2, PlayCircle, CheckCircle } from "lucide-react";
+import { getClientToken } from "@/lib/client-auth";
 
-export default function ProgressTracker({ request, user }) {
+export default function ProgressTracker({
+	request,
+	user,
+	onProgressUpdate,
+	isLoading: parentLoading,
+}) {
 	const [progressData, setProgressData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [updating, setUpdating] = useState(false);
@@ -13,8 +19,15 @@ export default function ProgressTracker({ request, user }) {
 	});
 
 	// Authorization checks
-	const isUserFromIT = user?.departement_id === "IT";
-	const isAssignedDeveloper = request?.assigned_developer === user?.username;
+	const isUserFromIT =
+		user?.departement_id === "IT" ||
+		user?.departemen === "IT" ||
+		user?.jbtn?.toLowerCase().includes("it") ||
+		user?.jabatan?.toLowerCase().includes("it");
+
+	// Use username if nik is not available
+	const userIdentifier = user?.nik || user?.username || user?.id;
+	const isAssignedDeveloper = request?.assigned_developer === userIdentifier;
 	const canUpdateProgress = isUserFromIT || isAssignedDeveloper;
 	const canHaveProgress = [
 		"Assigned",
@@ -26,6 +39,26 @@ export default function ProgressTracker({ request, user }) {
 		"UAT",
 	].includes(request?.current_status);
 
+	// Debug logging
+	console.log("ProgressTracker Authorization Debug:", {
+		user: user,
+		request: request,
+		userIdentifier: userIdentifier,
+		userNik: user?.nik,
+		userUsername: user?.username,
+		userId: user?.id,
+		userDepartment: user?.departement_id,
+		userDepartemen: user?.departemen,
+		userJbtn: user?.jbtn,
+		userJabatan: user?.jabatan,
+		assignedDeveloper: request?.assigned_developer,
+		isUserFromIT,
+		isAssignedDeveloper,
+		canUpdateProgress,
+		canHaveProgress,
+		currentStatus: request?.current_status,
+	});
+
 	useEffect(() => {
 		if (request?.request_id) {
 			fetchProgress();
@@ -35,8 +68,17 @@ export default function ProgressTracker({ request, user }) {
 	const fetchProgress = async () => {
 		try {
 			setLoading(true);
+			// Get authentication token
+			const token = getClientToken();
+
+			const headers = {};
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
 			const response = await fetch(
-				`/api/development/${request.request_id}/progress`
+				`/api/development/${request.request_id}/progress`,
+				{ headers }
 			);
 			const data = await response.json();
 
@@ -67,13 +109,22 @@ export default function ProgressTracker({ request, user }) {
 
 		try {
 			setUpdating(true);
+			// Get authentication token
+			const token = getClientToken();
+
+			const headers = {
+				"Content-Type": "application/json",
+			};
+
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
 			const response = await fetch(
 				`/api/development/${request.request_id}/progress`,
 				{
 					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
+					headers,
 					body: JSON.stringify(formData),
 				}
 			);
@@ -87,8 +138,18 @@ export default function ProgressTracker({ request, user }) {
 					progress_percentage: formData.progress_percentage,
 					progress_description: "",
 				});
+
+				// Call parent callback if provided
+				if (onProgressUpdate) {
+					try {
+						await onProgressUpdate(formData);
+					} catch (error) {
+						console.error("Error in parent progress update callback:", error);
+					}
+				}
 			} else {
 				console.error("Failed to update progress:", data.error);
+				alert("Gagal mengupdate progress: " + (data.error || "Unknown error"));
 			}
 		} catch (error) {
 			console.error("Error updating progress:", error);
@@ -96,6 +157,22 @@ export default function ProgressTracker({ request, user }) {
 			setUpdating(false);
 		}
 	};
+
+	// Don't render if parent is still loading or essential data is missing
+	if (parentLoading || !request || !user) {
+		return (
+			<div className="bg-white rounded-lg border border-gray-200 p-6">
+				<div className="flex items-center gap-3 mb-4">
+					<TrendingUp className="w-5 h-5 text-blue-600" />
+					<h3 className="text-lg font-semibold text-gray-900">
+						Progress Pengembangan
+					</h3>
+					<Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+				</div>
+				<div className="text-gray-600">Memuat data...</div>
+			</div>
+		);
+	}
 
 	if (!canHaveProgress) {
 		return null;
@@ -140,6 +217,50 @@ export default function ProgressTracker({ request, user }) {
 					/>
 				</div>
 			</div>
+
+			{/* Debug Info */}
+			{!canUpdateProgress && (
+				<div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+					<h4 className="text-sm font-medium text-yellow-800 mb-2">
+						Debug: Form tidak muncul
+					</h4>
+					<div className="text-xs text-yellow-700">
+						<p>User Object: {user ? JSON.stringify(user, null, 2) : "null"}</p>
+						<p>
+							Request Object:{" "}
+							{request
+								? JSON.stringify(
+										{
+											request_id: request.request_id,
+											assigned_developer: request.assigned_developer,
+											current_status: request.current_status,
+											title: request.title,
+										},
+										null,
+										2
+								  )
+								: "null"}
+						</p>
+						<hr className="my-2" />
+						<p>User Identifier: {userIdentifier || "null"}</p>
+						<p>User NIK: {user?.nik || "null"}</p>
+						<p>User Username: {user?.username || "null"}</p>
+						<p>User ID: {user?.id || "null"}</p>
+						<p>User Department: {user?.departement_id || "null"}</p>
+						<p>User Departemen: {user?.departemen || "null"}</p>
+						<p>User Jabatan: {user?.jabatan || "null"}</p>
+						<p>Assigned Developer: {request?.assigned_developer || "null"}</p>
+						<p>Current Status: {request?.current_status || "null"}</p>
+						<p>Is User IT: {isUserFromIT ? "true" : "false"}</p>
+						<p>
+							Is Assigned Developer: {isAssignedDeveloper ? "true" : "false"}
+						</p>
+						<p>Can Update Progress: {canUpdateProgress ? "true" : "false"}</p>
+						<p>Can Have Progress: {canHaveProgress ? "true" : "false"}</p>
+						<p>Parent Loading: {parentLoading ? "true" : "false"}</p>
+					</div>
+				</div>
+			)}
 
 			{/* Update Progress Form */}
 			{canUpdateProgress && (
