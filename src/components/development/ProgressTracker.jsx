@@ -105,7 +105,7 @@ export default function ProgressTracker({
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (!canUpdateProgress) return;
+		if (!canUpdateProgress || updating) return; // Prevent double submission
 
 		try {
 			setUpdating(true);
@@ -132,27 +132,38 @@ export default function ProgressTracker({
 			const data = await response.json();
 
 			if (response.ok) {
-				await fetchProgress();
 				// Reset form but keep the new progress as minimum
 				setFormData({
 					progress_percentage: formData.progress_percentage,
 					progress_description: "",
 				});
 
-				// Call parent callback if provided
+				// Refresh progress data
+				await fetchProgress();
+
+				// Call parent callback if provided (without duplicating API call)
 				if (onProgressUpdate) {
 					try {
-						await onProgressUpdate(formData);
+						// Just notify parent without making another API call
+						onProgressUpdate({
+							...formData,
+							success: true,
+							message: data.message,
+						});
 					} catch (error) {
 						console.error("Error in parent progress update callback:", error);
 					}
 				}
+
+				// Show success message
+				alert("Progress berhasil diupdate!");
 			} else {
 				console.error("Failed to update progress:", data.error);
 				alert("Gagal mengupdate progress: " + (data.error || "Unknown error"));
 			}
 		} catch (error) {
 			console.error("Error updating progress:", error);
+			alert("Terjadi kesalahan saat mengupdate progress");
 		} finally {
 			setUpdating(false);
 		}

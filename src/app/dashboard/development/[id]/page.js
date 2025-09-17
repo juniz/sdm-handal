@@ -229,38 +229,20 @@ export default function DevelopmentRequestDetail() {
 
 	const handleProgressUpdate = async (progressData) => {
 		try {
-			// Get authentication token
-			const token = getClientToken();
+			// This callback is called AFTER ProgressTracker has successfully updated
+			// No need to make another API call, just refresh the main request data
 
-			const headers = {
-				"Content-Type": "application/json",
-			};
+			console.log("Progress update callback received:", progressData);
 
-			if (token) {
-				headers["Authorization"] = `Bearer ${token}`;
+			if (progressData.success) {
+				// Refresh main request data to sync progress percentage
+				await fetchRequestDetail();
+
+				console.log("Request data refreshed after progress update");
 			}
-
-			const response = await fetch(`/api/development/${params.id}/progress`, {
-				method: "POST",
-				headers,
-				body: JSON.stringify(progressData),
-			});
-
-			const result = await response.json();
-
-			if (!response.ok) {
-				throw new Error(result.error || "Gagal update progress");
-			}
-
-			// Refresh data after progress update
-			await fetchRequestDetail();
-
-			// Show success message
-			alert(result.message);
 		} catch (err) {
-			console.error("Error in progress update:", err);
-			alert("Gagal update progress: " + err.message);
-			throw err; // Re-throw to let ProgressTracker handle the error state
+			console.error("Error in progress update callback:", err);
+			// Don't show alert here as ProgressTracker already handles it
 		}
 	};
 
