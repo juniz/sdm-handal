@@ -1,21 +1,23 @@
 import moment from "moment-timezone";
 
-// Fungsi untuk mengurutkan data rapat dengan prioritas nama tertentu
+// Fungsi untuk mengurutkan data rapat berdasarkan kolom urutan
 const sortRapatList = (rapatList) => {
-	const priorityName = "dr. LUSIANTO MADYO NUGROHO M.M.Kes";
-
 	return [...rapatList].sort((a, b) => {
-		// Jika nama a adalah prioritas, taruh di atas
-		if (a.nama === priorityName) return -1;
-		// Jika nama b adalah prioritas, taruh di atas
-		if (b.nama === priorityName) return 1;
-		// Untuk yang lain, urutkan berdasarkan nama secara alfabetis
-		return a.nama.localeCompare(b.nama);
+		// Urutkan berdasarkan kolom urutan (ascending)
+		const urutanA = a.urutan || 0;
+		const urutanB = b.urutan || 0;
+
+		// Jika urutan sama, urutkan berdasarkan nama
+		if (urutanA === urutanB) {
+			return a.nama.localeCompare(b.nama);
+		}
+
+		return urutanA - urutanB;
 	});
 };
 
 export const generatePrintHTML = (filterDate, rapatList) => {
-	// Urutkan data dengan prioritas nama tertentu
+	// Urutkan data berdasarkan kolom urutan
 	const sortedRapatList = sortRapatList(rapatList);
 
 	const tanggalFormatted = moment(filterDate).format("DD MMMM YYYY");
@@ -177,7 +179,7 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 };
 
 export const generateDaftarHadirHTML = (filterDate, rapatList) => {
-	// Urutkan data dengan prioritas nama tertentu
+	// Urutkan data berdasarkan kolom urutan
 	const sortedRapatList = sortRapatList(rapatList);
 
 	const hariFormatted = moment(filterDate).format("dddd").toUpperCase();
@@ -308,7 +310,7 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 };
 
 export const exportToPDF = async (filterDate, rapatList) => {
-	// Urutkan data sebelum dikirim ke fungsi generateDaftarHadirHTML
+	// Urutkan data berdasarkan kolom urutan sebelum dikirim ke fungsi generateDaftarHadirHTML
 	const sortedRapatList = sortRapatList(rapatList);
 
 	try {
@@ -392,7 +394,7 @@ export const exportToPDF = async (filterDate, rapatList) => {
 };
 
 export const openPrintWindow = async (filterDate, rapatList) => {
-	// Urutkan data sebelum dikirim ke fungsi generatePrintHTML
+	// Urutkan data berdasarkan kolom urutan sebelum dikirim ke fungsi generatePrintHTML
 	const sortedRapatList = sortRapatList(rapatList);
 
 	// Buat window baru untuk print

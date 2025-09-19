@@ -42,6 +42,8 @@ export async function GET(request) {
 			where: {
 				tanggal: moment(tanggal).format("YYYY-MM-DD"),
 			},
+			orderBy: "urutan",
+			order: "ASC",
 		};
 
 		// Tambahkan filter nama rapat jika ada
@@ -110,6 +112,7 @@ export async function POST(request) {
 			nama,
 			instansi,
 			tanda_tangan,
+			urutan,
 		} = await request.json();
 
 		// Validasi input
@@ -128,6 +131,7 @@ export async function POST(request) {
 				nama,
 				instansi,
 				tanda_tangan,
+				urutan: urutan || 0,
 			},
 		});
 
@@ -172,6 +176,7 @@ export async function PUT(request) {
 			nama,
 			instansi,
 			tanda_tangan,
+			urutan,
 		} = await request.json();
 
 		if (!id) {
@@ -189,6 +194,7 @@ export async function PUT(request) {
 				nama,
 				instansi,
 				tanda_tangan,
+				urutan: urutan || 0,
 			},
 			where: { id },
 		});
