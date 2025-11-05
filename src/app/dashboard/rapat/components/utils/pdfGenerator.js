@@ -160,8 +160,8 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 				<div class="col-6 text-center" style="font-size:12px;">
 					Mengetahui<br>
 					KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK<br><br><br><br><br>
-					dr. LUSIANTO MADYO NUGROHO M.M.Kes<br>
-					<span style="text-decoration:overline">AJUN KOMISARIS BESAR POLISI NRP 72010480</span>
+					drg. WAHYU ARI PRANANTO, MARS<br>
+					<span style="text-decoration:overline">AJUN KOMISARIS BESAR POLISI NRP 76030927</span>
 				</div>
 				<div class="col-6 text-center" style="font-size:12px;">
 					PEMIMPIN ACARA<br>
@@ -295,8 +295,8 @@ export const generateDaftarHadirHTML = (filterDate, rapatList) => {
 					<div style="width: 50%; text-align: center; font-size: 12px;">
 						Mengetahui<br>
 						KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK<br><br><br><br><br>
-						dr. LUSIANTO MADYO NUGROHO M.M.Kes<br>
-						<span style="text-decoration: overline;">AJUN KOMISARIS BESAR POLISI NRP 72010480</span>
+						drg. WAHYU ARI PRANANTO, MARS<br>
+						<span style="text-decoration: overline;">AJUN KOMISARIS BESAR POLISI NRP 76030927</span>
 					</div>
 					<div style="width: 50%; text-align: center; font-size: 12px;">
 						PEMIMPIN ACARA<br>
