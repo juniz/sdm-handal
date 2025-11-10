@@ -15,6 +15,7 @@ const AssignmentFilterAccordion = ({
 	loading,
 	masterData,
 	itEmployees,
+	tickets,
 }) => {
 	return (
 		<div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -163,10 +164,10 @@ const AssignmentFilterAccordion = ({
 									</div>
 									<div className="p-3 bg-orange-50 rounded-lg">
 										<div className="text-lg font-semibold text-orange-600">
-											{itEmployees?.reduce(
-												(sum, emp) => sum + emp.active_tickets,
-												0
-											) || 0}
+											{tickets?.filter(
+												(t) =>
+													!["Closed", "Resolved"].includes(t.current_status)
+											).length || 0}
 										</div>
 										<div className="text-xs text-orange-600">Ticket Aktif</div>
 									</div>

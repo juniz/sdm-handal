@@ -213,6 +213,7 @@ const TicketAssignmentPage = () => {
 					loading={loading}
 					masterData={masterData}
 					itEmployees={itEmployees}
+					tickets={tickets}
 				/>
 
 				{/* Tabs */}
