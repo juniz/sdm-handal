@@ -156,6 +156,13 @@ const AdminMenu = () => {
 			href: "/dashboard/reports/monthly-attendance",
 			color: "from-orange-500 to-red-500",
 		},
+		{
+			title: "Pegawai Organik",
+			description: "Lihat daftar pegawai organik",
+			icon: Users,
+			href: "/dashboard/pegawai-organik",
+			color: "from-green-500 to-lime-500",
+		},
 	];
 
 	return (
@@ -167,22 +174,25 @@ const AdminMenu = () => {
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="relative">
-				<div className="grid grid-cols-2 gap-3">
+				<div className="grid grid-cols-1 gap-2">
 					{adminActions.map((action) => (
 						<button
 							key={action.title}
 							onClick={() => router.push(action.href)}
-							className="group relative overflow-hidden rounded-lg p-3 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
+							className="group relative overflow-hidden rounded-lg p-2.5 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
 						>
-							<div className="flex flex-col items-center gap-2">
+							<div className="flex items-center gap-3">
 								<div
-									className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm`}
+									className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm flex-shrink-0`}
 								>
-									<action.icon className="w-5 h-5" />
+									<action.icon className="w-4 h-4" />
 								</div>
-								<div className="text-center">
+								<div className="flex-1 text-left min-w-0">
 									<span className="font-medium text-gray-900 text-sm block">
 										{action.title}
+									</span>
+									<span className="text-xs text-gray-500 line-clamp-1">
+										{action.description}
 									</span>
 								</div>
 							</div>
