@@ -116,7 +116,7 @@ export async function GET(request) {
 
 		// Query untuk mengambil data ticket yang sudah di-assign (termasuk yang sudah selesai)
 		const ticketsQuery = `
-			SELECT 
+			SELECT DISTINCT
 				t.ticket_id,
 				t.no_ticket,
 				t.user_id,
@@ -144,7 +144,19 @@ export async function GET(request) {
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
-			LEFT JOIN assignments_ticket at ON t.ticket_id = at.ticket_id
+			LEFT JOIN (
+				SELECT at1.*
+				FROM assignments_ticket at1
+				WHERE at1.assignment_id = (
+					SELECT at2.assignment_id
+					FROM assignments_ticket at2
+					WHERE at2.ticket_id = at1.ticket_id
+					ORDER BY 
+						CASE WHEN at2.released_date IS NULL THEN 0 ELSE 1 END,
+						at2.assignment_id DESC
+					LIMIT 1
+				)
+			) at ON t.ticket_id = at.ticket_id
 			LEFT JOIN pegawai assigned_p ON at.assigned_to = assigned_p.nik
 			LEFT JOIN (
 				SELECT ticket_id, COUNT(*) as total_notes
@@ -163,12 +175,24 @@ export async function GET(request) {
 
 		// Query untuk menghitung total data
 		const countQuery = `
-			SELECT COUNT(*) as total
+			SELECT COUNT(DISTINCT t.ticket_id) as total
 			FROM tickets t
 			LEFT JOIN statuses_ticket s ON t.current_status_id = s.status_id
 			LEFT JOIN priorities_ticket pr ON t.priority_id = pr.priority_id
 			LEFT JOIN categories_ticket c ON t.category_id = c.category_id
-			LEFT JOIN assignments_ticket at ON t.ticket_id = at.ticket_id
+			LEFT JOIN (
+				SELECT at1.*
+				FROM assignments_ticket at1
+				WHERE at1.assignment_id = (
+					SELECT at2.assignment_id
+					FROM assignments_ticket at2
+					WHERE at2.ticket_id = at1.ticket_id
+					ORDER BY 
+						CASE WHEN at2.released_date IS NULL THEN 0 ELSE 1 END,
+						at2.assignment_id DESC
+					LIMIT 1
+				)
+			) at ON t.ticket_id = at.ticket_id
 			WHERE (at.released_date IS NULL OR s.status_name IN ('Closed', 'Resolved'))
 			${whereClause ? `AND ${whereClause.replace("WHERE ", "")}` : ""}
 		`;

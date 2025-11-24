@@ -33,25 +33,42 @@ export async function GET(request) {
 		// Ambil parameter dari URL
 		const { searchParams } = new URL(request.url);
 		const today = moment().format("YYYY-MM-DD");
-		const tanggal = searchParams.get("tanggal") || today;
+		const tanggal = searchParams.get("tanggal");
 		const namaRapat = searchParams.get("nama_rapat") || "";
+		const namaPeserta = searchParams.get("nama_peserta") || "";
+		const searchByNama = searchParams.get("search_by_nama") === "true"; // Parameter khusus untuk pencarian duplikasi
 
-		// Buat query berdasarkan filter
 		let query = {
 			table: "rapat",
-			where: {
-				tanggal: moment(tanggal).format("YYYY-MM-DD"),
-			},
-			orderBy: "urutan",
-			order: "ASC",
+			where: {},
+			orderBy: searchByNama ? "tanggal" : "urutan",
+			order: searchByNama ? "DESC" : "ASC",
+			limit: searchByNama ? 5 : null,
 		};
 
-		// Tambahkan filter nama rapat jika ada
-		if (namaRapat.trim()) {
-			query.where.rapat = {
-				operator: "LIKE",
-				value: `%${namaRapat.trim()}%`,
-			};
+		// Jika search_by_nama=true, hanya filter berdasarkan nama peserta tanpa tanggal
+		if (searchByNama) {
+			if (namaPeserta.trim()) {
+				query.where.nama = {
+					operator: "LIKE",
+					value: `%${namaPeserta.trim()}%`,
+				};
+			}
+		} else {
+			// Mode normal: filter berdasarkan tanggal, nama rapat, dan nama peserta
+			query.where.tanggal = moment(tanggal || today).format("YYYY-MM-DD");
+			if (namaRapat.trim()) {
+				query.where.rapat = {
+					operator: "LIKE",
+					value: `%${namaRapat.trim()}%`,
+				};
+			}
+			if (namaPeserta.trim()) {
+				query.where.nama = {
+					operator: "LIKE",
+					value: `%${namaPeserta.trim()}%`,
+				};
+			}
 		}
 
 		const result = await select(query);
@@ -71,9 +88,12 @@ export async function GET(request) {
 			data: formattedResult,
 			metadata: {
 				filter: {
-					tanggal,
+					tanggal: searchByNama ? null : (tanggal || today),
 					nama_rapat: namaRapat,
-					isToday: tanggal === today,
+					nama_peserta: namaPeserta,
+					isToday: !searchByNama && (tanggal || today) === today,
+					search_by_nama: searchByNama,
+					limit: searchByNama ? 5 : null,
 				},
 			},
 		});
@@ -256,6 +276,71 @@ export async function DELETE(request) {
 		console.error("Error deleting rapat:", error);
 		return NextResponse.json(
 			{ error: "Terjadi kesalahan saat menghapus data rapat" },
+			{ status: 500 }
+		);
+	}
+}
+
+// PATCH: Update urutan rapat (hanya untuk IT)
+export async function PATCH(request) {
+	try {
+		const cookieStore = cookies();
+		const token = cookieStore.get("auth_token")?.value;
+
+		if (!token) {
+			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+		}
+
+		let verified;
+		try {
+			verified = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
+		} catch (error) {
+			return NextResponse.json(
+				{ error: "Token tidak valid atau kadaluarsa" },
+				{ status: 401 }
+			);
+		}
+
+		// Cek apakah user adalah IT
+		const userDepartemen = verified.payload.departemen;
+		if (userDepartemen !== "IT") {
+			return NextResponse.json(
+				{ error: "Akses ditolak - Hanya untuk departemen IT" },
+				{ status: 403 }
+			);
+		}
+
+		const { updates } = await request.json();
+
+		if (!Array.isArray(updates) || updates.length === 0) {
+			return NextResponse.json(
+				{ error: "Data updates harus berupa array" },
+				{ status: 400 }
+			);
+		}
+
+		// Update urutan untuk setiap rapat
+		const updatePromises = updates.map(({ id, urutan }) => {
+			if (!id || urutan === undefined) {
+				throw new Error("ID dan urutan harus disertakan");
+			}
+			return update({
+				table: "rapat",
+				data: { urutan },
+				where: { id },
+			});
+		});
+
+		await Promise.all(updatePromises);
+
+		return NextResponse.json({
+			status: "success",
+			message: "Urutan rapat berhasil diperbarui",
+		});
+	} catch (error) {
+		console.error("Error updating urutan rapat:", error);
+		return NextResponse.json(
+			{ error: "Terjadi kesalahan saat memperbarui urutan rapat" },
 			{ status: 500 }
 		);
 	}

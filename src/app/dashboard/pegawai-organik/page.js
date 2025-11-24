@@ -329,7 +329,7 @@ export default function PegawaiOrganikPage() {
 						</TabsTrigger>
 						<TabsTrigger
 							value="polri"
-							className={`group flex items-center gap-2.5 px-6 py-3.5 rounded-lg transition-all duration-300 ease-in-out relative ${
+							className={`group flex items-center gap-1.5 px-6 py-3.5 rounded-lg transition-all duration-300 ease-in-out relative ${
 								activeTab === "polri"
 									? "bg-white shadow-lg scale-[1.02] text-red-700 font-semibold"
 									: "text-gray-600 hover:bg-white/60 hover:text-gray-800"

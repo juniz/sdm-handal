@@ -11,6 +11,8 @@ import {
 	Search,
 	X,
 	Loader2,
+	Copy,
+	User,
 } from "lucide-react";
 import moment from "moment-timezone";
 import { exportToPDF } from "./utils/pdfGenerator";
@@ -18,14 +20,26 @@ import { exportToPDF } from "./utils/pdfGenerator";
 const FilterAccordion = ({
 	filterDate,
 	setFilterDate,
+	searchDate,
+	setSearchDate,
 	filterNamaRapat,
 	setFilterNamaRapat,
+	searchNamaRapat,
+	setSearchNamaRapat,
+	filterNamaPeserta,
+	setFilterNamaPeserta,
+	searchNamaPeserta,
+	setSearchNamaPeserta,
+	onSearch,
+	onResetSearch,
 	isOpen,
 	setIsOpen,
 	onAddClick,
+	onDuplicateClick,
 	loading,
 	isToday,
 	rapatList,
+	isITUser = false,
 }) => {
 	const handleExportPDF = async () => {
 		await exportToPDF(filterDate, rapatList);
@@ -45,7 +59,7 @@ const FilterAccordion = ({
 							Hari Ini
 						</span>
 					)}
-					{filterNamaRapat && (
+					{(filterNamaRapat || filterNamaPeserta) && (
 						<span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
 							{rapatList.length} hasil
 						</span>
@@ -75,10 +89,15 @@ const FilterAccordion = ({
 								</label>
 								<input
 									type="date"
-									value={filterDate}
-									onChange={(e) => setFilterDate(e.target.value)}
+									value={searchDate}
+									onChange={(e) => setSearchDate(e.target.value)}
 									className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 								/>
+								{filterDate !== searchDate && (
+									<p className="text-xs text-gray-500 mt-1">
+										Filter aktif: {moment(filterDate).format("DD MMMM YYYY")}
+									</p>
+								)}
 							</div>
 
 							{/* Filter Nama Rapat */}
@@ -90,30 +109,115 @@ const FilterAccordion = ({
 									<input
 										type="text"
 										placeholder="Cari nama rapat..."
-										value={filterNamaRapat}
-										onChange={(e) => setFilterNamaRapat(e.target.value)}
+										value={searchNamaRapat}
+										onChange={(e) => setSearchNamaRapat(e.target.value)}
+										onKeyPress={(e) => {
+											if (e.key === "Enter") {
+												onSearch();
+											}
+										}}
 										className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 									/>
-									{loading && filterNamaRapat && (
-										<Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 animate-spin" />
-									)}
-									{!loading && filterNamaRapat && (
+									{searchNamaRapat && (
 										<button
-											onClick={() => setFilterNamaRapat("")}
+											onClick={() => setSearchNamaRapat("")}
 											className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
 										>
 											<X className="w-4 h-4" />
 										</button>
 									)}
-									{!loading && !filterNamaRapat && (
+									{!searchNamaRapat && (
 										<Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
 									)}
 								</div>
-								{filterNamaRapat && (
-									<p className="text-xs text-gray-500 mt-1">
-										Mencari: "{filterNamaRapat}" • {rapatList.length} hasil
-										ditemukan
-									</p>
+							</div>
+
+							{/* Filter Nama Peserta */}
+							<div>
+								<label className="block text-sm text-gray-600 mb-1">
+									Nama Peserta
+								</label>
+								<div className="relative">
+									<input
+										type="text"
+										placeholder="Cari nama peserta..."
+										value={searchNamaPeserta}
+										onChange={(e) => setSearchNamaPeserta(e.target.value)}
+										onKeyPress={(e) => {
+											if (e.key === "Enter") {
+												onSearch();
+											}
+										}}
+										className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+									/>
+									{searchNamaPeserta && (
+										<button
+											onClick={() => setSearchNamaPeserta("")}
+											className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+										>
+											<X className="w-4 h-4" />
+										</button>
+									)}
+									{!searchNamaPeserta && (
+										<User className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+									)}
+								</div>
+							</div>
+
+							{/* Info Filter Aktif */}
+							{(filterNamaRapat || filterNamaPeserta) && (
+								<div className="mt-2 flex items-center justify-between bg-gray-50 p-2 rounded-lg">
+									<div className="flex-1">
+										<p className="text-xs text-gray-600">
+											Filter aktif:
+											{filterNamaRapat && (
+												<span className="ml-1 font-medium">
+													Nama Rapat: "{filterNamaRapat}"
+												</span>
+											)}
+											{filterNamaPeserta && (
+												<span className="ml-1 font-medium">
+													{filterNamaRapat ? " • " : ""}Nama Peserta: "
+													{filterNamaPeserta}"
+												</span>
+											)}
+											<span className="ml-1">• {rapatList.length} hasil</span>
+										</p>
+									</div>
+									<button
+										onClick={onResetSearch}
+										className="text-xs text-red-500 hover:text-red-600 flex items-center gap-1 ml-2"
+									>
+										<X className="w-3 h-3" />
+										Hapus Filter
+									</button>
+								</div>
+							)}
+
+							{/* Tombol Cari Gabungan */}
+							<div className="flex gap-2">
+								<button
+									onClick={onSearch}
+									disabled={loading}
+									className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+								>
+									{loading ? (
+										<Loader2 className="w-4 h-4 animate-spin" />
+									) : (
+										<Search className="w-4 h-4" />
+									)}
+									<span>Cari Rapat</span>
+								</button>
+								{(filterDate !== searchDate ||
+									filterNamaRapat ||
+									filterNamaPeserta) && (
+									<button
+										onClick={onResetSearch}
+										className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm"
+									>
+										<X className="w-4 h-4" />
+										<span>Reset</span>
+									</button>
 								)}
 							</div>
 
@@ -128,6 +232,17 @@ const FilterAccordion = ({
 									<span>Tambah Rapat</span>
 								</button>
 
+								{isITUser && onDuplicateClick && (
+									<button
+										onClick={onDuplicateClick}
+										className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm w-full"
+										disabled={loading}
+									>
+										<Copy className="w-4 h-4" />
+										<span>Duplikasi Rapat</span>
+									</button>
+								)}
+
 								{rapatList.length > 0 && (
 									<button
 										onClick={handleExportPDF}
@@ -136,19 +251,6 @@ const FilterAccordion = ({
 									>
 										<Download className="w-4 h-4" />
 										<span>Export PDF</span>
-									</button>
-								)}
-
-								{(!isToday || filterNamaRapat) && (
-									<button
-										onClick={() => {
-											setFilterDate(moment().format("YYYY-MM-DD"));
-											setFilterNamaRapat("");
-										}}
-										className="text-sm text-blue-500 hover:text-blue-600 px-4 py-2 rounded-lg border border-blue-500 hover:border-blue-600 transition-colors w-full flex items-center justify-center gap-2"
-									>
-										<Calendar className="w-4 h-4" />
-										<span>Reset Filter</span>
 									</button>
 								)}
 							</div>

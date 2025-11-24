@@ -7,14 +7,21 @@ export const useRapat = () => {
 	const [rapatList, setRapatList] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [filterDate, setFilterDate] = useState(moment().format("YYYY-MM-DD"));
+	const [searchDate, setSearchDate] = useState(moment().format("YYYY-MM-DD")); // State untuk input pencarian tanggal
 	const [filterNamaRapat, setFilterNamaRapat] = useState("");
-	const [debouncedNamaRapat, setDebouncedNamaRapat] = useState("");
+	const [searchNamaRapat, setSearchNamaRapat] = useState(""); // State untuk input pencarian
+	const [filterNamaPeserta, setFilterNamaPeserta] = useState("");
+	const [searchNamaPeserta, setSearchNamaPeserta] = useState(""); // State untuk input pencarian nama peserta
 	const [isToday, setIsToday] = useState(true);
 	const [errors, setErrors] = useState({});
 
 	// Fetch data rapat
 	const fetchRapat = useCallback(
-		async (date = filterDate, namaRapat = debouncedNamaRapat) => {
+		async (
+			date = filterDate,
+			namaRapat = filterNamaRapat,
+			namaPeserta = filterNamaPeserta
+		) => {
 			setLoading(true);
 			try {
 				const params = new URLSearchParams({
@@ -23,6 +30,10 @@ export const useRapat = () => {
 
 				if (namaRapat.trim()) {
 					params.append("nama_rapat", namaRapat.trim());
+				}
+
+				if (namaPeserta.trim()) {
+					params.append("nama_peserta", namaPeserta.trim());
 				}
 
 				const response = await fetch(`/api/rapat?${params.toString()}`);
@@ -41,7 +52,7 @@ export const useRapat = () => {
 				setLoading(false);
 			}
 		},
-		[filterDate, debouncedNamaRapat]
+		[filterDate, filterNamaRapat, filterNamaPeserta]
 	);
 
 	// Validasi form
@@ -82,9 +93,29 @@ export const useRapat = () => {
 		try {
 			const method = modalMode === "add" ? "POST" : "PUT";
 			const url = "/api/rapat";
+			
+			// Untuk add, hitung urutan berdasarkan jumlah rapat pada tanggal yang sama
+			let urutan = 0;
+			if (modalMode === "add") {
+				// Ambil jumlah rapat pada tanggal yang sama untuk menentukan urutan
+				const currentDate = formData.tanggal;
+				const rapatOnSameDate = rapatList.filter(
+					(r) => moment(r.tanggal, "DD MMMM YYYY").format("YYYY-MM-DD") === currentDate
+				);
+				// Gunakan urutan maksimum + 1, atau jumlah + 1 jika tidak ada urutan
+				const maxUrutan = rapatOnSameDate.length > 0
+					? Math.max(...rapatOnSameDate.map(r => r.urutan || 0))
+					: 0;
+				urutan = maxUrutan + 1;
+			} else {
+				// Untuk edit, gunakan urutan yang sudah ada
+				urutan = selectedRapat?.urutan || 0;
+			}
+
 			const body = {
 				...formData,
 				tanda_tangan,
+				urutan,
 			};
 
 			if (modalMode === "edit") {
@@ -147,38 +178,86 @@ export const useRapat = () => {
 		}
 	};
 
+	// Fungsi untuk manual search
+	const handleSearch = () => {
+		setFilterDate(searchDate);
+		setFilterNamaRapat(searchNamaRapat);
+		setFilterNamaPeserta(searchNamaPeserta);
+	};
+
+	// Fungsi untuk reset search
+	const resetSearch = () => {
+		const today = moment().format("YYYY-MM-DD");
+		setSearchDate(today);
+		setSearchNamaRapat("");
+		setSearchNamaPeserta("");
+		setFilterDate(today);
+		setFilterNamaRapat("");
+		setFilterNamaPeserta("");
+	};
+
+	// Update urutan rapat (hanya untuk IT)
+	const updateUrutan = async (updates) => {
+		try {
+			const response = await fetch("/api/rapat", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ updates }),
+			});
+
+			const data = await response.json();
+
+			if (data.status === "success") {
+				await fetchRapat();
+				return {
+					success: true,
+					message: "Urutan rapat berhasil diperbarui",
+				};
+			} else {
+				throw new Error(data.error || "Gagal memperbarui urutan");
+			}
+		} catch (error) {
+			console.error("Error updating urutan:", error);
+			throw error;
+		}
+	};
+
 	// Effect untuk fetch data awal
 	useEffect(() => {
 		fetchRapat();
 	}, []);
 
-	// Debounce effect untuk nama rapat
-	useEffect(() => {
-		const timer = setTimeout(() => {
-			setDebouncedNamaRapat(filterNamaRapat);
-		}, 500); // 500ms delay
-
-		return () => clearTimeout(timer);
-	}, [filterNamaRapat]);
-
 	// Effect untuk fetch data saat filter berubah
 	useEffect(() => {
-		fetchRapat(filterDate, debouncedNamaRapat);
-	}, [filterDate, debouncedNamaRapat, fetchRapat]);
+		fetchRapat(filterDate, filterNamaRapat, filterNamaPeserta);
+	}, [filterDate, filterNamaRapat, filterNamaPeserta, fetchRapat]);
 
 	return {
 		rapatList,
 		loading,
 		filterDate,
 		setFilterDate,
+		searchDate,
+		setSearchDate,
 		filterNamaRapat,
 		setFilterNamaRapat,
+		searchNamaRapat,
+		setSearchNamaRapat,
+		filterNamaPeserta,
+		setFilterNamaPeserta,
+		searchNamaPeserta,
+		setSearchNamaPeserta,
 		isToday,
 		errors,
 		setErrors,
 		fetchRapat,
+		handleSearch,
+		resetSearch,
 		validateForm,
 		submitRapat,
 		deleteRapat,
+		updateUrutan,
 	};
 };

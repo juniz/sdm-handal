@@ -12,6 +12,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import FilterAccordion from "./components/FilterAccordion";
 import RapatCard from "./components/RapatCard";
 import RapatModal from "./components/RapatModal";
+import DuplicateRapatModal from "./components/DuplicateRapatModal";
 import { useRapat } from "./components/hooks/useRapat";
 
 moment.locale("id");
@@ -24,22 +25,36 @@ const RapatPage = () => {
 		loading,
 		filterDate,
 		setFilterDate,
+		searchDate,
+		setSearchDate,
 		filterNamaRapat,
 		setFilterNamaRapat,
+		searchNamaRapat,
+		setSearchNamaRapat,
+		filterNamaPeserta,
+		setFilterNamaPeserta,
+		searchNamaPeserta,
+		setSearchNamaPeserta,
 		isToday,
 		errors,
 		validateForm,
 		submitRapat,
 		deleteRapat,
+		handleSearch,
+		resetSearch,
+		updateUrutan,
+		fetchRapat,
 	} = useRapat();
 
 	// State untuk user data
 	const [userData, setUserData] = useState(null);
 	const [userNik, setUserNik] = useState(null);
 	const [userLoading, setUserLoading] = useState(true);
+	const [isITUser, setIsITUser] = useState(false);
 
 	// State untuk modal dan form
 	const [showModal, setShowModal] = useState(false);
+	const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 	const [modalMode, setModalMode] = useState("add");
 	const [selectedRapat, setSelectedRapat] = useState(null);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -67,6 +82,14 @@ const RapatPage = () => {
 					const data = await response.json();
 					console.log("User data fetched:", data.user);
 					setUserData(data.user);
+
+					// Cek apakah user adalah IT
+					const isIT =
+						data.user.departemen === "IT" ||
+						data.user.departemen?.toLowerCase().includes("it") ||
+						data.user.jbtn?.toLowerCase().includes("it") ||
+						data.user.jabatan?.toLowerCase().includes("it");
+					setIsITUser(isIT);
 
 					// Update formData dengan default values
 					setFormData((prev) => ({
@@ -165,6 +188,117 @@ const RapatPage = () => {
 		}
 	};
 
+	const handleDuplicateClick = () => {
+		setShowDuplicateModal(true);
+		setIsFilterOpen(false);
+	};
+
+	const handleDuplicateSuccess = (message) => {
+		showToast(message || "Data rapat berhasil diduplikasi");
+		// Refresh data rapat
+		fetchRapat();
+	};
+
+	const handleDuplicateError = (errorMessage) => {
+		showToast(errorMessage || "Terjadi kesalahan saat menduplikasi data rapat", "error");
+	};
+
+	const handleDuplicateRefresh = () => {
+		// Refresh data rapat setelah duplikasi berhasil
+		fetchRapat();
+	};
+
+	const handleMoveUp = async (index) => {
+		if (index === 0) return;
+
+		const newList = [...rapatList];
+		const temp = newList[index];
+		newList[index] = newList[index - 1];
+		newList[index - 1] = temp;
+
+		// Update urutan
+		const updates = newList.map((rapat, idx) => ({
+			id: rapat.id,
+			urutan: idx + 1,
+		}));
+
+		try {
+			const result = await updateUrutan(updates);
+			if (result.success) {
+				showToast("Urutan rapat berhasil diperbarui");
+			}
+		} catch (error) {
+			showToast("Terjadi kesalahan saat memperbarui urutan", "error");
+		}
+	};
+
+	const handleMoveDown = async (index) => {
+		if (index === rapatList.length - 1) return;
+
+		const newList = [...rapatList];
+		const temp = newList[index];
+		newList[index] = newList[index + 1];
+		newList[index + 1] = temp;
+
+		// Update urutan
+		const updates = newList.map((rapat, idx) => ({
+			id: rapat.id,
+			urutan: idx + 1,
+		}));
+
+		try {
+			const result = await updateUrutan(updates);
+			if (result.success) {
+				showToast("Urutan rapat berhasil diperbarui");
+			}
+		} catch (error) {
+			showToast("Terjadi kesalahan saat memperbarui urutan", "error");
+		}
+	};
+
+	// Handler untuk update urutan langsung dengan input angka
+	const handleUrutanChange = async (rapatId, newUrutan) => {
+		if (!isITUser) return;
+
+		// Validasi urutan
+		const urutanNum = parseInt(newUrutan);
+		if (isNaN(urutanNum) || urutanNum < 1 || urutanNum > rapatList.length) {
+			showToast(
+				`Urutan harus antara 1 dan ${rapatList.length}`,
+				"error"
+			);
+			return;
+		}
+
+		// Buat array baru dengan urutan yang diupdate
+		const newList = [...rapatList];
+		const currentIndex = newList.findIndex((r) => r.id === rapatId);
+		
+		if (currentIndex === -1) return;
+
+		// Hapus item dari posisi lama
+		const [movedItem] = newList.splice(currentIndex, 1);
+		
+		// Insert item ke posisi baru
+		const newIndex = urutanNum - 1;
+		newList.splice(newIndex, 0, movedItem);
+
+		// Update urutan semua item
+		const updates = newList.map((rapat, idx) => ({
+			id: rapat.id,
+			urutan: idx + 1,
+		}));
+
+		try {
+			const result = await updateUrutan(updates);
+			if (result.success) {
+				showToast("Urutan rapat berhasil diperbarui");
+			}
+		} catch (error) {
+			showToast("Terjadi kesalahan saat memperbarui urutan", "error");
+		}
+	};
+
 	const handleSubmit = async (tanda_tangan) => {
 		try {
 			if (!validateForm(formData, signPadRef)) {
@@ -212,14 +346,26 @@ const RapatPage = () => {
 				<FilterAccordion
 					filterDate={filterDate}
 					setFilterDate={setFilterDate}
+					searchDate={searchDate}
+					setSearchDate={setSearchDate}
 					filterNamaRapat={filterNamaRapat}
 					setFilterNamaRapat={setFilterNamaRapat}
+					searchNamaRapat={searchNamaRapat}
+					setSearchNamaRapat={setSearchNamaRapat}
+					filterNamaPeserta={filterNamaPeserta}
+					setFilterNamaPeserta={setFilterNamaPeserta}
+					searchNamaPeserta={searchNamaPeserta}
+					setSearchNamaPeserta={setSearchNamaPeserta}
+					onSearch={handleSearch}
+					onResetSearch={resetSearch}
 					isOpen={isFilterOpen}
 					setIsOpen={setIsFilterOpen}
 					onAddClick={handleAddClick}
+					onDuplicateClick={isITUser ? handleDuplicateClick : null}
 					loading={loading}
 					isToday={isToday}
 					rapatList={rapatList}
+					isITUser={isITUser}
 				/>
 
 				{/* Content */}
@@ -241,13 +387,19 @@ const RapatPage = () => {
 					</div>
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-						{rapatList.map((rapat) => (
+						{rapatList.map((rapat, index) => (
 							<RapatCard
 								key={rapat.id}
 								rapat={rapat}
+								index={index}
+								totalItems={rapatList.length}
 								onEdit={handleEdit}
 								onDelete={handleDelete}
+								onMoveUp={isITUser ? handleMoveUp : null}
+								onMoveDown={isITUser ? handleMoveDown : null}
+								onUrutanChange={isITUser ? handleUrutanChange : null}
 								searchTerm={filterNamaRapat}
+								isITUser={isITUser}
 							/>
 						))}
 					</div>
@@ -266,6 +418,18 @@ const RapatPage = () => {
 				onReset={resetForm}
 				signPadRef={signPadRef}
 			/>
+
+			{/* Duplicate Modal */}
+			{isITUser && (
+				<DuplicateRapatModal
+					showModal={showDuplicateModal}
+					setShowModal={setShowDuplicateModal}
+					onDuplicate={handleDuplicateRefresh}
+					onSuccess={handleDuplicateSuccess}
+					onError={handleDuplicateError}
+					loading={loading}
+				/>
+			)}
 
 			{/* Toast Notification */}
 			<AnimatePresence>

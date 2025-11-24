@@ -64,24 +64,35 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 						aria-expanded={open}
 						disabled={disabled}
 						className={cn(
-							"w-full justify-between h-12",
-							error && "border-red-500 focus:ring-red-500"
+							"w-full justify-between h-12 text-left",
+							error && "border-red-500 focus:ring-red-500",
+							!value && "text-muted-foreground"
 						)}
 					>
-						{value
+						{loading
+							? "Memuat data pegawai..."
+							: value
 							? pegawai.find((item) => item.value === value)?.label
 							: "Pilih nama pegawai..."}
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-[400px] p-0">
+				<PopoverContent
+					className="w-[400px] p-0"
+					side="bottom"
+					align="start"
+					sideOffset={8}
+					avoidCollisions={true}
+					collisionPadding={10}
+				>
 					<Command shouldFilter={false}>
 						<CommandInput
 							placeholder="Cari pegawai..."
 							value={searchQuery}
 							onValueChange={setSearchQuery}
+							className="h-12"
 						/>
-						<CommandList>
+						<CommandList className="max-h-[200px] overflow-y-auto">
 							<CommandEmpty>
 								{loading ? "Memuat data..." : "Pegawai tidak ditemukan."}
 							</CommandEmpty>
@@ -94,6 +105,7 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 											onValueChange(currentValue === value ? "" : currentValue);
 											setOpen(false);
 										}}
+										className="cursor-pointer"
 									>
 										<Check
 											className={cn(
