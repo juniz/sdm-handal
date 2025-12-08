@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createConnection } from "@/lib/db";
 import { getUser } from "@/lib/auth";
+import { validateIdParam } from "@/lib/server-component-security";
 
 export async function GET(request, { params }) {
 	try {
-		const { id } = params;
+		// SECURITY FIX CVE-2025-66478: Validasi ID parameter untuk mencegah RCE
+		const id = validateIdParam(params.id);
 
 		// Get user info from token for authorization
 		const currentUser = await getUser();

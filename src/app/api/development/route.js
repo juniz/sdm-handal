@@ -17,8 +17,34 @@ export async function GET(request) {
 		const my_requests = searchParams.get("my_requests") === "true";
 		const date_from = searchParams.get("date_from");
 		const date_to = searchParams.get("date_to");
-		const sort_by = searchParams.get("sort_by") || "submission_date";
-		const sort_order = searchParams.get("sort_order") || "desc";
+		// SECURITY FIX CVE-001: Validasi sort_by dan sort_order dengan whitelist
+		const ALLOWED_SORT_COLUMNS = [
+			"request_id",
+			"submission_date",
+			"title",
+			"current_status_id",
+			"priority_id",
+			"no_request",
+			"approved_date",
+			"development_start_date",
+			"deployment_date",
+			"completed_date",
+			"closed_date",
+		];
+		const ALLOWED_SORT_ORDERS = ["ASC", "DESC"];
+
+		const sort_by_raw = searchParams.get("sort_by") || "submission_date";
+		const sort_order_raw = searchParams.get("sort_order") || "desc";
+
+		// Validasi dengan whitelist
+		const sort_by = ALLOWED_SORT_COLUMNS.includes(sort_by_raw)
+			? sort_by_raw
+			: "submission_date";
+		const sort_order = ALLOWED_SORT_ORDERS.includes(
+			sort_order_raw.toUpperCase()
+		)
+			? sort_order_raw.toUpperCase()
+			: "DESC";
 
 		// Get user info from token for authorization
 		const currentUser = await getUser();

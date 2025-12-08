@@ -83,6 +83,42 @@ export async function POST(request) {
 			);
 		}
 
+		// SECURITY FIX CVE-005: Sanitasi dan validasi panjang untuk mencegah DoS
+		const MAX_LENGTH = 10000; // 10KB max per field
+		const MAX_URL_LENGTH = 2048;
+		const MAX_SHORT_LENGTH = 255;
+		const MAX_ACTION_LENGTH = 500;
+
+		const ALLOWED_SEVERITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
+
+		const sanitizedData = {
+			MAX_LENGTH, // Include untuk digunakan di bawah
+			error_type:
+				(error_type?.substring(0, MAX_SHORT_LENGTH) || "Unknown").replace(
+					/[<>]/g,
+					""
+				),
+			error_message:
+				(error_message?.substring(0, MAX_LENGTH) || "").replace(/[<>]/g, ""),
+			error_stack:
+				error_stack?.substring(0, MAX_LENGTH)?.replace(/[<>]/g, "") || null,
+			page_url:
+				page_url?.substring(0, MAX_URL_LENGTH)?.replace(/[<>]/g, "") || null,
+			severity: ALLOWED_SEVERITIES.includes(severity)
+				? severity
+				: "MEDIUM",
+			component_name:
+				component_name?.substring(0, MAX_SHORT_LENGTH)?.replace(/[<>]/g, "") ||
+				null,
+			action_attempted:
+				action_attempted?.substring(0, MAX_ACTION_LENGTH)?.replace(/[<>]/g, "") ||
+				null,
+			additional_data:
+				typeof additional_data === "object"
+					? JSON.stringify(additional_data).substring(0, MAX_LENGTH)
+					: "{}",
+		};
+
 		// Get user info from token (optional)
 		let userInfo = { user_id: null, user_name: null };
 		try {
@@ -116,23 +152,29 @@ export async function POST(request) {
 		const browserInfo = parseUserAgent(userAgent);
 		const ipAddress = getClientIP(request);
 
-		// Insert error log
+		// Insert error log dengan data yang sudah disanitasi
 		const errorLogData = {
 			user_id: userInfo.user_id,
 			user_name: userInfo.user_name,
-			error_type,
-			error_message,
-			error_stack,
-			page_url,
-			user_agent: userAgent,
-			browser_info: browserInfo ? JSON.stringify(browserInfo) : null,
-			device_info: JSON.stringify(additional_data.deviceInfo || {}),
-			severity,
-			component_name,
-			action_attempted,
-			additional_data: JSON.stringify(additional_data),
-			ip_address: ipAddress,
-			session_id: additional_data.sessionId || null,
+			error_type: sanitizedData.error_type,
+			error_message: sanitizedData.error_message,
+			error_stack: sanitizedData.error_stack,
+			page_url: sanitizedData.page_url,
+			user_agent: userAgent?.substring(0, 500) || null,
+			browser_info: browserInfo
+				? JSON.stringify(browserInfo).substring(0, MAX_LENGTH)
+				: null,
+			device_info: JSON.stringify(additional_data.deviceInfo || {}).substring(
+				0,
+				MAX_LENGTH
+			),
+			severity: sanitizedData.severity,
+			component_name: sanitizedData.component_name,
+			action_attempted: sanitizedData.action_attempted,
+			additional_data: sanitizedData.additional_data,
+			ip_address: ipAddress?.substring(0, 45) || null, // IPv6 max length
+			session_id:
+				additional_data.sessionId?.substring(0, 100) || null,
 			timestamp: moment().format("YYYY-MM-DD HH:mm:ss"),
 		};
 

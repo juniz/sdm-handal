@@ -91,6 +91,33 @@ function calculateStatus(jamMasuk, currentTime) {
 	}
 }
 
+// SECURITY FIX CVE-004: Validasi magic bytes untuk memastikan file benar-benar gambar
+function validateImageMagicBytes(buffer) {
+	if (!buffer || buffer.length < 4) {
+		return false;
+	}
+
+	// JPEG magic bytes: FF D8 FF
+	const isJPEG =
+		buffer[0] === 0xff &&
+		buffer[1] === 0xd8 &&
+		buffer[2] === 0xff &&
+		(buffer[3] === 0xe0 || buffer[3] === 0xe1 || buffer[3] === 0xe8);
+
+	// PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+	const isPNG =
+		buffer[0] === 0x89 &&
+		buffer[1] === 0x50 &&
+		buffer[2] === 0x4e &&
+		buffer[3] === 0x47 &&
+		buffer[4] === 0x0d &&
+		buffer[5] === 0x0a &&
+		buffer[6] === 0x1a &&
+		buffer[7] === 0x0a;
+
+	return isJPEG || isPNG;
+}
+
 // Fungsi untuk menyimpan file base64 ke folder uploads di root
 async function saveBase64Image(base64Data, idPegawai) {
 	try {
@@ -114,9 +141,31 @@ async function saveBase64Image(base64Data, idPegawai) {
 			throw new Error("Buffer foto kosong");
 		}
 
+		// SECURITY FIX CVE-004: Validasi ukuran file maksimum (5MB)
+		const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+		if (buffer.length > MAX_FILE_SIZE) {
+			throw new Error("File terlalu besar. Maksimum 5MB");
+		}
+
+		// SECURITY FIX CVE-004: Validasi magic bytes untuk memastikan file benar-benar gambar
+		if (!validateImageMagicBytes(buffer)) {
+			throw new Error("File harus berupa gambar JPEG atau PNG yang valid");
+		}
+
+		// Tentukan ekstensi berdasarkan magic bytes
+		let fileExt = ".jpg";
+		if (
+			buffer[0] === 0x89 &&
+			buffer[1] === 0x50 &&
+			buffer[2] === 0x4e &&
+			buffer[3] === 0x47
+		) {
+			fileExt = ".png";
+		}
+
 		// Buat nama file unik dengan timestamp
 		const timestamp = new Date().getTime();
-		const fileName = `attendance_${idPegawai}_${timestamp}.jpg`;
+		const fileName = `attendance_${idPegawai}_${timestamp}${fileExt}`;
 
 		// Pastikan folder uploads ada di root project
 		const uploadDir = path.join(process.cwd(), "uploads", "attendance");

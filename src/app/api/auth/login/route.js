@@ -17,13 +17,17 @@ export async function POST(request) {
 			);
 		}
 
+		// SECURITY FIX CVE-007: Gunakan environment variables untuk encryption keys
+		const AES_USER_KEY = process.env.AES_USER_KEY || "nur";
+		const AES_PASSWORD_KEY = process.env.AES_PASSWORD_KEY || "windi";
+
 		// Query dengan AES encryption/decryption
 		const users = await query(
 			`
 			SELECT 
 				pegawai.id,
-				AES_DECRYPT(user.id_user, 'nur') as username,
-				AES_DECRYPT(user.password, 'windi') as password,
+				AES_DECRYPT(user.id_user, ?) as username,
+				AES_DECRYPT(user.password, ?) as password,
 				pegawai.nama,
 				pegawai.departemen as cap,
 				pegawai.tmp_lahir,
@@ -31,11 +35,11 @@ export async function POST(request) {
 				pegawai.alamat,
 				pegawai.photo
 			FROM user
-			JOIN pegawai ON pegawai.nik = AES_DECRYPT(user.id_user, 'nur')
-			WHERE user.id_user = AES_ENCRYPT(?, 'nur')
+			JOIN pegawai ON pegawai.nik = AES_DECRYPT(user.id_user, ?)
+			WHERE user.id_user = AES_ENCRYPT(?, ?)
 			AND pegawai.stts_aktif = 'AKTIF'
 		`,
-			[nip]
+			[AES_USER_KEY, AES_PASSWORD_KEY, AES_USER_KEY, nip, AES_USER_KEY]
 		);
 
 		console.log("Query result:", users ? "User found" : "User not found");

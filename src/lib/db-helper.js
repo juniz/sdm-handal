@@ -1,6 +1,68 @@
 import { query } from "./db";
 import { createConnection } from "./db";
 
+// SECURITY FIX CVE-002: Validasi identifier untuk mencegah SQL injection
+/**
+ * Validasi identifier (table name, column name) untuk mencegah SQL injection
+ * Hanya allow alphanumeric, underscore, dan dash
+ */
+function validateIdentifier(identifier) {
+	if (!identifier || typeof identifier !== "string") {
+		throw new Error(`Invalid identifier: ${identifier}`);
+	}
+	// Hanya allow alphanumeric, underscore, dan dash
+	if (!/^[a-zA-Z0-9_\-]+$/.test(identifier)) {
+		throw new Error(`Invalid identifier format: ${identifier}`);
+	}
+	return identifier;
+}
+
+/**
+ * Whitelist untuk table names yang diizinkan
+ * Update ini sesuai dengan tabel yang ada di database
+ */
+const ALLOWED_TABLES = [
+	"development_requests",
+	"pegawai",
+	"departemen",
+	"temporary_presensi",
+	"rekap_presensi",
+	"error_logs",
+	"error_resolutions",
+	"security_logs",
+	"jadwal_pegawai",
+	"jadwal_tambahan",
+	"jam_masuk",
+	"development_assignments",
+	"development_notes",
+	"development_attachments",
+	"development_progress",
+	"development_statuses",
+	"development_priorities",
+	"module_types",
+	"tickets",
+	"assignments_ticket",
+	"categories_ticket",
+	"priorities_ticket",
+	"statuses_ticket",
+	"ticket_notes",
+	"ticket_status_history",
+	"pengajuan_kta",
+	"pengajuan_tukar_dinas",
+	"rapat",
+	"user",
+];
+
+/**
+ * Validasi table name dengan whitelist
+ */
+function validateTableName(table) {
+	if (!ALLOWED_TABLES.includes(table)) {
+		throw new Error(`Table not allowed: ${table}`);
+	}
+	return table;
+}
+
 /**
  * Transaction manager untuk database operations
  */
@@ -114,12 +176,14 @@ export const transactionHelpers = {
 	 * Insert dengan transaction context
 	 */
 	async insert(transaction, { table, data }) {
-		const keys = Object.keys(data);
+		// SECURITY FIX CVE-002: Validasi table name dan column names
+		const validatedTable = validateTableName(table);
+		const validatedKeys = Object.keys(data).map(validateIdentifier);
 		const values = Object.values(data);
 		const placeholders = values.map(() => "?").join(", ");
 
 		const sqlQuery = `
-			INSERT INTO ${table} (${keys.join(", ")})
+			INSERT INTO ${validatedTable} (${validatedKeys.join(", ")})
 			VALUES (${placeholders})
 		`;
 
@@ -130,13 +194,14 @@ export const transactionHelpers = {
 	 * Update dengan transaction context
 	 */
 	async update(transaction, { table, data, where }) {
+		// SECURITY FIX CVE-002: Validasi table name dan column names
+		const validatedTable = validateTableName(table);
 		const { whereClause, values: whereValues } = processWhereClause(where);
-		const setClause = Object.keys(data)
-			.map((key) => `${key} = ?`)
-			.join(", ");
+		const validatedKeys = Object.keys(data).map(validateIdentifier);
+		const setClause = validatedKeys.map((key) => `${key} = ?`).join(", ");
 
 		const sqlQuery = `
-			UPDATE ${table}
+			UPDATE ${validatedTable}
 			SET ${setClause}
 			${whereClause}
 		`;
@@ -149,10 +214,12 @@ export const transactionHelpers = {
 	 * Delete dengan transaction context
 	 */
 	async delete(transaction, { table, where }) {
+		// SECURITY FIX CVE-002: Validasi table name
+		const validatedTable = validateTableName(table);
 		const { whereClause, values } = processWhereClause(where);
 
 		const sqlQuery = `
-			DELETE FROM ${table}
+			DELETE FROM ${validatedTable}
 			${whereClause}
 		`;
 
@@ -173,13 +240,28 @@ export const transactionHelpers = {
 			limit = null,
 		}
 	) {
+		// SECURITY FIX CVE-002: Validasi table name, fields, dan orderBy
+		const validatedTable = validateTableName(table);
 		const { whereClause, values } = processWhereClause(where);
 		const limitClause = limit ? `LIMIT ${parseInt(limit)}` : "";
-		const orderByClause = orderBy ? `ORDER BY ${orderBy} ${order}` : "";
+		
+		// Validasi fields
+		let validatedFields = fields;
+		if (fields[0] !== "*") {
+			validatedFields = fields.map(validateIdentifier);
+		}
+		
+		// Validasi orderBy
+		let orderByClause = "";
+		if (orderBy) {
+			const validatedOrderBy = validateIdentifier(orderBy);
+			const validatedOrder = order.toUpperCase() === "DESC" ? "DESC" : "ASC";
+			orderByClause = `ORDER BY ${validatedOrderBy} ${validatedOrder}`;
+		}
 
 		const sqlQuery = `
-			SELECT ${fields.join(", ")}
-			FROM ${table}
+			SELECT ${validatedFields.join(", ")}
+			FROM ${validatedTable}
 			${whereClause}
 			${orderByClause}
 			${limitClause}
@@ -217,16 +299,33 @@ export async function select({
 	offset = null,
 }) {
 	try {
+		// SECURITY FIX CVE-002: Validasi table name, fields, dan orderBy
+		const validatedTable = validateTableName(table);
 		const { whereClause, values } = processWhereClause(where);
 		const limitClause = limit ? `LIMIT ${parseInt(limit)}` : "";
-		const orderByClause = orderBy ? `ORDER BY ${orderBy} ${order}` : "";
+		const offsetClause = offset ? `OFFSET ${parseInt(offset)}` : "";
+		
+		// Validasi fields
+		let validatedFields = fields;
+		if (fields[0] !== "*") {
+			validatedFields = fields.map(validateIdentifier);
+		}
+		
+		// Validasi orderBy
+		let orderByClause = "";
+		if (orderBy) {
+			const validatedOrderBy = validateIdentifier(orderBy);
+			const validatedOrder = order.toUpperCase() === "DESC" ? "DESC" : "ASC";
+			orderByClause = `ORDER BY ${validatedOrderBy} ${validatedOrder}`;
+		}
 
 		const sqlQuery = `
-			SELECT ${fields.join(", ")}
-			FROM ${table}
+			SELECT ${validatedFields.join(", ")}
+			FROM ${validatedTable}
 			${whereClause}
 			${orderByClause}
 			${limitClause}
+			${offsetClause}
 		`;
 
 		const result = await query(sqlQuery, values);
@@ -267,12 +366,14 @@ export async function selectFirst({ table, where = {}, fields = ["*"] }) {
  */
 export async function insert({ table, data }) {
 	try {
-		const keys = Object.keys(data);
+		// SECURITY FIX CVE-002: Validasi table name dan column names
+		const validatedTable = validateTableName(table);
+		const validatedKeys = Object.keys(data).map(validateIdentifier);
 		const values = Object.values(data);
 		const placeholders = values.map(() => "?").join(", ");
 
 		const sqlQuery = `
-			INSERT INTO ${table} (${keys.join(", ")})
+			INSERT INTO ${validatedTable} (${validatedKeys.join(", ")})
 			VALUES (${placeholders})
 		`;
 
@@ -293,13 +394,14 @@ export async function insert({ table, data }) {
  */
 export async function update({ table, data, where }) {
 	try {
+		// SECURITY FIX CVE-002: Validasi table name dan column names
+		const validatedTable = validateTableName(table);
 		const { whereClause, values: whereValues } = processWhereClause(where);
-		const setClause = Object.keys(data)
-			.map((key) => `${key} = ?`)
-			.join(", ");
+		const validatedKeys = Object.keys(data).map(validateIdentifier);
+		const setClause = validatedKeys.map((key) => `${key} = ?`).join(", ");
 
 		const sqlQuery = `
-			UPDATE ${table}
+			UPDATE ${validatedTable}
 			SET ${setClause}
 			${whereClause}
 		`;
@@ -321,10 +423,12 @@ export async function update({ table, data, where }) {
  */
 export async function delete_({ table, where }) {
 	try {
+		// SECURITY FIX CVE-002: Validasi table name
+		const validatedTable = validateTableName(table);
 		const { whereClause, values } = processWhereClause(where);
 
 		const sqlQuery = `
-			DELETE FROM ${table}
+			DELETE FROM ${validatedTable}
 			${whereClause}
 		`;
 
@@ -358,37 +462,40 @@ function processWhereClause(where) {
 	const conditions = [];
 
 	for (const [key, value] of Object.entries(where)) {
+		// SECURITY FIX CVE-002: Validasi column name
+		const validatedKey = validateIdentifier(key);
+		
 		// Skip undefined values
 		if (value === undefined) {
 			console.warn(
-				`Warning: Skipping undefined value for key '${key}' in WHERE clause`
+				`Warning: Skipping undefined value for key '${validatedKey}' in WHERE clause`
 			);
 			continue;
 		}
 
 		if (value === null) {
-			conditions.push(`${key} IS NULL`);
+			conditions.push(`${validatedKey} IS NULL`);
 		} else if (typeof value === "object" && value !== null) {
 			// Handle operator objects
 			const operator = value.operator?.toUpperCase() || "=";
 			switch (operator) {
 				case "LIKE":
 				case "NOT LIKE":
-					conditions.push(`${key} ${operator} ?`);
+					conditions.push(`${validatedKey} ${operator} ?`);
 					values.push(value.value);
 					break;
 				case "IN":
 				case "NOT IN":
 					if (Array.isArray(value.value)) {
 						conditions.push(
-							`${key} ${operator} (${value.value.map(() => "?").join(",")})`
+							`${validatedKey} ${operator} (${value.value.map(() => "?").join(",")})`
 						);
 						values.push(...value.value);
 					}
 					break;
 				case "BETWEEN":
 					if (Array.isArray(value.value) && value.value.length === 2) {
-						conditions.push(`${key} BETWEEN ? AND ?`);
+						conditions.push(`${validatedKey} BETWEEN ? AND ?`);
 						values.push(...value.value);
 					}
 					break;
@@ -398,15 +505,15 @@ function processWhereClause(where) {
 				case "<=":
 				case "!=":
 				case "<>":
-					conditions.push(`${key} ${operator} ?`);
+					conditions.push(`${validatedKey} ${operator} ?`);
 					values.push(value.value);
 					break;
 				default:
-					conditions.push(`${key} = ?`);
+					conditions.push(`${validatedKey} = ?`);
 					values.push(value.value);
 			}
 		} else {
-			conditions.push(`${key} = ?`);
+			conditions.push(`${validatedKey} = ?`);
 			values.push(value);
 		}
 	}
