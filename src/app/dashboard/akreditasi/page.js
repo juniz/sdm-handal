@@ -1,22 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { BookOpen, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import { Viewer, Worker } from "@react-pdf-viewer/core";
-import { defaultLayoutPlugin } from "@react-pdf-viewer/default-layout";
-import { zoomPlugin } from "@react-pdf-viewer/zoom";
-import { toolbarPlugin } from "@react-pdf-viewer/toolbar";
-import { pageNavigationPlugin } from "@react-pdf-viewer/page-navigation";
-
-import "@react-pdf-viewer/core/lib/styles/index.css";
-import "@react-pdf-viewer/default-layout/lib/styles/index.css";
-import "@react-pdf-viewer/toolbar/lib/styles/index.css";
-import "@react-pdf-viewer/zoom/lib/styles/index.css";
-import "@react-pdf-viewer/page-navigation/lib/styles/index.css";
+// SECURITY FIX: Dynamic import untuk mencegah SSR error dengan DOMMatrix
+// PDF viewer memerlukan browser APIs yang tidak tersedia di server-side
+// Error terjadi karena @react-pdf-viewer menggunakan DOMMatrix yang hanya ada di browser
+const PDFViewerComponent = dynamic(
+	() => import("./PDFViewerComponent"),
+	{
+		ssr: false,
+		loading: () => (
+			<div className="flex items-center justify-center min-h-[80vh]">
+				<div className="text-center">
+					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto mb-4"></div>
+					<p className="text-gray-600">Memuat PDF viewer...</p>
+				</div>
+			</div>
+		),
+	}
+);
 
 const fadeIn = {
 	initial: { opacity: 0, y: 20 },
@@ -28,18 +35,6 @@ export default function AkreditasiPage() {
 	const [currentPage, setCurrentPage] = useState(0);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
-
-	// Inisialisasi plugin
-	const pageNavigationPluginInstance = pageNavigationPlugin();
-	const defaultLayoutPluginInstance = defaultLayoutPlugin({
-		sidebarTabs: (defaultTabs) => [],
-	});
-	const zoomPluginInstance = zoomPlugin();
-	const toolbarPluginInstance = toolbarPlugin({
-		scrollModePlugin: {
-			scrollMode: "vertical",
-		},
-	});
 
 	const handleDownload = () => {
 		const link = document.createElement("a");
@@ -111,31 +106,11 @@ export default function AkreditasiPage() {
 									</div>
 								</div>
 							)}
-							<Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-								<Viewer
-									fileUrl="/documents/akreditasi.pdf"
-									plugins={[
-										pageNavigationPluginInstance,
-										defaultLayoutPluginInstance,
-										zoomPluginInstance,
-										toolbarPluginInstance,
-									]}
-									defaultScale={0.6}
-									theme={{
-										theme: "auto",
-									}}
-									onDocumentLoad={handleDocumentLoad}
-									onDocumentLoadError={handleDocumentError}
-									onPageChange={(e) => setCurrentPage(e.currentPage)}
-									renderPage={(props) => (
-										<div style={{ margin: "8px auto", maxWidth: "100%" }}>
-											{props.canvasLayer.children}
-											{props.annotationLayer.children}
-											{props.textLayer.children}
-										</div>
-									)}
-								/>
-							</Worker>
+							<PDFViewerComponent
+								onDocumentLoad={handleDocumentLoad}
+								onDocumentLoadError={handleDocumentError}
+								onPageChange={(e) => setCurrentPage(e.currentPage)}
+							/>
 						</div>
 					</CardContent>
 				</Card>
