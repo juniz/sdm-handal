@@ -109,6 +109,19 @@ const ALLOWED_TABLES = [
 ];
 ```
 
+**⚠️ PENTING:** Jika terjadi error `Table not allowed: [nama_tabel]`, berarti tabel tersebut belum ditambahkan ke whitelist. Tambahkan nama tabel ke `ALLOWED_TABLES` di `src/lib/db-helper.js`.
+
+**Tabel yang sudah ditambahkan:**
+
+- `pengajuan_cuti` - untuk pengajuan cuti
+- `pengajuan_izin` - untuk pengajuan izin
+- `pengajuan_tudin` - untuk pengajuan tukar dinas
+- `pendidikan` - untuk data pendidikan
+- `jam_jaga` - untuk data shift/jam jaga
+- `status_history_ticket` - untuk history status ticket
+- `kelompok_jabatan` - untuk kelompok jabatan
+- `stts_kerja` - untuk status kerja
+
 ### 3. Testing
 
 Lakukan testing untuk memastikan semua perbaikan bekerja:
