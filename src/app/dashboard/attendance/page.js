@@ -486,6 +486,16 @@ export default function AttendancePage() {
 					return;
 				}
 
+				// Handle specific error for no schedule
+				if (errorData.error === "NO_SCHEDULE") {
+					setStatus("no_schedule");
+					setTimeout(() => {
+						alertRef.current?.scrollIntoView({ behavior: "smooth" });
+						alertRef.current?.focus();
+					}, 100);
+					return;
+				}
+
 				const error = new Error(`Gagal melakukan presensi: ${response.status}`);
 				await logError({
 					error,
@@ -743,6 +753,8 @@ export default function AttendancePage() {
 								? "bg-yellow-50 text-yellow-700"
 								: status === "unfinished_attendance"
 								? "bg-orange-50 text-orange-700"
+								: status === "no_schedule"
+								? "bg-orange-50 text-orange-700 border-2 border-orange-300"
 								: "bg-red-50 text-red-700"
 						}`}
 					>
@@ -801,6 +813,20 @@ export default function AttendancePage() {
 										dahulu atau gunakan tombol Auto Checkout jika sudah melewati
 										batas waktu.
 									</span>
+								</>
+							) : status === "no_schedule" ? (
+								<>
+									<AlertTriangle className="w-5 h-5" />
+									<div className="flex-1">
+										<div className="font-semibold mb-1">
+											Jadwal Shift Belum Diisi
+										</div>
+										<span className="text-sm">
+											Jadwal shift untuk hari ini belum diisi. Silakan hubungi
+											admin atau HR untuk mengisi jadwal terlebih dahulu sebelum
+											melakukan presensi.
+										</span>
+									</div>
 								</>
 							) : (
 								<>

@@ -923,7 +923,16 @@ export async function POST(request) {
 
 			if (!scheduleWithShift || !scheduleWithShift.shift_today) {
 				return NextResponse.json(
-					{ message: "Tidak ada jadwal shift untuk hari ini" },
+					{
+						message:
+							"Jadwal shift belum diisi untuk hari ini. Silakan isi jadwal terlebih dahulu sebelum melakukan presensi.",
+						error: "NO_SCHEDULE",
+						details: {
+							reason: "schedule_not_found",
+							date: moment().format("YYYY-MM-DD"),
+							action: "Silahkan mengisi jadwal shift hari ini",
+						},
+					},
 					{ status: 400 }
 				);
 			}
