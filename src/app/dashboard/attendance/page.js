@@ -822,9 +822,9 @@ export default function AttendancePage() {
 											Jadwal Shift Belum Diisi
 										</div>
 										<span className="text-sm">
-											Jadwal shift untuk hari ini belum diisi. Silakan hubungi
-											admin atau HR untuk mengisi jadwal terlebih dahulu sebelum
-											melakukan presensi.
+											Jadwal shift untuk hari ini belum diisi. Silakan mengisi
+											jadwal shift hari ini terlebih dahulu sebelum melakukan
+											presensi.
 										</span>
 									</div>
 								</>
