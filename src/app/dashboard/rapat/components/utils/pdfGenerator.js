@@ -54,41 +54,203 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 			<meta charset="utf-8">
 			<meta name="viewport" content="width=device-width, initial-scale=1">
 			<title>REKAP ABSENSI RAPAT RSB NGANJUK</title>
-			<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
 			<style>
+				* {
+					box-sizing: border-box;
+					margin: 0;
+					padding: 0;
+				}
+				
 				html, body {
 					width: 210mm;
-					height: 297mm;
+					min-height: 297mm;
+					font-family: "Times New Roman", Times, serif;
+					font-size: 12pt;
+					line-height: 1.5;
+					color: #000000;
+					background-color: #ffffff;
+					font-weight: bold;
 				}
+				
+				.row {
+					display: flex;
+					flex-wrap: wrap;
+					margin-left: -15px;
+					margin-right: -15px;
+				}
+				
+				.col, .col-1, .col-2, .col-4, .col-5, .col-6, .col-12 {
+					position: relative;
+					padding-left: 15px;
+					padding-right: 15px;
+				}
+				
+				.col {
+					flex: 1 0 0%;
+				}
+				
+				.col-1 {
+					flex: 0 0 auto;
+					width: 8.33333333%;
+				}
+				
+				.col-2 {
+					flex: 0 0 auto;
+					width: 16.66666667%;
+				}
+				
+				.col-4 {
+					flex: 0 0 auto;
+					width: 33.33333333%;
+				}
+				
+				.col-5 {
+					flex: 0 0 auto;
+					width: 41.66666667%;
+				}
+				
+				.col-6 {
+					flex: 0 0 auto;
+					width: 50%;
+				}
+				
+				.col-12 {
+					flex: 0 0 auto;
+					width: 100%;
+				}
+				
+				.text-center {
+					text-align: center !important;
+				}
+				
+				.fw-bold {
+					font-weight: bold !important;
+				}
+				
+				.p-3 {
+					padding: 1rem !important;
+				}
+				
+				.pt-3 {
+					padding-top: 1rem !important;
+				}
+				
 				table {
+					width: 100%;
+					border-collapse: collapse;
 					page-break-inside: auto;
+					margin-bottom: 1rem;
 				}
+				
+				.table {
+					border-collapse: collapse !important;
+				}
+				
+				.table-bordered {
+					border: 1px solid #000000 !important;
+				}
+				
+				.table-bordered th,
+				.table-bordered td {
+					border: 1px solid #000000 !important;
+				}
+				
+				.border-dark {
+					border-color: #000000 !important;
+				}
+				
+				thead {
+					display: table-header-group;
+				}
+				
+				tbody {
+					display: table-row-group;
+				}
+				
 				tr {
 					page-break-inside: avoid;
 					page-break-after: auto;
 				}
-				thead {
-					display: table-header-group;
+				
+				th, td {
+					padding: 8px;
+					text-align: left;
+					vertical-align: middle;
+					border: 1px solid #000000;
 				}
-				tfoot {
-					display: table-footer-group;
+				
+				th {
+					font-weight: bold;
+					text-align: center;
+					background-color: #ffffff;
+					color: #000000;
 				}
+				
+				td {
+					background-color: #ffffff;
+					color: #000000;
+				}
+				
+				u {
+					text-decoration: underline;
+				}
+				
+				img {
+					max-width: 100%;
+					height: auto;
+					display: inline-block;
+					vertical-align: middle;
+				}
+				
 				@media print {
 					@page { 
 						margin: 15mm; 
 						size: A4; 
 					}
+					
+					html, body {
+						width: 210mm;
+						min-height: 297mm;
+						margin: 0;
+						padding: 0;
+					}
+					
 					body { 
-						margin: 0; 
+						margin: 0;
+						padding: 0;
 						-webkit-print-color-adjust: exact;
 						print-color-adjust: exact;
+						color-adjust: exact;
+					}
+					
+					table {
+						border-collapse: collapse !important;
+					}
+					
+					th, td {
+						border: 1px solid #000000 !important;
+						-webkit-print-color-adjust: exact;
+						print-color-adjust: exact;
+						color-adjust: exact;
+					}
+					
+					thead {
+						display: table-header-group;
+					}
+					
+					tfoot {
+						display: table-footer-group;
+					}
+					
+					tr {
+						page-break-inside: avoid;
 					}
 				}
 			</style>
 		</head>
-		<body class="fw-bold">
-			<div class="row">
-				<div class="col-5 text-center fw-bold" style="font-size:12px;">
+		<body style="font-weight: bold;">
+			<div class="row" style="margin-bottom: 20px;">
+				<div class="col-5 text-center fw-bold" style="font-size: 12px;">
 					POLRI DAERAH JAWA TIMUR<br>
 					BIDANG KEDOKTERAN DAN KESEHATAN<br>
 					<u>RUMAH SAKIT BHAYANGKARA TK. III NGANJUK</u>
@@ -96,30 +258,30 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 				<div class="col"></div>
 				<div class="col"></div>
 			</div>
-			<div class="row p-3" style="font-size:12px;">
-				<div class="col-12 text-center">DAFTAR HADIR</div>
+			<div class="row p-3" style="font-size: 12px; margin-bottom: 15px;">
+				<div class="col-12 text-center fw-bold">DAFTAR HADIR</div>
 			</div>
-			<div class="row" style="font-size:12px;">
-				<div class="col-2">HARI</div>
+			<div class="row" style="font-size: 12px; margin-bottom: 5px;">
+				<div class="col-2 fw-bold">HARI</div>
 				<div class="col-4">: ${hariFormatted}</div>
-				<div class="col-1">ACARA</div>
+				<div class="col-1 fw-bold">ACARA</div>
 				<div class="col-5">: .......................................................</div>
 			</div>
-			<div class="row" style="font-size:12px;">
-				<div class="col-2">TANGGAL</div>
+			<div class="row" style="font-size: 12px; margin-bottom: 20px;">
+				<div class="col-2 fw-bold">TANGGAL</div>
 				<div class="col-4">: ${formatTanggalIndo(filterDate)}</div>
-				<div class="col-1">JUMLAH</div>
+				<div class="col-1 fw-bold">JUMLAH</div>
 				<div class="col-5">: ${sortedRapatList.length}</div>
 			</div>
-			<div class="row pt-3">
+			<div class="row pt-3" style="margin-bottom: 30px;">
 				<div class="col-12">
-					<table class="table table-bordered border-dark" style="font-size:12px;">
+					<table class="table table-bordered border-dark" style="font-size: 12px; width: 100%; border-collapse: collapse;">
 						<thead>
 							<tr>
-								<th class="text-center" style="width:10%">NO</th>
-								<th class="text-center" style="width:30%">NAMA</th>
-								<th class="text-center" style="width:30%">NRP/INSTANSI/JABATAN</th>
-								<th class="text-center" colspan="2" style="width:30%">HADIR</th>
+								<th class="text-center fw-bold" style="width: 10%; border: 1px solid #000000; padding: 8px; text-align: center;">NO</th>
+								<th class="text-center fw-bold" style="width: 30%; border: 1px solid #000000; padding: 8px; text-align: center;">NAMA</th>
+								<th class="text-center fw-bold" style="width: 30%; border: 1px solid #000000; padding: 8px; text-align: center;">NRP/INSTANSI/JABATAN</th>
+								<th class="text-center fw-bold" colspan="2" style="width: 30%; border: 1px solid #000000; padding: 8px; text-align: center;">HADIR</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -127,24 +289,28 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 								.map(
 									(rapat, index) => `
 								<tr>
-									<td>${index + 1}</td>
-									<td>${rapat.nama}</td>
-									<td>${rapat.instansi.toUpperCase()}</td>
-									<td style="width:15%">
+									<td style="border: 1px solid #000000; padding: 8px; text-align: left;">${
+										index + 1
+									}</td>
+									<td style="border: 1px solid #000000; padding: 8px; text-align: left;">${
+										rapat.nama
+									}</td>
+									<td style="border: 1px solid #000000; padding: 8px; text-align: left;">${rapat.instansi.toUpperCase()}</td>
+									<td style="width: 15%; border: 1px solid #000000; padding: 8px; text-align: left;">
 										${
 											(index + 1) % 2 !== 0 && rapat.tanda_tangan
 												? `${index + 1}<img src="${
 														rapat.tanda_tangan
-												  }" width="80" height="50"/>`
+												  }" style="width: 80px; height: 50px; display: inline-block; vertical-align: middle;" />`
 												: ""
 										}
 									</td>
-									<td style="width:15%">
+									<td style="width: 15%; border: 1px solid #000000; padding: 8px; text-align: left;">
 										${
 											(index + 1) % 2 === 0 && rapat.tanda_tangan
 												? `${index + 1}<img src="${
 														rapat.tanda_tangan
-												  }" width="80" height="50"/>`
+												  }" style="width: 80px; height: 50px; display: inline-block; vertical-align: middle;" />`
 												: ""
 										}
 									</td>
@@ -157,22 +323,25 @@ export const generatePrintHTML = (filterDate, rapatList) => {
 				</div>
 			</div>
 			<div class="row pt-3">
-				<div class="col-6 text-center" style="font-size:12px;">
+				<div class="col-6 text-center" style="font-size: 12px;">
 					Mengetahui<br>
 					KEPALA RUMAH SAKIT BHAYANGKARA TK.III NGANJUK<br><br><br><br><br>
 					drg. WAHYU ARI PRANANTO, M.A.R.S.<br>
-					<span style="text-decoration:overline">AJUN KOMISARIS BESAR POLISI NRP 76030927</span>
+					<span style="text-decoration: overline;">AJUN KOMISARIS BESAR POLISI NRP 76030927</span>
 				</div>
-				<div class="col-6 text-center" style="font-size:12px;">
+				<div class="col-6 text-center" style="font-size: 12px;">
 					PEMIMPIN ACARA<br>
 					<br><br><br><br><br>
 					........................................<br>
 				</div>
 			</div>
 			<script>
-				window.print();
+				window.onload = function() {
+					setTimeout(function() {
+						window.print();
+					}, 500);
+				};
 			</script>
-			<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
 		</body>
 		</html>
 	`;
