@@ -15,6 +15,7 @@ import {
 	CreditCard,
 	RefreshCcw,
 	Users,
+	DollarSign,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -95,6 +96,11 @@ export default function DashboardLayout({ children }) {
 						label: "Pegawai Organik",
 						href: "/dashboard/pegawai-organik",
 					},
+					// {
+					// 	icon: DollarSign,
+					// 	label: "Penggajian",
+					// 	href: "/dashboard/penggajian",
+					// },
 					{ icon: FileText, label: "Laporan", href: "/dashboard/reports" },
 			  ]
 			: [

@@ -165,11 +165,75 @@ export async function POST(request, { params }) {
 			]
 		);
 
+		// Track if status was actually auto-updated
+		let statusAutoUpdated = false;
+
+		// Auto-update status to "Completed" if progress reaches 100%
+		if (progress_percentage === 100) {
+			// Get Completed status ID
+			const [completedStatusResult] = await connection.execute(
+				"SELECT status_id FROM development_statuses WHERE status_name = 'Completed'"
+			);
+
+			if (completedStatusResult.length > 0) {
+				const completedStatusId = completedStatusResult[0].status_id;
+
+				// Only update if current status is not already Completed or Closed
+				if (
+					requestData.current_status !== "Completed" &&
+					requestData.current_status !== "Closed"
+				) {
+					// Update request status to Completed
+					await connection.execute(
+						`UPDATE development_requests 
+						SET current_status_id = ?, 
+							completed_date = NOW(),
+							updated_date = NOW()
+						WHERE request_id = ?`,
+						[completedStatusId, id]
+					);
+
+					// Add status history
+					await connection.execute(
+						`INSERT INTO development_status_history 
+						(request_id, old_status, new_status, changed_by, change_date, change_reason) 
+						VALUES (?, ?, ?, ?, NOW(), ?)`,
+						[
+							id,
+							requestData.current_status_id,
+							completedStatusId,
+							currentUser.username,
+							"Progress mencapai 100% - Status otomatis diupdate menjadi Completed",
+						]
+					);
+
+					// Add note about auto-completion
+					await connection.execute(
+						`INSERT INTO development_notes 
+						(request_id, note, note_type, created_by, created_date) 
+						VALUES (?, ?, ?, ?, NOW())`,
+						[
+							id,
+							`Progress mencapai 100%. Status otomatis diupdate menjadi Completed oleh sistem.`,
+							"update",
+							currentUser.username,
+						]
+					);
+
+					// Mark that status was successfully updated
+					statusAutoUpdated = true;
+				}
+			}
+		}
+
 		await connection.end();
 
 		return NextResponse.json({
 			success: true,
-			message: "Progress updated successfully",
+			message: statusAutoUpdated
+				? "Progress updated successfully. Status automatically changed to Completed."
+				: "Progress updated successfully",
+			auto_status_update: statusAutoUpdated,
 		});
 	} catch (error) {
 		console.error("Error updating progress:", error);

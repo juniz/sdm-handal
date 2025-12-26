@@ -59,6 +59,9 @@ const ALLOWED_TABLES = [
 	"stts_kerja",
 	"rapat",
 	"user",
+	"gaji_pegawai",
+	"gaji_upload_log",
+	"gaji_history",
 ];
 
 /**
