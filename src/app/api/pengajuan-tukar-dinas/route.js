@@ -276,7 +276,7 @@ export async function POST(request) {
 				tgl_ganti: tgl_ganti,
 				shift2: shift2,
 				nik_pj: nik_pj || null,
-				kepentingan: keptingan,
+				keptingan: keptingan, // Field di database adalah 'keptingan' (dengan typo)
 				status: "Proses Pengajuan",
 			},
 		});
