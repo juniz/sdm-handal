@@ -309,20 +309,27 @@ export async function PUT(request) {
 		}
 
 		const userNik = user.username; // NIK dari JWT token
-		const { id, status, alasan_ditolak } = await request.json();
+		const { no_pengajuan, status, alasan_ditolak } = await request.json();
 
 		// Validasi input
-		if (!id || !status) {
+		if (!no_pengajuan) {
 			return NextResponse.json(
-				{ message: "ID dan status harus diisi" },
+				{ message: "Nomor pengajuan harus diisi" },
+				{ status: 400 }
+			);
+		}
+
+		if (!status) {
+			return NextResponse.json(
+				{ message: "Status harus diisi" },
 				{ status: 400 }
 			);
 		}
 
 		// Ambil data pengajuan untuk validasi nik_pj
 		const pengajuanData = await rawQuery(
-			`SELECT nik_pj FROM pengajuan_tudin WHERE id = ?`,
-			[id]
+			`SELECT nik_pj FROM pengajuan_tudin WHERE no_pengajuan = ?`,
+			[no_pengajuan]
 		);
 
 		if (pengajuanData.length === 0) {
@@ -374,7 +381,7 @@ export async function PUT(request) {
 		await update({
 			table: "pengajuan_tudin",
 			data: updateData,
-			where: { id: id },
+			where: { no_pengajuan: no_pengajuan },
 		});
 
 		return NextResponse.json({

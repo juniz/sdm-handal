@@ -251,6 +251,11 @@ const usePengajuanTukarDinas = () => {
 
 	// Update status pengajuan
 	const handleUpdateStatus = async () => {
+		if (!selectedPengajuan || !selectedPengajuan.no_pengajuan) {
+			toast.error("Data pengajuan tidak valid");
+			return;
+		}
+
 		if (!updateData.status) {
 			toast.error("Status harus dipilih");
 			return;
@@ -268,7 +273,7 @@ const usePengajuanTukarDinas = () => {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					id: selectedPengajuan.id,
+					no_pengajuan: selectedPengajuan.no_pengajuan,
 					status: updateData.status,
 					alasan_ditolak: updateData.alasan_ditolak,
 				}),
