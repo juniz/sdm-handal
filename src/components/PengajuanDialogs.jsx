@@ -310,7 +310,9 @@ const PengajuanDialogs = ({
 											Kepentingan/Alasan
 										</Label>
 										<div className="mt-1 p-3 bg-gray-50 rounded text-sm break-words">
-											{selectedPengajuan.keptingan || selectedPengajuan.kepentingan || "-"}
+											{selectedPengajuan.keptingan ||
+												selectedPengajuan.kepentingan ||
+												"-"}
 										</div>
 									</div>
 								</div>
@@ -342,7 +344,7 @@ const PengajuanDialogs = ({
 						>
 							Tutup
 						</Button>
-						{currentUserNik === selectedPengajuan?.nik_pj && selectedPengajuan && (
+						{selectedPengajuan && currentUserNik === selectedPengajuan.nik_pj && (
 							<Button
 								onClick={() => {
 									setUpdateData({
