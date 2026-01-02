@@ -76,6 +76,27 @@ export default function UploadExcelModal({ isOpen, onClose, onUpload }) {
 		}
 	};
 
+	const handleDownloadTemplate = async () => {
+		try {
+			const response = await fetch("/api/gaji/template");
+			if (!response.ok) {
+				throw new Error("Gagal download template");
+			}
+
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "Template_Gaji_Pegawai.xlsx";
+			document.body.appendChild(a);
+			a.click();
+			window.URL.revokeObjectURL(url);
+			document.body.removeChild(a);
+		} catch (err) {
+			setError(err.message || "Gagal download template Excel");
+		}
+	};
+
 	const handleClose = () => {
 		setFile(null);
 		setError(null);
@@ -139,9 +160,32 @@ export default function UploadExcelModal({ isOpen, onClose, onUpload }) {
 
 						{/* File Upload */}
 						<div className="mb-4">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								File Excel
-							</label>
+							<div className="flex justify-between items-center mb-1">
+								<label className="block text-sm font-medium text-gray-700">
+									File Excel
+								</label>
+								<button
+									type="button"
+									onClick={handleDownloadTemplate}
+									className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										className="h-4 w-4"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+										/>
+									</svg>
+									Download Template
+								</button>
+							</div>
 							<input
 								type="file"
 								accept=".xlsx,.xls"

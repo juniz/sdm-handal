@@ -1,6 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 
 export default function GajiFilter({ filters, onFilterChange }) {
 	const currentYear = new Date().getFullYear();
@@ -24,69 +33,72 @@ export default function GajiFilter({ filters, onFilterChange }) {
 		onFilterChange({ search: e.target.value });
 	};
 
-	const handleYearChange = (e) => {
-		onFilterChange({ periode_tahun: parseInt(e.target.value) });
+	const handleYearChange = (value) => {
+		onFilterChange({ periode_tahun: parseInt(value) });
 	};
 
-	const handleMonthChange = (e) => {
-		onFilterChange({ periode_bulan: parseInt(e.target.value) });
+	const handleMonthChange = (value) => {
+		onFilterChange({ periode_bulan: parseInt(value) });
 	};
 
 	return (
-		<div className="bg-white p-4 rounded-lg shadow-sm mb-4">
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-				{/* Search */}
-				<div>
-					<label className="block text-sm font-medium text-gray-700 mb-1">
-						Cari NIK/Nama
-					</label>
-					<input
-						type="text"
-						value={filters.search || ""}
-						onChange={handleSearchChange}
-						placeholder="Cari NIK atau nama..."
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-					/>
-				</div>
+		<Card className="mb-4">
+			<CardContent className="pt-6">
+				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+					{/* Search */}
+					<div className="space-y-2">
+						<Label htmlFor="search">Cari NIK/Nama</Label>
+						<Input
+							id="search"
+							type="text"
+							value={filters.search || ""}
+							onChange={handleSearchChange}
+							placeholder="Cari NIK atau nama..."
+							className="w-full"
+						/>
+					</div>
 
-				{/* Tahun */}
-				<div>
-					<label className="block text-sm font-medium text-gray-700 mb-1">
-						Tahun
-					</label>
-					<select
-						value={filters.periode_tahun || currentYear}
-						onChange={handleYearChange}
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-					>
-						{years.map((year) => (
-							<option key={year} value={year}>
-								{year}
-							</option>
-						))}
-					</select>
-				</div>
+					{/* Tahun */}
+					<div className="space-y-2">
+						<Label htmlFor="year">Tahun</Label>
+						<Select
+							value={String(filters.periode_tahun || currentYear)}
+							onValueChange={handleYearChange}
+						>
+							<SelectTrigger id="year" className="w-full">
+								<SelectValue placeholder="Pilih tahun" />
+							</SelectTrigger>
+							<SelectContent>
+								{years.map((year) => (
+									<SelectItem key={year} value={String(year)}>
+										{year}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 
-				{/* Bulan */}
-				<div>
-					<label className="block text-sm font-medium text-gray-700 mb-1">
-						Bulan
-					</label>
-					<select
-						value={filters.periode_bulan || new Date().getMonth() + 1}
-						onChange={handleMonthChange}
-						className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-					>
-						{months.map((month) => (
-							<option key={month.value} value={month.value}>
-								{month.label}
-							</option>
-						))}
-					</select>
+					{/* Bulan */}
+					<div className="space-y-2">
+						<Label htmlFor="month">Bulan</Label>
+						<Select
+							value={String(filters.periode_bulan || new Date().getMonth() + 1)}
+							onValueChange={handleMonthChange}
+						>
+							<SelectTrigger id="month" className="w-full">
+								<SelectValue placeholder="Pilih bulan" />
+							</SelectTrigger>
+							<SelectContent>
+								{months.map((month) => (
+									<SelectItem key={month.value} value={String(month.value)}>
+										{month.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 				</div>
-			</div>
-		</div>
+			</CardContent>
+		</Card>
 	);
 }
-
-

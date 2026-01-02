@@ -25,21 +25,29 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 	const [searchQuery, setSearchQuery] = React.useState("");
 
 	React.useEffect(() => {
+		let isMounted = true;
+		
 		const fetchPegawai = async () => {
 			try {
 				const response = await fetch("/api/pegawai");
 				const data = await response.json();
-				if (data.status === "success") {
+				if (isMounted && data.status === "success") {
 					setPegawai(data.data);
 				}
 			} catch (error) {
 				console.error("Error fetching pegawai:", error);
 			} finally {
-				setLoading(false);
+				if (isMounted) {
+					setLoading(false);
+				}
 			}
 		};
 
 		fetchPegawai();
+		
+		return () => {
+			isMounted = false;
+		};
 	}, []);
 
 	// Filter pegawai berdasarkan input pencarian
@@ -102,8 +110,13 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 										key={item.value}
 										value={item.value}
 										onSelect={(currentValue) => {
-											onValueChange(currentValue === value ? "" : currentValue);
-											setOpen(false);
+											try {
+												onValueChange(currentValue === value ? "" : currentValue);
+												setOpen(false);
+											} catch (error) {
+												console.error("Error selecting pegawai:", error);
+												setOpen(false);
+											}
 										}}
 										className="cursor-pointer"
 									>

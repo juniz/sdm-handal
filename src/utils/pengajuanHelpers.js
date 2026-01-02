@@ -80,7 +80,7 @@ export const validatePengajuanForm = (
 	const errors = {};
 
 	// Required fields validation
-	const requiredFields = ["shift1", "shift2", "keptingan"];
+	const requiredFields = ["shift1", "shift2", "kepentingan"];
 	for (let field of requiredFields) {
 		if (!formData[field]) {
 			errors[field] = `Field ${field.replace("_", " ")} harus diisi`;

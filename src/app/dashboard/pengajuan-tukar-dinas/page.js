@@ -116,20 +116,29 @@ export default function PengajuanTukarDinasPage() {
 				</div>
 
 				{/* Form Pengajuan Modal */}
-				<ErrorBoundary
-					componentName="PengajuanFormModal"
-					actionAttempted="Rendering form modal"
-				>
-					<PengajuanFormModal
-						open={showFormDialog}
-						onOpenChange={setShowFormDialog}
-						onSubmit={handleSubmit}
-						shiftData={shiftData}
-						submitLoading={submitLoading}
-						pegawaiLoading={pegawaiLoading}
-						userLoading={userLoading}
-					/>
-				</ErrorBoundary>
+				{showFormDialog && (
+					<ErrorBoundary
+						componentName="PengajuanFormModal"
+						actionAttempted="Rendering form modal"
+					>
+						<PengajuanFormModal
+							open={showFormDialog}
+							onOpenChange={(open) => {
+								try {
+									setShowFormDialog(open);
+								} catch (error) {
+									console.error("Error handling form dialog:", error);
+									setShowFormDialog(false);
+								}
+							}}
+							onSubmit={handleSubmit}
+							shiftData={shiftData}
+							submitLoading={submitLoading}
+							pegawaiLoading={pegawaiLoading}
+							userLoading={userLoading}
+						/>
+					</ErrorBoundary>
+				)}
 
 				{/* Filter Component */}
 				<ErrorBoundary

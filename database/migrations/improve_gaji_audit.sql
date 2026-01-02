@@ -5,33 +5,33 @@
 
 -- Step 1: Tambahkan field updated_by ke tabel gaji_pegawai
 ALTER TABLE gaji_pegawai 
-ADD COLUMN updated_by VARCHAR(20) NULL AFTER uploaded_by,
+ADD COLUMN updated_by VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL AFTER uploaded_by,
 ADD COLUMN deleted_at TIMESTAMP NULL AFTER updated_at,
-ADD COLUMN deleted_by VARCHAR(20) NULL AFTER deleted_at;
+ADD COLUMN deleted_by VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NULL AFTER deleted_at;
 
 -- Step 2: Tambahkan foreign key untuk updated_by dan deleted_by
 ALTER TABLE gaji_pegawai
-ADD CONSTRAINT fk_gaji_updated_by FOREIGN KEY (updated_by) REFERENCES pegawai(nik) ON DELETE RESTRICT,
-ADD CONSTRAINT fk_gaji_deleted_by FOREIGN KEY (deleted_by) REFERENCES pegawai(nik) ON DELETE RESTRICT;
+ADD CONSTRAINT fk_gaji_updated_by FOREIGN KEY (updated_by) REFERENCES pegawai(nik) ON DELETE RESTRICT ON UPDATE CASCADE,
+ADD CONSTRAINT fk_gaji_deleted_by FOREIGN KEY (deleted_by) REFERENCES pegawai(nik) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- Step 3: Buat tabel history untuk track perubahan gaji
 CREATE TABLE IF NOT EXISTS gaji_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     gaji_id INT NOT NULL,
-    nik VARCHAR(20) NOT NULL,
+    nik VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
     periode_tahun INT NOT NULL,
     periode_bulan INT NOT NULL,
     jenis ENUM('Gaji', 'Jasa') NOT NULL,
     gaji_lama DECIMAL(15,2) NULL,
     gaji_baru DECIMAL(15,2) NOT NULL,
-    changed_by VARCHAR(20) NOT NULL,
+    changed_by VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
     change_type ENUM('CREATE', 'UPDATE', 'DELETE') NOT NULL,
     change_reason TEXT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY (gaji_id) REFERENCES gaji_pegawai(id) ON DELETE CASCADE,
-    FOREIGN KEY (nik) REFERENCES pegawai(nik) ON DELETE CASCADE,
-    FOREIGN KEY (changed_by) REFERENCES pegawai(nik) ON DELETE RESTRICT,
+    FOREIGN KEY (nik) REFERENCES pegawai(nik) ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (changed_by) REFERENCES pegawai(nik) ON DELETE RESTRICT ON UPDATE CASCADE,
     
     INDEX idx_gaji_id (gaji_id),
     INDEX idx_nik (nik),

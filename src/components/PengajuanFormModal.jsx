@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,7 +41,7 @@ const PengajuanFormModal = ({
 		tgl_ganti: "",
 		shift2: "",
 		nik_pj: "",
-		keptingan: "",
+		kepentingan: "",
 	});
 
 	// Date state for DatePicker components
@@ -58,14 +58,14 @@ const PengajuanFormModal = ({
 		tgl_ganti: "",
 		shift2: "",
 		nik_pj: "",
-		keptingan: "",
+		kepentingan: "",
 	});
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
 		// Validasi form
-		const requiredFields = ["shift1", "shift2", "keptingan"];
+		const requiredFields = ["shift1", "shift2", "kepentingan"];
 		for (let field of requiredFields) {
 			if (!formData[field]) {
 				toast.error(`Field ${field.replace("_", " ")} harus diisi`);
@@ -112,7 +112,7 @@ const PengajuanFormModal = ({
 			tgl_ganti: "",
 			shift2: "",
 			nik_pj: "",
-			keptingan: "",
+			kepentingan: "",
 		});
 		setDateState({
 			tgl_dinas: undefined,
@@ -125,17 +125,41 @@ const PengajuanFormModal = ({
 			tgl_ganti: "",
 			shift2: "",
 			nik_pj: "",
-			keptingan: "",
+			kepentingan: "",
 		});
 	};
 
 	const handleClose = () => {
 		onOpenChange(false);
-		resetForm();
+	};
+
+	// Handle onOpenChange dengan error handling
+	const handleOpenChange = (newOpen) => {
+		try {
+			onOpenChange(newOpen);
+			if (!newOpen) {
+				// Delay reset untuk memastikan animasi selesai
+				setTimeout(() => {
+					resetForm();
+				}, 200);
+			}
+		} catch (error) {
+			console.error("Error handling dialog open change:", error);
+			// Fallback: force close
+			if (typeof onOpenChange === "function") {
+				setTimeout(() => {
+					try {
+						onOpenChange(false);
+					} catch (e) {
+						console.error("Error forcing dialog close:", e);
+					}
+				}, 100);
+			}
+		}
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col mx-2 sm:mx-auto">
 				<DialogHeader className="flex-shrink-0 pb-4 md:pb-6 border-b">
 					<div className="flex items-center gap-3 md:gap-4">
@@ -360,20 +384,20 @@ const PengajuanFormModal = ({
 							<div className="bg-purple-50 rounded-xl p-4 md:p-6">
 								<div className="space-y-2">
 									<Label
-										htmlFor="keptingan"
+										htmlFor="kepentingan"
 										className="text-sm font-medium text-gray-700"
 									>
 										Jelaskan alasan tukar dinas
 									</Label>
 									<Textarea
-										id="keptingan"
-										value={formData.keptingan}
-										onChange={(e) =>
-											setFormData({ ...formData, keptingan: e.target.value })
-										}
-										rows={4}
-										className="resize-none min-h-[100px] focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-										error={formErrors.keptingan}
+									id="kepentingan"
+									value={formData.kepentingan}
+									onChange={(e) =>
+										setFormData({ ...formData, kepentingan: e.target.value })
+									}
+									rows={4}
+									className="resize-none min-h-[100px] focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+									error={formErrors.kepentingan}
 									/>
 								</div>
 							</div>

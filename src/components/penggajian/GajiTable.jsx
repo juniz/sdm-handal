@@ -1,8 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Download, Pen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import TandaTanganModal from "./TandaTanganModal";
 
-export default function GajiTable({ gajiList, loading, onDownloadSlip, isKEU }) {
+export default function GajiTable({
+	gajiList,
+	loading,
+	onDownloadSlip,
+	onTandaTangan,
+	isKEU,
+	validasiMap,
+}) {
+	const [selectedGaji, setSelectedGaji] = useState(null);
+	const [isTandaTanganModalOpen, setIsTandaTanganModalOpen] = useState(false);
 	const formatRupiah = (angka) => {
 		return new Intl.NumberFormat("id-ID", {
 			style: "currency",
@@ -113,19 +125,54 @@ export default function GajiTable({ gajiList, loading, onDownloadSlip, isKEU }) 
 									{formatRupiah(gaji.gaji)}
 								</td>
 								<td className="px-4 py-3 whitespace-nowrap text-center text-sm">
-									<button
-										onClick={() => onDownloadSlip(gaji.id)}
-										className="text-blue-600 hover:text-blue-900 font-medium"
-									>
-										Download Slip
-									</button>
+									<div className="flex items-center justify-center gap-2">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => onDownloadSlip(gaji.id)}
+											className="h-8"
+										>
+											<Download className="h-3 w-3 mr-1" />
+											Slip
+										</Button>
+										{!isKEU && (
+											<Button
+												variant={validasiMap?.[gaji.id] ? "default" : "outline"}
+												size="sm"
+												onClick={() => {
+													setSelectedGaji(gaji);
+													setIsTandaTanganModalOpen(true);
+												}}
+												className="h-8"
+												disabled={!!validasiMap?.[gaji.id]}
+											>
+												<Pen className="h-3 w-3 mr-1" />
+												{validasiMap?.[gaji.id]
+													? "Sudah Ditandatangani"
+													: "Tanda Tangan"}
+											</Button>
+										)}
+									</div>
 								</td>
 							</tr>
 						))}
 					</tbody>
 				</table>
 			</div>
+
+			{/* Tanda Tangan Modal */}
+			{selectedGaji && (
+				<TandaTanganModal
+					open={isTandaTanganModalOpen}
+					onOpenChange={setIsTandaTanganModalOpen}
+					gajiData={selectedGaji}
+					onSubmit={async (data) => {
+						await onTandaTangan(data);
+						setIsTandaTanganModalOpen(false);
+						setSelectedGaji(null);
+					}}
+				/>
+			)}
 		</div>
 	);
 }
-

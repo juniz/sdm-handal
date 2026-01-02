@@ -310,9 +310,7 @@ const PengajuanDialogs = ({
 											Kepentingan/Alasan
 										</Label>
 										<div className="mt-1 p-3 bg-gray-50 rounded text-sm break-words">
-											{selectedPengajuan.keptingan ||
-												selectedPengajuan.kepentingan ||
-												"-"}
+											{selectedPengajuan.kepentingan || "-"}
 										</div>
 									</div>
 								</div>

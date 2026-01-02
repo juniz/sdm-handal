@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `pengajuan_tudin` (
   `tgl_ganti` date NOT NULL COMMENT 'Tanggal dinas pengganti',
   `shift2` enum('Pagi','Siang','Malam') NOT NULL COMMENT 'Shift pengganti',
   `nik_pj` varchar(20) DEFAULT NULL COMMENT 'NIK penanggung jawab (opsional)',
-  `keptingan` varchar(100) NOT NULL COMMENT 'Kepentingan/alasan tukar dinas',
+  `kepentingan` varchar(100) NOT NULL COMMENT 'Kepentingan/alasan tukar dinas',
   `status` enum('Proses Pengajuan','Disetujui','Ditolak') NOT NULL DEFAULT 'Proses Pengajuan',
   `alasan_ditolak` text DEFAULT NULL COMMENT 'Alasan penolakan jika ditolak',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -51,7 +51,7 @@ SELECT
     pt.shift2,
     pt.nik_pj,
     p3.nama as nama_pj,
-    pt.keptingan,
+    pt.kepentingan,
     pt.status,
     pt.alasan_ditolak,
     pt.created_at,
@@ -92,7 +92,7 @@ GROUP BY d.dep_id, d.nama
 ORDER BY total_pengajuan DESC;
 
 -- Insert data sample (opsional, untuk testing)
--- INSERT INTO pengajuan_tudin (no_pengajuan, tanggal, nik, tgl_dinas, shift1, nik_ganti, tgl_ganti, shift2, nik_pj, keptingan, status) VALUES
+-- INSERT INTO pengajuan_tudin (no_pengajuan, tanggal, nik, tgl_dinas, shift1, nik_ganti, tgl_ganti, shift2, nik_pj, kepentingan, status) VALUES
 -- ('TD-2024-01-0001', '2024-01-15', '12345', '2024-01-20', 'Pagi', '67890', '2024-01-22', 'Siang', '11111', 'Keperluan keluarga', 'Proses Pengajuan'),
 -- ('TD-2024-01-0002', '2024-01-16', '67890', '2024-01-25', 'Malam', '12345', '2024-01-27', 'Pagi', NULL, 'Keperluan pribadi', 'Disetujui');
 
@@ -123,7 +123,7 @@ BEGIN
         p2.nama as nama_pengganti,
         pt.tgl_ganti,
         pt.shift2,
-        pt.keptingan,
+        pt.kepentingan,
         pt.status,
         pt.alasan_ditolak,
         pt.created_at

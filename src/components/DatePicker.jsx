@@ -32,10 +32,23 @@ export function DatePicker({
 		onChange(date);
 		// Delay untuk memberikan feedback visual sebelum menutup
 		setTimeout(() => {
-			setOpen(false);
-			setIsSelecting(false);
+			try {
+				setOpen(false);
+				setIsSelecting(false);
+			} catch (error) {
+				console.error("Error closing date picker:", error);
+				setIsSelecting(false);
+			}
 		}, 150);
 	};
+
+	// Cleanup effect untuk mencegah error saat unmount
+	React.useEffect(() => {
+		return () => {
+			// Reset state saat unmount
+			setIsSelecting(false);
+		};
+	}, []);
 
 	return (
 		<div className="w-full">

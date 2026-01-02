@@ -74,13 +74,7 @@ export async function GET(request) {
 		const userNik = userData[0].nik;
 
 		// Cek apakah user dari IT atau HRD
-		const isITorHRD =
-			userDepartment === "IT" ||
-			userDepartment === "HRD" ||
-			userDepartmentName?.toLowerCase().includes("it") ||
-			userDepartmentName?.toLowerCase().includes("teknologi") ||
-			userDepartmentName?.toLowerCase().includes("hrd") ||
-			userDepartmentName?.toLowerCase().includes("human resource");
+		const isITorHRD = userDepartment === "IT" || userDepartment === "SPI";
 
 		let pengajuanData;
 
@@ -152,7 +146,7 @@ export async function POST(request) {
 			tgl_ganti,
 			shift2,
 			nik_pj,
-			keptingan,
+			kepentingan,
 		} = await request.json();
 
 		// Validasi input
@@ -163,7 +157,7 @@ export async function POST(request) {
 			nik_ganti,
 			tgl_ganti,
 			shift2,
-			keptingan,
+			kepentingan,
 		};
 		for (const [field, value] of Object.entries(requiredFields)) {
 			if (!value) {
@@ -276,7 +270,7 @@ export async function POST(request) {
 				tgl_ganti: tgl_ganti,
 				shift2: shift2,
 				nik_pj: nik_pj || null,
-				keptingan: keptingan, // Field di database adalah 'keptingan' (dengan typo)
+				kepentingan: kepentingan,
 				status: "Proses Pengajuan",
 			},
 		});
@@ -292,8 +286,29 @@ export async function POST(request) {
 		});
 	} catch (error) {
 		console.error("Error creating pengajuan tukar dinas:", error);
+
+		// Cek jika error karena kolom tidak ditemukan
+		if (
+			error.code === "ER_BAD_FIELD_ERROR" &&
+			error.message?.includes("kepentingan")
+		) {
+			return NextResponse.json(
+				{
+					message:
+						"Kolom 'kepentingan' tidak ditemukan di tabel pengajuan_tudin. Silakan jalankan migration script: database/migrations/rename_keptingan_to_kepentingan.sql",
+					error:
+						process.env.NODE_ENV === "development" ? error.message : undefined,
+				},
+				{ status: 500 }
+			);
+		}
+
 		return NextResponse.json(
-			{ message: "Terjadi kesalahan saat membuat pengajuan tukar dinas" },
+			{
+				message: "Terjadi kesalahan saat membuat pengajuan tukar dinas",
+				error:
+					process.env.NODE_ENV === "development" ? error.message : undefined,
+			},
 			{ status: 500 }
 		);
 	}

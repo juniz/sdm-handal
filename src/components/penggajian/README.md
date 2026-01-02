@@ -1,23 +1,28 @@
 # Modul Penggajian Pegawai
 
 ## Deskripsi
+
 Modul untuk mengelola data gaji pegawai dengan fitur upload Excel dan generate PDF slip gaji.
 
 ## Fitur Utama
 
 ### 1. Upload Excel Gaji (Hanya untuk Departemen KEU)
+
+- Download template Excel untuk memudahkan input data
 - Upload file Excel dengan format: NIK, Nama, Jenis (Gaji/Jasa), Total Gaji
 - Validasi data sebelum insert
 - Menampilkan hasil upload (success count, error count, error details)
 - Audit trail melalui tabel `gaji_upload_log`
 
 ### 2. View Gaji
+
 - User biasa: hanya bisa melihat gaji sendiri
 - User KEU: bisa melihat semua gaji
 - Filter berdasarkan periode (tahun/bulan)
 - Pencarian berdasarkan NIK atau nama
 
 ### 3. Generate Slip Gaji PDF
+
 - Download slip gaji dalam format PDF
 - Format mengikuti template RSB Nganjuk
 - User biasa: hanya bisa download slip gaji sendiri
@@ -25,14 +30,30 @@ Modul untuk mengelola data gaji pegawai dengan fitur upload Excel dan generate P
 
 ## Format Excel
 
+### Download Template Excel
+
+User dapat mendownload template Excel melalui:
+
+- Tombol "Download Template" di modal Upload Excel
+- API endpoint: `GET /api/gaji/template`
+
+Template Excel sudah berisi:
+
+- Header: NIK, Nama, Jenis, Total Gaji
+- Contoh data untuk referensi
+- Format kolom yang sudah sesuai
+
 ### Template Excel
+
 Kolom yang diperlukan:
+
 - **Kolom A**: NIK (VARCHAR 20)
 - **Kolom B**: Nama (VARCHAR 255)
 - **Kolom C**: Jenis (ENUM: "Gaji" atau "Jasa")
 - **Kolom D**: Total Gaji (DECIMAL)
 
 ### Validasi Excel
+
 - Baris pertama bisa header (akan di-skip jika berisi "NIK", "Nama", dll)
 - NIK harus ada di tabel pegawai
 - Jenis harus "Gaji" atau "Jasa" (case insensitive)
@@ -43,6 +64,7 @@ Kolom yang diperlukan:
 ## Struktur Database
 
 ### Tabel `gaji_pegawai`
+
 - `id`: Primary key
 - `nik`: NIK pegawai (FK ke pegawai.nik)
 - `periode_tahun`: Tahun periode gaji
@@ -54,6 +76,7 @@ Kolom yang diperlukan:
 - Unique constraint: (nik, periode_tahun, periode_bulan, jenis)
 
 ### Tabel `gaji_upload_log`
+
 - `id`: Primary key
 - `file_name`: Nama file Excel
 - `file_path`: Path file yang diupload
@@ -69,29 +92,36 @@ Kolom yang diperlukan:
 ## Authorization
 
 ### Departemen KEU
+
 - Upload Excel gaji
 - View semua gaji
 - Download semua slip gaji
 
 ### User Lain
+
 - View gaji sendiri
 - Download slip gaji sendiri
 
 ## Instalasi
 
 ### 1. Database
+
 Jalankan script SQL untuk membuat tabel:
+
 ```bash
 mysql -u username -p database_name < database/create_gaji_tables.sql
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install xlsx
 ```
 
 ### 3. Setup
+
 Tidak ada konfigurasi tambahan yang diperlukan. Modul siap digunakan setelah:
+
 - Database tables dibuat
 - Library xlsx terinstall
 - User login dengan departemen KEU untuk akses upload
@@ -99,21 +129,26 @@ Tidak ada konfigurasi tambahan yang diperlukan. Modul siap digunakan setelah:
 ## Penggunaan
 
 ### Upload Excel Gaji
+
 1. Login sebagai user departemen KEU
 2. Buka halaman Penggajian
 3. Klik tombol "Upload Excel"
-4. Pilih periode (tahun dan bulan)
-5. Pilih file Excel
-6. Klik "Upload"
-7. Lihat hasil upload (success/error count)
+4. (Opsional) Klik "Download Template" untuk mendapatkan template Excel
+5. Isi template Excel dengan data gaji pegawai
+6. Pilih periode (tahun dan bulan)
+7. Pilih file Excel yang sudah diisi
+8. Klik "Upload"
+9. Lihat hasil upload (success/error count)
 
 ### View Gaji
+
 1. Buka halaman Penggajian
 2. Gunakan filter untuk memilih periode
 3. Gunakan search untuk mencari NIK/nama
 4. Data gaji akan ditampilkan dalam tabel
 
 ### Download Slip Gaji
+
 1. Buka halaman Penggajian
 2. Cari gaji yang ingin didownload
 3. Klik "Download Slip"
@@ -129,6 +164,8 @@ src/
 │   │       ├── route.js              # API CRUD gaji
 │   │       ├── upload/
 │   │       │   └── route.js         # API upload Excel
+│   │       ├── template/
+│   │       │   └── route.js         # API download template Excel
 │   │       └── slip/
 │   │           └── [id]/
 │   │               └── route.js     # API generate PDF slip
@@ -149,14 +186,17 @@ src/
 ## Troubleshooting
 
 ### Error: Library xlsx belum terinstall
+
 **Solusi**: Jalankan `npm install xlsx`
 
 ### Error: NIK tidak ditemukan di database
+
 **Solusi**: Pastikan NIK di Excel sudah ada di tabel pegawai
 
 ### Error: Duplikasi gaji untuk periode yang sama
+
 **Solusi**: Hapus data gaji lama untuk periode yang sama atau gunakan jenis yang berbeda
 
 ### Error: Hanya user departemen KEU yang dapat mengupload
-**Solusi**: Pastikan user login dengan departemen KEU atau nama departemen mengandung "keu" atau "keuangan"
 
+**Solusi**: Pastikan user login dengan departemen KEU atau nama departemen mengandung "keu" atau "keuangan"

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 export function useGaji() {
 	const [gajiList, setGajiList] = useState([]);
+	const [validasiMap, setValidasiMap] = useState({});
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [filters, setFilters] = useState({
@@ -37,11 +38,50 @@ export function useGaji() {
 			}
 
 			setGajiList(data.data || []);
+
+			// Fetch validasi untuk setiap gaji
+			await fetchValidasi(data.data || [], activeFilters);
 		} catch (err) {
 			setError(err.message);
 			console.error("Error fetching gaji:", err);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	// Fetch validasi gaji
+	const fetchValidasi = async (gajiListData, customFilters = null) => {
+		try {
+			if (!gajiListData || gajiListData.length === 0) {
+				setValidasiMap({});
+				return;
+			}
+
+			const activeFilters = customFilters || filters;
+			const params = new URLSearchParams();
+			if (activeFilters.periode_tahun) {
+				params.append("periode_tahun", activeFilters.periode_tahun);
+			}
+			if (activeFilters.periode_bulan) {
+				params.append("periode_bulan", activeFilters.periode_bulan);
+			}
+
+			const response = await fetch(`/api/gaji/validasi?${params.toString()}`);
+			const data = await response.json();
+
+			if (response.ok && data.data) {
+				// Buat map dari gaji_id ke validasi
+				const map = {};
+				data.data.forEach((validasi) => {
+					map[validasi.gaji_id] = validasi;
+				});
+				setValidasiMap(map);
+			} else {
+				setValidasiMap({});
+			}
+		} catch (err) {
+			console.error("Error fetching validasi:", err);
+			setValidasiMap({});
 		}
 	};
 
@@ -85,30 +125,49 @@ export function useGaji() {
 		}
 	};
 
-	// Download slip gaji
+	// Buka halaman slip gaji HTML
 	const downloadSlipGaji = async (gajiId) => {
 		try {
-			const response = await fetch(`/api/gaji/slip/${gajiId}`);
+			// Buka halaman slip gaji di tab baru
+			const url = `/dashboard/penggajian/slip/${gajiId}`;
+			window.open(url, "_blank");
+		} catch (err) {
+			setError(err.message || "Gagal membuka slip gaji");
+			console.error("Error opening slip gaji:", err);
+			throw err;
+		}
+	};
+
+	// Tanda tangan validasi gaji
+	const tandaTanganGaji = async (data) => {
+		setLoading(true);
+		setError(null);
+
+		try {
+			const response = await fetch("/api/gaji/validasi", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify(data),
+			});
+
+			const result = await response.json();
+
 			if (!response.ok) {
-				throw new Error("Gagal generate slip gaji");
+				throw new Error(result.message || "Gagal menyimpan tanda tangan");
 			}
 
-			// Buka di window baru untuk print
-			const blob = await response.blob();
-			const url = window.URL.createObjectURL(blob);
-			const printWindow = window.open(url, "_blank");
+			// Refresh data setelah tanda tangan
+			await fetchGaji();
 
-			if (printWindow) {
-				printWindow.onload = () => {
-					setTimeout(() => {
-						printWindow.print();
-					}, 500);
-				};
-			}
+			return result;
 		} catch (err) {
 			setError(err.message);
-			console.error("Error downloading slip gaji:", err);
+			console.error("Error signing gaji:", err);
 			throw err;
+		} finally {
+			setLoading(false);
 		}
 	};
 
@@ -133,12 +192,14 @@ export function useGaji() {
 
 	return {
 		gajiList,
+		validasiMap,
 		loading,
 		error,
 		filters,
 		fetchGaji,
 		uploadExcel,
 		downloadSlipGaji,
+		tandaTanganGaji,
 		updateFilters,
 		resetFilters,
 	};
