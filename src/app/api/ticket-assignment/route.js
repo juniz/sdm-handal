@@ -474,7 +474,6 @@ export async function PUT(request) {
 				table: "assignments_ticket",
 				data: {
 					released_date: moment().format("YYYY-MM-DD HH:mm:ss"),
-					released_by: user.username,
 				},
 				where: { assignment_id: existingAssignment.assignment_id },
 			});
