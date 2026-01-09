@@ -230,29 +230,29 @@ export async function POST(request) {
 			);
 		}
 
-		const departemenId = pegawaiDept[0].departemen;
+		// const departemenId = pegawaiDept[0].departemen;
 
 		// Validasi shift1 dan shift2 tersedia di departemen
-		const validShifts = await rawQuery(
-			`SELECT DISTINCT shift FROM jam_jaga WHERE dep_id = ?`,
-			[departemenId]
-		);
+		// const validShifts = await rawQuery(
+		// 	`SELECT DISTINCT shift FROM jam_jaga WHERE dep_id = ?`,
+		// 	[departemenId]
+		// );
 
-		const availableShifts = validShifts.map((s) => s.shift);
+		// const availableShifts = validShifts.map((s) => s.shift);
 
-		if (!availableShifts.includes(shift1)) {
-			return NextResponse.json(
-				{ message: `Shift ${shift1} tidak tersedia untuk departemen Anda` },
-				{ status: 400 }
-			);
-		}
+		// if (!availableShifts.includes(shift1)) {
+		// 	return NextResponse.json(
+		// 		{ message: `Shift ${shift1} tidak tersedia untuk departemen Anda` },
+		// 		{ status: 400 }
+		// 	);
+		// }
 
-		if (!availableShifts.includes(shift2)) {
-			return NextResponse.json(
-				{ message: `Shift ${shift2} tidak tersedia untuk departemen Anda` },
-				{ status: 400 }
-			);
-		}
+		// if (!availableShifts.includes(shift2)) {
+		// 	return NextResponse.json(
+		// 		{ message: `Shift ${shift2} tidak tersedia untuk departemen Anda` },
+		// 		{ status: 400 }
+		// 	);
+		// }
 
 		// Generate nomor pengajuan
 		const noPengajuan = await generateNoPengajuan();
