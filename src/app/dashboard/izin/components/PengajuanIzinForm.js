@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PegawaiCombobox } from "@/components/PegawaiCombobox";
-import { Send } from "lucide-react";
+import { Send, Info } from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment";
 
@@ -39,7 +39,7 @@ export default function PengajuanIzinForm() {
 		tanggal_awal: "",
 		tanggal_akhir: "",
 		nik_pj: "",
-		urgensi: "Perjalanan Dinas",
+		urgensi: "none",
 		kepentingan: "",
 		status: "Proses Pengajuan",
 	});
@@ -50,32 +50,6 @@ export default function PengajuanIzinForm() {
 	});
 
 	const [errors, setErrors] = useState({});
-
-	const validateDates = () => {
-		const newErrors = {};
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-
-		if (!date.tanggal_awal) {
-			toast.error("Tanggal awal wajib diisi");
-			newErrors.tanggal_awal = "Tanggal awal wajib diisi";
-		} else if (date.tanggal_awal < today) {
-			toast.error("Tanggal awal tidak boleh kurang dari hari ini");
-			newErrors.tanggal_awal = "Tanggal awal tidak boleh kurang dari hari ini";
-		}
-
-		if (!date.tanggal_akhir) {
-			toast.error("Tanggal akhir wajib diisi");
-			newErrors.tanggal_akhir = "Tanggal akhir wajib diisi";
-		} else if (date.tanggal_akhir < date.tanggal_awal) {
-			toast.error("Tanggal akhir tidak boleh kurang dari tanggal awal");
-			newErrors.tanggal_akhir =
-				"Tanggal akhir tidak boleh kurang dari tanggal awal";
-		}
-
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
 
 	const handleDateChange = (value, field) => {
 		setDate((prev) => ({ ...prev, [field]: value }));
@@ -89,6 +63,7 @@ export default function PengajuanIzinForm() {
 	const handleChange = (e) => {
 		const { name, value } = e.target;
 		setForm({ ...form, [name]: value });
+		setErrors((prev) => ({ ...prev, [name]: "" }));
 	};
 
 	const handlePegawaiChange = (value) => {
@@ -96,9 +71,42 @@ export default function PengajuanIzinForm() {
 		setErrors((prev) => ({ ...prev, nik_pj: "" }));
 	};
 
-	const validateForm = () => {
-		const newErrors = { ...errors };
+	const handleUrgensiChange = (value) => {
+		setForm({ ...form, urgensi: value });
+		setErrors((prev) => ({ ...prev, urgensi: "" }));
+	};
 
+	const validateForm = () => {
+		const newErrors = {};
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		// Validasi tanggal awal
+		if (!date.tanggal_awal) {
+			newErrors.tanggal_awal = "Tanggal awal wajib diisi";
+		} else if (date.tanggal_awal < today) {
+			newErrors.tanggal_awal = "Tanggal awal tidak boleh kurang dari hari ini";
+		}
+
+		// Validasi tanggal akhir
+		if (!date.tanggal_akhir) {
+			newErrors.tanggal_akhir = "Tanggal akhir wajib diisi";
+		} else if (date.tanggal_akhir < date.tanggal_awal) {
+			newErrors.tanggal_akhir =
+				"Tanggal akhir tidak boleh kurang dari tanggal awal";
+		}
+
+		// Validasi urgensi
+		if (!form.urgensi || form.urgensi === "none") {
+			newErrors.urgensi = "Urgensi wajib dipilih";
+		}
+
+		// Validasi kepentingan
+		if (!form.kepentingan || form.kepentingan.trim() === "") {
+			newErrors.kepentingan = "Kepentingan wajib diisi";
+		}
+
+		// Validasi penanggung jawab
 		if (!form.nik_pj) {
 			newErrors.nik_pj = "Penanggung jawab wajib dipilih";
 		}
@@ -109,59 +117,53 @@ export default function PengajuanIzinForm() {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		// if (validateDates() && validateForm()) {
-		try {
-			setIsSubmitting(true);
+		if (validateForm()) {
+			try {
+				setIsSubmitting(true);
 
-			const response = await fetch("/api/izin", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					tanggal_awal: form.tanggal_awal,
-					tanggal_akhir: form.tanggal_akhir,
-					urgensi: form.urgensi,
-					kepentingan: form.kepentingan,
-					nik_pj: form.nik_pj,
-				}),
-			});
-
-			const data = await response.json();
-
-			if (data.status === "success") {
-				toast.success("Pengajuan izin berhasil disimpan");
-				// Reset form
-				setForm({
-					tanggal_awal: "",
-					tanggal_akhir: "",
-					nik_pj: "",
-					urgensi: "Perjalanan Dinas",
-					kepentingan: "",
-					status: "Proses Pengajuan",
+				const response = await fetch("/api/izin", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						tanggal_awal: form.tanggal_awal,
+						tanggal_akhir: form.tanggal_akhir,
+						urgensi: form.urgensi === "none" ? "" : form.urgensi,
+						kepentingan: form.kepentingan,
+						nik_pj: form.nik_pj,
+					}),
 				});
-				setDate({
-					tanggal_awal: undefined,
-					tanggal_akhir: undefined,
-				});
-			} else {
-				throw new Error(data.message || "Terjadi kesalahan");
+
+				const data = await response.json();
+
+				if (data.status === "success") {
+					toast.success("Pengajuan izin berhasil disimpan");
+					// Reset form
+					setForm({
+						tanggal_awal: "",
+						tanggal_akhir: "",
+						nik_pj: "",
+						urgensi: "none",
+						kepentingan: "",
+						status: "Proses Pengajuan",
+					});
+					setDate({
+						tanggal_awal: undefined,
+						tanggal_akhir: undefined,
+					});
+				} else {
+					throw new Error(data.message || "Terjadi kesalahan");
+				}
+			} catch (error) {
+				console.error("Error submitting form:", error);
+				toast.error(error.message || "Gagal menyimpan pengajuan izin");
+			} finally {
+				setIsSubmitting(false);
 			}
-		} catch (error) {
-			console.error("Error submitting form:", error);
-			toast.error(error.message || "Gagal menyimpan pengajuan izin");
-		} finally {
-			setIsSubmitting(false);
+		} else {
+			toast.error("Mohon lengkapi semua field yang wajib diisi");
 		}
-		// } else {
-		// 	toast.error(
-		// 		"Form tidak boleh kosong " +
-		// 			Object.keys(errors).map(
-		// 				(key, index) =>
-		// 					errors[key] + (index < Object.keys(errors).length - 1 ? ", " : "")
-		// 			)
-		// 	);
-		// }
 	};
 
 	return (
@@ -205,22 +207,44 @@ export default function PengajuanIzinForm() {
 						<span className="text-red-500">*</span>
 						Urgensi
 					</label>
-					<Select
-						value={form.urgensi}
-						onValueChange={(value) => setForm({ ...form, urgensi: value })}
-					>
-						<SelectTrigger className="w-full">
+					<Select value={form.urgensi} onValueChange={handleUrgensiChange}>
+						<SelectTrigger
+							className={`w-full ${
+								errors.urgensi
+									? "border-red-500 focus:border-red-500 focus:ring-red-500"
+									: ""
+							}`}
+						>
 							<SelectValue placeholder="Pilih urgensi" />
 						</SelectTrigger>
 						<SelectContent>
 							<SelectGroup>
-								<SelectItem value="Perjalanan Dinas">
-									Perjalanan Dinas
+								<SelectItem value="none">Pilih Urgensi</SelectItem>
+								<SelectItem value="Dinas Dalam Kota">
+									Dinas Dalam Kota
 								</SelectItem>
+								<SelectItem value="Dinas Luar Kota">Dinas Luar Kota</SelectItem>
 								<SelectItem value="Lain-lain">Lain-lain</SelectItem>
 							</SelectGroup>
 						</SelectContent>
 					</Select>
+					{errors.urgensi && (
+						<p className="text-sm text-red-500 mt-1">{errors.urgensi}</p>
+					)}
+					{/* Info untuk Dinas Dalam Kota */}
+					{form.urgensi === "Dinas Dalam Kota" && (
+						<motion.div
+							initial={{ opacity: 0, y: -10 }}
+							animate={{ opacity: 1, y: 0 }}
+							className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2"
+						>
+							<Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+							<p className="text-sm text-blue-800">
+								<strong>Informasi:</strong> Dinas dalam kota yang waktunya lebih
+								dari 8 jam tidak wajib presensi.
+							</p>
+						</motion.div>
+					)}
 				</motion.div>
 
 				<motion.div variants={fadeIn} className="space-y-2 md:col-span-2">
@@ -234,7 +258,15 @@ export default function PengajuanIzinForm() {
 						onChange={handleChange}
 						required
 						placeholder="Jelaskan kepentingan izin..."
+						className={
+							errors.kepentingan
+								? "border-red-500 focus:border-red-500 focus:ring-red-500"
+								: ""
+						}
 					/>
+					{errors.kepentingan && (
+						<p className="text-sm text-red-500 mt-1">{errors.kepentingan}</p>
+					)}
 				</motion.div>
 
 				<motion.div variants={fadeIn} className="space-y-2">
