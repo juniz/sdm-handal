@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,10 @@ const PengajuanFormModal = ({
 	pegawaiLoading = false,
 	userLoading = false,
 }) => {
+	// Track mounting state untuk mencegah DOM errors
+	const isMountedRef = useRef(true);
+	const isClosingRef = useRef(false);
+	
 	// Form state
 	const [formData, setFormData] = useState({
 		tgl_dinas: "",
@@ -60,6 +64,14 @@ const PengajuanFormModal = ({
 		nik_pj: "",
 		kepentingan: "",
 	});
+	
+	// Track mounting lifecycle
+	useEffect(() => {
+		isMountedRef.current = true;
+		return () => {
+			isMountedRef.current = false;
+		};
+	}, []);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -104,7 +116,9 @@ const PengajuanFormModal = ({
 		}
 	};
 
-	const resetForm = () => {
+	const resetForm = useCallback(() => {
+		if (!isMountedRef.current) return;
+		
 		setFormData({
 			tgl_dinas: "",
 			shift1: "",
@@ -127,36 +141,55 @@ const PengajuanFormModal = ({
 			nik_pj: "",
 			kepentingan: "",
 		});
-	};
+	}, []);
 
-	const handleClose = () => {
-		onOpenChange(false);
-	};
+	const handleClose = useCallback(() => {
+		if (isClosingRef.current) return;
+		isClosingRef.current = true;
+		
+		// Gunakan requestAnimationFrame untuk mencegah race condition
+		requestAnimationFrame(() => {
+			if (isMountedRef.current) {
+				onOpenChange(false);
+			}
+			// Reset closing flag setelah animasi selesai
+			setTimeout(() => {
+				isClosingRef.current = false;
+			}, 300);
+		});
+	}, [onOpenChange]);
 
-	// Handle onOpenChange dengan error handling
-	const handleOpenChange = (newOpen) => {
+	// Handle onOpenChange dengan error handling yang lebih robust
+	const handleOpenChange = useCallback((newOpen) => {
+		// Cegah multiple closing calls
+		if (!newOpen && isClosingRef.current) return;
+		
 		try {
-			onOpenChange(newOpen);
 			if (!newOpen) {
-				// Delay reset untuk memastikan animasi selesai
-				setTimeout(() => {
-					resetForm();
-				}, 200);
+				isClosingRef.current = true;
+				
+				// Delay untuk memastikan nested popovers sudah tertutup
+				requestAnimationFrame(() => {
+					if (isMountedRef.current) {
+						onOpenChange(newOpen);
+					}
+					
+					// Reset form setelah dialog tertutup
+					setTimeout(() => {
+						if (isMountedRef.current) {
+							resetForm();
+						}
+						isClosingRef.current = false;
+					}, 300);
+				});
+			} else {
+				onOpenChange(newOpen);
 			}
 		} catch (error) {
 			console.error("Error handling dialog open change:", error);
-			// Fallback: force close
-			if (typeof onOpenChange === "function") {
-				setTimeout(() => {
-					try {
-						onOpenChange(false);
-					} catch (e) {
-						console.error("Error forcing dialog close:", e);
-					}
-				}, 100);
-			}
+			isClosingRef.current = false;
 		}
-	};
+	}, [onOpenChange, resetForm]);
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>

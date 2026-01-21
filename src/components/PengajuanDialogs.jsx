@@ -1,4 +1,5 @@
 "use client";
+import { useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +51,79 @@ const PengajuanDialogs = ({
 	setPengajuanToDelete,
 	onDeleteConfirm,
 }) => {
+	const isMountedRef = useRef(true);
+	const isClosingRef = useRef({
+		update: false,
+		detail: false,
+		delete: false,
+	});
+
+	useEffect(() => {
+		isMountedRef.current = true;
+		return () => {
+			isMountedRef.current = false;
+		};
+	}, []);
+
+	// Safe dialog close handlers untuk mencegah removeChild error
+	const handleUpdateDialogChange = useCallback((open) => {
+		if (!isMountedRef.current) return;
+		if (!open && isClosingRef.current.update) return;
+		
+		if (!open) {
+			isClosingRef.current.update = true;
+			requestAnimationFrame(() => {
+				if (isMountedRef.current) {
+					setShowUpdateDialog(false);
+				}
+				setTimeout(() => {
+					isClosingRef.current.update = false;
+				}, 200);
+			});
+		} else {
+			setShowUpdateDialog(true);
+		}
+	}, [setShowUpdateDialog]);
+
+	const handleDetailDialogChange = useCallback((open) => {
+		if (!isMountedRef.current) return;
+		if (!open && isClosingRef.current.detail) return;
+		
+		if (!open) {
+			isClosingRef.current.detail = true;
+			requestAnimationFrame(() => {
+				if (isMountedRef.current) {
+					setShowDetailDialog(false);
+				}
+				setTimeout(() => {
+					isClosingRef.current.detail = false;
+				}, 200);
+			});
+		} else {
+			setShowDetailDialog(true);
+		}
+	}, [setShowDetailDialog]);
+
+	const handleDeleteDialogChange = useCallback((open) => {
+		if (!isMountedRef.current) return;
+		if (!open && isClosingRef.current.delete) return;
+		
+		if (!open) {
+			isClosingRef.current.delete = true;
+			requestAnimationFrame(() => {
+				if (isMountedRef.current) {
+					setShowDeleteDialog(false);
+					setPengajuanToDelete(null);
+				}
+				setTimeout(() => {
+					isClosingRef.current.delete = false;
+				}, 200);
+			});
+		} else {
+			setShowDeleteDialog(true);
+		}
+	}, [setShowDeleteDialog, setPengajuanToDelete]);
+
 	const getStatusBadge = (status) => {
 		const statusConfig = {
 			"Proses Pengajuan": {
@@ -105,7 +179,7 @@ const PengajuanDialogs = ({
 	return (
 		<>
 			{/* Dialog Update Status */}
-			<Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+			<Dialog open={showUpdateDialog} onOpenChange={handleUpdateDialogChange}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Update Status Pengajuan</DialogTitle>
@@ -162,7 +236,7 @@ const PengajuanDialogs = ({
 					<DialogFooter>
 						<Button
 							variant="outline"
-							onClick={() => setShowUpdateDialog(false)}
+							onClick={() => handleUpdateDialogChange(false)}
 						>
 							Batal
 						</Button>
@@ -172,7 +246,7 @@ const PengajuanDialogs = ({
 			</Dialog>
 
 			{/* Dialog Detail Pengajuan */}
-			<Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+			<Dialog open={showDetailDialog} onOpenChange={handleDetailDialogChange}>
 				<DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
 					<DialogHeader className="flex-shrink-0">
 						<DialogTitle>Detail Pengajuan Tukar Dinas</DialogTitle>
@@ -338,7 +412,7 @@ const PengajuanDialogs = ({
 					<DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
 						<Button
 							variant="outline"
-							onClick={() => setShowDetailDialog(false)}
+							onClick={() => handleDetailDialogChange(false)}
 						>
 							Tutup
 						</Button>
@@ -349,8 +423,13 @@ const PengajuanDialogs = ({
 										status: selectedPengajuan.status,
 										alasan_ditolak: selectedPengajuan.alasan_ditolak || "",
 									});
-									setShowDetailDialog(false);
-									setShowUpdateDialog(true);
+									handleDetailDialogChange(false);
+									// Delay membuka dialog update untuk menghindari race condition
+									setTimeout(() => {
+										if (isMountedRef.current) {
+											setShowUpdateDialog(true);
+										}
+									}, 250);
 								}}
 							>
 								<Edit className="w-4 h-4 mr-1" />
@@ -362,7 +441,7 @@ const PengajuanDialogs = ({
 			</Dialog>
 
 			{/* Dialog Konfirmasi Hapus */}
-			<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+			<Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogChange}>
 				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<div className="flex items-center gap-3">
@@ -431,10 +510,7 @@ const PengajuanDialogs = ({
 					<DialogFooter className="gap-2">
 						<Button
 							variant="outline"
-							onClick={() => {
-								setShowDeleteDialog(false);
-								setPengajuanToDelete(null);
-							}}
+							onClick={() => handleDeleteDialogChange(false)}
 							className="flex-1 sm:flex-none"
 						>
 							Batal

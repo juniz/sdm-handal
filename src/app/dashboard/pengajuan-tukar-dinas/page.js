@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, RefreshCcw, Clock } from "lucide-react";
@@ -19,6 +20,8 @@ moment.locale("id");
 moment.tz.setDefault("Asia/Jakarta");
 
 export default function PengajuanTukarDinasPage() {
+	const [isMounted, setIsMounted] = useState(false);
+
 	const {
 		// Data
 		pengajuanData,
@@ -73,6 +76,34 @@ export default function PengajuanTukarDinasPage() {
 		handleDelete,
 	} = usePengajuanTukarDinas();
 
+	// Track mounted state untuk mencegah DOM manipulation errors pada mobile
+	useEffect(() => {
+		setIsMounted(true);
+		return () => {
+			setIsMounted(false);
+		};
+	}, []);
+
+	// Safe dialog handler untuk mencegah removeChild error
+	const handleFormDialogChange = useCallback(
+		(open) => {
+			if (!isMounted) return;
+
+			// Gunakan requestAnimationFrame untuk menunda state update
+			// Ini membantu mencegah race condition saat closing dialog
+			if (!open) {
+				requestAnimationFrame(() => {
+					if (isMounted) {
+						setShowFormDialog(open);
+					}
+				});
+			} else {
+				setShowFormDialog(open);
+			}
+		},
+		[isMounted, setShowFormDialog]
+	);
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center min-h-screen">
@@ -115,30 +146,22 @@ export default function PengajuanTukarDinasPage() {
 					)}
 				</div>
 
-				{/* Form Pengajuan Modal */}
-				{showFormDialog && (
-					<ErrorBoundary
-						componentName="PengajuanFormModal"
-						actionAttempted="Rendering form modal"
-					>
-						<PengajuanFormModal
-							open={showFormDialog}
-							onOpenChange={(open) => {
-								try {
-									setShowFormDialog(open);
-								} catch (error) {
-									console.error("Error handling form dialog:", error);
-									setShowFormDialog(false);
-								}
-							}}
-							onSubmit={handleSubmit}
-							shiftData={shiftData}
-							submitLoading={submitLoading}
-							pegawaiLoading={pegawaiLoading}
-							userLoading={userLoading}
-						/>
-					</ErrorBoundary>
-				)}
+				{/* Form Pengajuan Modal - Selalu render, kontrol via open prop
+				    Ini mencegah error removeChild karena tidak ada unmounting */}
+				<ErrorBoundary
+					componentName="PengajuanFormModal"
+					actionAttempted="Rendering form modal"
+				>
+					<PengajuanFormModal
+						open={showFormDialog}
+						onOpenChange={handleFormDialogChange}
+						onSubmit={handleSubmit}
+						shiftData={shiftData}
+						submitLoading={submitLoading}
+						pegawaiLoading={pegawaiLoading}
+						userLoading={userLoading}
+					/>
+				</ErrorBoundary>
 
 				{/* Filter Component */}
 				<ErrorBoundary
