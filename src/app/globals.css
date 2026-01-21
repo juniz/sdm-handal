@@ -76,6 +76,12 @@
 	--sidebar-accent-foreground: oklch(0.216 0.006 56.043);
 	--sidebar-border: oklch(0.923 0.003 48.717);
 	--sidebar-ring: oklch(0.709 0.01 56.259);
+
+	/* PWA Safe Area Variables */
+	--sat: env(safe-area-inset-top);
+	--sab: env(safe-area-inset-bottom);
+	--sal: env(safe-area-inset-left);
+	--sar: env(safe-area-inset-right);
 }
 
 .dark {
@@ -118,6 +124,24 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		/* PWA Safe Area Padding and Behaviors */
+		padding-top: var(--sat);
+		padding-bottom: var(--sab);
+		padding-left: var(--sal);
+		padding-right: var(--sar);
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		user-select: none;
+		overscroll-behavior-y: none;
+	}
+	
+	@supports(padding: max(0px)) {
+		body {
+			padding-top: max(var(--sat), 16px);
+			padding-bottom: max(var(--sab), 16px);
+			padding-left: max(var(--sal), 16px);
+			padding-right: max(var(--sar), 16px);
+		}
 	}
 }
 

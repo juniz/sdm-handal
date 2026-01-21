@@ -20,7 +20,7 @@ import {
 	ChevronRight,
 	Trash2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { DatePicker } from "@/components/DatePicker";
@@ -54,6 +54,29 @@ const staggerContainer = {
 			staggerChildren: 0.1,
 		},
 	},
+};
+
+const formatDateSafe = (dateString, formatStr = "dd MMM yyyy") => {
+	if (!dateString) return "-";
+	try {
+		let date = typeof dateString === "string" ? parseISO(dateString) : new Date(dateString);
+		
+		// Handle SQL timestamp format (YYYY-MM-DD HH:mm:ss) which isn't strict ISO
+		if (!isValid(date) && typeof dateString === "string" && dateString.includes(" ")) {
+			date = parseISO(dateString.replace(" ", "T"));
+		}
+
+		if (!isValid(date)) {
+			// Fallback to new Date() if parseISO fails
+			date = new Date(dateString);
+		}
+
+		if (!isValid(date)) return "-";
+		return format(date, formatStr, { locale: id });
+	} catch (error) {
+		console.error("Date formatting error:", error);
+		return "-";
+	}
 };
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
@@ -188,9 +211,7 @@ const IzinCard = ({ item, onDelete }) => {
 					<div className="flex flex-col items-start text-left">
 						<div className="font-medium">{item.no_pengajuan}</div>
 						<div className="text-sm text-gray-500">
-							{format(new Date(item.tanggal), "dd MMM yyyy", {
-								locale: id,
-							})}
+							{formatDateSafe(item.tanggal)}
 						</div>
 					</div>
 				</AccordionTrigger>
@@ -201,13 +222,9 @@ const IzinCard = ({ item, onDelete }) => {
 							<div className="flex items-center mt-1">
 								<Clock className="w-4 h-4 mr-1 text-blue-600" />
 								<div className="text-sm">
-									{format(new Date(item.tanggal_awal), "dd MMM yyyy", {
-										locale: id,
-									})}{" "}
+									{formatDateSafe(item.tanggal_awal)}{" "}
 									-{" "}
-									{format(new Date(item.tanggal_akhir), "dd MMM yyyy", {
-										locale: id,
-									})}
+									{formatDateSafe(item.tanggal_akhir)}
 								</div>
 							</div>
 							<Badge variant="outline" className="mt-1">
@@ -514,20 +531,14 @@ export default function DaftarIzin() {
 										{item.no_pengajuan}
 									</TableCell>
 									<TableCell>
-										{format(new Date(item.tanggal), "dd MMM yyyy", {
-											locale: id,
-										})}
+										{formatDateSafe(item.tanggal)}
 									</TableCell>
 									<TableCell>
 										<div className="flex items-center">
 											<Clock className="w-4 h-4 mr-1 text-blue-600" />
-											{format(new Date(item.tanggal_awal), "dd MMM yyyy", {
-												locale: id,
-											})}{" "}
+											{formatDateSafe(item.tanggal_awal)}{" "}
 											-{" "}
-											{format(new Date(item.tanggal_akhir), "dd MMM yyyy", {
-												locale: id,
-											})}
+											{formatDateSafe(item.tanggal_akhir)}
 											<Badge variant="outline" className="ml-2">
 												{item.jumlah} hari
 											</Badge>

@@ -54,34 +54,6 @@ export default function RootLayout({ children }) {
 					content={process.env.NEXT_PUBLIC_APP_THEME_COLOR || "#2563eb"}
 				/>
 				<meta name="msapplication-tap-highlight" content="no" />
-				<style>{`
-					:root {
-						--sat: env(safe-area-inset-top);
-						--sab: env(safe-area-inset-bottom);
-						--sal: env(safe-area-inset-left);
-						--sar: env(safe-area-inset-right);
-					}
-					
-					body {
-						padding-top: var(--sat);
-						padding-bottom: var(--sab);
-						padding-left: var(--sal);
-						padding-right: var(--sar);
-						-webkit-touch-callout: none;
-						-webkit-user-select: none;
-						user-select: none;
-						overscroll-behavior-y: none;
-					}
-
-					@supports(padding: max(0px)) {
-						body {
-							padding-top: max(var(--sat), 16px);
-							padding-bottom: max(var(--sab), 16px);
-							padding-left: max(var(--sal), 16px);
-							padding-right: max(var(--sar), 16px);
-						}
-					}
-				`}</style>
 			</head>
 			<body className={`${inter.className} min-h-screen bg-gray-50`}>
 				<PWAHandler />
