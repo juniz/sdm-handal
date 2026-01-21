@@ -64,6 +64,9 @@ const ALLOWED_TABLES = [
 	"gaji_history",
 	"gaji_validasi",
 	"gaji_validasi_history",
+	"presentase_kategori",
+	"presentase_unit",
+	"presentase_pegawai",
 ];
 
 /**

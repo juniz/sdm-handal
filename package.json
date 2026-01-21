@@ -37,6 +37,7 @@
 		"test-attendance-query": "node scripts/test-attendance-query.js"
 	},
 	"dependencies": {
+		"@hookform/resolvers": "^5.2.2",
 		"@radix-ui/react-accordion": "^1.2.10",
 		"@radix-ui/react-alert-dialog": "^1.1.13",
 		"@radix-ui/react-dialog": "^1.1.13",
@@ -51,6 +52,7 @@
 		"@react-pdf-viewer/page-navigation": "^3.12.0",
 		"@react-pdf-viewer/toolbar": "^3.12.0",
 		"@react-pdf-viewer/zoom": "^3.12.0",
+		"@tanstack/react-table": "^8.21.3",
 		"bcrypt": "^5.1.1",
 		"cardinal": "^2.1.1",
 		"chart.js": "^4.4.9",
@@ -80,6 +82,7 @@
 		"react-chartjs-2": "^5.3.0",
 		"react-day-picker": "^8.10.1",
 		"react-dom": "^19.2.3",
+		"react-hook-form": "^7.71.1",
 		"react-leaflet": "^5.0.0",
 		"react-server-dom-webpack": "^19.2.3",
 		"react-signature-canvas": "^1.1.0-alpha.2",
@@ -87,7 +90,8 @@
 		"react-webcam": "^7.2.0",
 		"sonner": "^2.0.3",
 		"tailwind-merge": "^3.2.0",
-		"xlsx": "^0.18.5"
+		"xlsx": "^0.18.5",
+		"zod": "^4.3.5"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3",

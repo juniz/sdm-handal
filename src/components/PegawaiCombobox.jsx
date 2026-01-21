@@ -23,21 +23,23 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 	const [pegawai, setPegawai] = React.useState([]);
 	const [loading, setLoading] = React.useState(true);
 	const [searchQuery, setSearchQuery] = React.useState("");
+	const isMountedRef = React.useRef(true);
+	const isClosingRef = React.useRef(false);
 
 	React.useEffect(() => {
-		let isMounted = true;
+		isMountedRef.current = true;
 		
 		const fetchPegawai = async () => {
 			try {
 				const response = await fetch("/api/pegawai");
 				const data = await response.json();
-				if (isMounted && data.status === "success") {
+				if (isMountedRef.current && data.status === "success") {
 					setPegawai(data.data);
 				}
 			} catch (error) {
 				console.error("Error fetching pegawai:", error);
 			} finally {
-				if (isMounted) {
+				if (isMountedRef.current) {
 					setLoading(false);
 				}
 			}
@@ -46,8 +48,30 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 		fetchPegawai();
 		
 		return () => {
-			isMounted = false;
+			isMountedRef.current = false;
+			// Pastikan popover tertutup sebelum unmount
+			setOpen(false);
 		};
+	}, []);
+	
+	// Safe popover state handler
+	const handleOpenChange = React.useCallback((newOpen) => {
+		if (!isMountedRef.current) return;
+		if (!newOpen && isClosingRef.current) return;
+		
+		if (!newOpen) {
+			isClosingRef.current = true;
+			requestAnimationFrame(() => {
+				if (isMountedRef.current) {
+					setOpen(false);
+				}
+				setTimeout(() => {
+					isClosingRef.current = false;
+				}, 200);
+			});
+		} else {
+			setOpen(true);
+		}
 	}, []);
 
 	// Filter pegawai berdasarkan input pencarian
@@ -64,7 +88,7 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 
 	return (
 		<div className="w-full">
-			<Popover open={open} onOpenChange={setOpen}>
+			<Popover open={open} onOpenChange={handleOpenChange} modal={false}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="outline"
@@ -106,20 +130,23 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 							</CommandEmpty>
 							<CommandGroup>
 								{filteredPegawai.map((item) => (
-									<CommandItem
-										key={item.value}
-										value={item.value}
-										onSelect={(currentValue) => {
-											try {
-												onValueChange(currentValue === value ? "" : currentValue);
-												setOpen(false);
-											} catch (error) {
-												console.error("Error selecting pegawai:", error);
-												setOpen(false);
-											}
-										}}
-										className="cursor-pointer"
-									>
+								<CommandItem
+									key={item.value}
+									value={item.value}
+									onSelect={(currentValue) => {
+										if (!isMountedRef.current || isClosingRef.current) return;
+										
+										try {
+											onValueChange(currentValue === value ? "" : currentValue);
+											// Gunakan handleOpenChange untuk closing yang aman
+											handleOpenChange(false);
+										} catch (error) {
+											console.error("Error selecting pegawai:", error);
+											handleOpenChange(false);
+										}
+									}}
+									className="cursor-pointer"
+								>
 										<Check
 											className={cn(
 												"mr-2 h-4 w-4",

@@ -26,33 +26,62 @@ export function DatePicker({
 }) {
 	const [open, setOpen] = React.useState(false);
 	const [isSelecting, setIsSelecting] = React.useState(false);
+	const isMountedRef = React.useRef(true);
+	const isClosingRef = React.useRef(false);
 
-	const handleSelect = (date) => {
+	const handleSelect = React.useCallback((date) => {
+		if (!isMountedRef.current || isClosingRef.current) return;
+		
 		setIsSelecting(true);
 		onChange(date);
-		// Delay untuk memberikan feedback visual sebelum menutup
-		setTimeout(() => {
-			try {
+		
+		// Gunakan requestAnimationFrame untuk timing yang lebih baik
+		isClosingRef.current = true;
+		requestAnimationFrame(() => {
+			if (isMountedRef.current) {
 				setOpen(false);
 				setIsSelecting(false);
-			} catch (error) {
-				console.error("Error closing date picker:", error);
-				setIsSelecting(false);
 			}
-		}, 150);
-	};
+			// Reset flag setelah animasi selesai
+			setTimeout(() => {
+				isClosingRef.current = false;
+			}, 200);
+		});
+	}, [onChange]);
+
+	// Safe popover state handler
+	const handleOpenChange = React.useCallback((newOpen) => {
+		if (!isMountedRef.current) return;
+		if (!newOpen && isClosingRef.current) return;
+		
+		if (!newOpen) {
+			isClosingRef.current = true;
+			requestAnimationFrame(() => {
+				if (isMountedRef.current) {
+					setOpen(false);
+				}
+				setTimeout(() => {
+					isClosingRef.current = false;
+				}, 200);
+			});
+		} else {
+			setOpen(true);
+		}
+	}, []);
 
 	// Cleanup effect untuk mencegah error saat unmount
 	React.useEffect(() => {
+		isMountedRef.current = true;
 		return () => {
-			// Reset state saat unmount
-			setIsSelecting(false);
+			isMountedRef.current = false;
+			// Pastikan popover tertutup sebelum unmount
+			setOpen(false);
 		};
 	}, []);
 
 	return (
 		<div className="w-full">
-			<Popover open={open} onOpenChange={setOpen}>
+			<Popover open={open} onOpenChange={handleOpenChange} modal={false}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="outline"
