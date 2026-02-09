@@ -53,8 +53,16 @@ function SelectContent({
   position = "popper",
   ...props
 }) {
+  // Ref untuk container element yang mencegah removeChild error
+  const containerRef = React.useRef(null);
+  
+  React.useEffect(() => {
+    // Set container ke body setelah mount
+    containerRef.current = document.body;
+  }, []);
+
   return (
-    (<SelectPrimitive.Portal>
+    (<SelectPrimitive.Portal container={containerRef.current}>
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(

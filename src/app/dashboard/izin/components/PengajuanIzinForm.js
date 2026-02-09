@@ -172,7 +172,8 @@ export default function PengajuanIzinForm() {
 				variants={staggerContainer}
 				className="grid grid-cols-1 md:grid-cols-2 gap-6"
 			>
-				<motion.div variants={fadeIn} className="space-y-2">
+				{/* Menggunakan div biasa untuk DatePicker */}
+				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
 						<span className="text-red-500">*</span>
 						Tanggal Awal
@@ -184,9 +185,10 @@ export default function PengajuanIzinForm() {
 						error={errors.tanggal_awal}
 						// minDate={new Date()}
 					/>
-				</motion.div>
+				</div>
 
-				<motion.div variants={fadeIn} className="space-y-2">
+				{/* Menggunakan div biasa untuk DatePicker */}
+				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
 						<span className="text-red-500">*</span>
 						Tanggal Akhir
@@ -200,9 +202,10 @@ export default function PengajuanIzinForm() {
 						// 	date.tanggal_awal ? new Date(date.tanggal_awal) : new Date()
 						// }
 					/>
-				</motion.div>
+				</div>
 
-				<motion.div variants={fadeIn} className="space-y-2">
+				{/* Menggunakan div biasa bukan motion.div untuk mencegah konflik dengan Radix Select di mobile */}
+				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
 						<span className="text-red-500">*</span>
 						Urgensi
@@ -241,7 +244,7 @@ export default function PengajuanIzinForm() {
 							</p>
 						</div>
 					)}
-				</motion.div>
+				</div>
 
 				<motion.div variants={fadeIn} className="space-y-2 md:col-span-2">
 					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -265,7 +268,8 @@ export default function PengajuanIzinForm() {
 					)}
 				</motion.div>
 
-				<motion.div variants={fadeIn} className="space-y-2">
+					{/* Menggunakan div biasa bukan motion.div untuk mencegah konflik dengan Radix Popover di mobile */}
+				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
 					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
 						<span className="text-red-500">*</span>
 						Penanggung Jawab
@@ -275,7 +279,7 @@ export default function PengajuanIzinForm() {
 						onValueChange={handlePegawaiChange}
 						error={errors.nik_pj}
 					/>
-				</motion.div>
+				</div>
 			</motion.div>
 
 			<motion.div variants={fadeIn} className="pt-6 flex justify-end">
