@@ -192,7 +192,7 @@ const PengajuanFormModal = ({
 	}, [onOpenChange, resetForm]);
 
 	return (
-		<Dialog open={open} onOpenChange={handleOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
 			<DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col mx-2 sm:mx-auto">
 				<DialogHeader className="flex-shrink-0 pb-4 md:pb-6 border-b">
 					<div className="flex items-center gap-3 md:gap-4">

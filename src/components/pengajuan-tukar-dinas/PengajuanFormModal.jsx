@@ -127,33 +127,48 @@ const PengajuanFormModal = ({
 
 	const handleClose = () => {
 		onOpenChange(false);
-		// Reset form when closing
-		setFormData({
-			tgl_dinas: "",
-			shift1: "",
-			nik_ganti: "",
-			tgl_ganti: "",
-			shift2: "",
-			nik_pj: "",
-			kepentingan: "",
-		});
-		setDateState({
-			tgl_dinas: undefined,
-			tgl_ganti: undefined,
-		});
-		setFormErrors({
-			tgl_dinas: "",
-			shift1: "",
-			nik_ganti: "",
-			tgl_ganti: "",
-			shift2: "",
-			nik_pj: "",
-			kepentingan: "",
-		});
+		// Delay reset form untuk mencegah race condition pada mobile
+		// yang bisa menyebabkan removeChild error
+		setTimeout(() => {
+			setFormData({
+				tgl_dinas: "",
+				shift1: "",
+				nik_ganti: "",
+				tgl_ganti: "",
+				shift2: "",
+				nik_pj: "",
+				kepentingan: "",
+			});
+			setDateState({
+				tgl_dinas: undefined,
+				tgl_ganti: undefined,
+			});
+			setFormErrors({
+				tgl_dinas: "",
+				shift1: "",
+				nik_ganti: "",
+				tgl_ganti: "",
+				shift2: "",
+				nik_pj: "",
+				kepentingan: "",
+			});
+		}, 150);
+	};
+
+	// Handler untuk menangani perubahan state dialog dengan aman
+	const handleOpenChange = (newOpen) => {
+		if (!newOpen) {
+			// Saat menutup dialog, delay untuk mencegah removeChild error
+			requestAnimationFrame(() => {
+				onOpenChange(false);
+			});
+		} else {
+			onOpenChange(true);
+		}
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
 			<DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col mx-2 sm:mx-auto">
 				<DialogHeader className="flex-shrink-0 pb-4 md:pb-6 border-b">
 					<div className="flex items-center gap-3 md:gap-4">

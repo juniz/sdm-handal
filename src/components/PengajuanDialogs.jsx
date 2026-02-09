@@ -179,7 +179,7 @@ const PengajuanDialogs = ({
 	return (
 		<>
 			{/* Dialog Update Status */}
-			<Dialog open={showUpdateDialog} onOpenChange={handleUpdateDialogChange}>
+			<Dialog open={showUpdateDialog} onOpenChange={handleUpdateDialogChange} modal={false}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Update Status Pengajuan</DialogTitle>
@@ -246,7 +246,7 @@ const PengajuanDialogs = ({
 			</Dialog>
 
 			{/* Dialog Detail Pengajuan */}
-			<Dialog open={showDetailDialog} onOpenChange={handleDetailDialogChange}>
+			<Dialog open={showDetailDialog} onOpenChange={handleDetailDialogChange} modal={false}>
 				<DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
 					<DialogHeader className="flex-shrink-0">
 						<DialogTitle>Detail Pengajuan Tukar Dinas</DialogTitle>
@@ -441,7 +441,7 @@ const PengajuanDialogs = ({
 			</Dialog>
 
 			{/* Dialog Konfirmasi Hapus */}
-			<Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogChange}>
+			<Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogChange} modal={false}>
 				<DialogContent className="max-w-md">
 					<DialogHeader>
 						<div className="flex items-center gap-3">
