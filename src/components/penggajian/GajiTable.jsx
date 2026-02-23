@@ -64,19 +64,6 @@ export default function GajiTable({
 				<table className="min-w-full divide-y divide-gray-200">
 					<thead className="bg-gray-50">
 						<tr>
-							{isKEU && (
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									NIK
-								</th>
-							)}
-							<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-								Nama
-							</th>
-							{isKEU && (
-								<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-									Departemen
-								</th>
-							)}
 							<th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
 								Periode
 							</th>
@@ -94,26 +81,13 @@ export default function GajiTable({
 					<tbody className="bg-white divide-y divide-gray-200">
 						{gajiList.map((gaji) => (
 							<tr key={gaji.id} className="hover:bg-gray-50">
-								{isKEU && (
-									<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-										{gaji.nik}
-									</td>
-								)}
-								<td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-									{gaji.nama}
-								</td>
-								{isKEU && (
-									<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-										{gaji.departemen_name || "-"}
-									</td>
-								)}
 								<td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
 									{formatBulan(gaji.periode_bulan)} {gaji.periode_tahun}
 								</td>
 								<td className="px-4 py-3 whitespace-nowrap">
 									<span
 										className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-											gaji.jenis === "GAJI"
+											gaji.jenis && gaji.jenis.toString().trim().toUpperCase() === "GAJI"
 												? "bg-blue-100 text-blue-800"
 												: "bg-green-100 text-green-800"
 										}`}

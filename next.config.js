@@ -64,6 +64,12 @@ const nextConfig = {
 	// SECURITY FIX: Headers untuk mencegah RCE dan XSS attacks
 	// Headers untuk PWA Android compatibility dan foto presensi
 	async headers() {
+		const isDev = process.env.NODE_ENV === "development";
+
+		if (isDev) {
+			return [];
+		}
+
 		const securityHeaders = [
 			{
 				key: "X-DNS-Prefetch-Control",

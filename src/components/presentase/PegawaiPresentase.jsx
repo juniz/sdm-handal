@@ -70,8 +70,6 @@ export default function PegawaiPresentase({ onDataChange }) {
 		id_unit: "",
 		id_pegawai: "",
 		presentase_dari_unit: "",
-		berlaku_mulai: moment().format("YYYY-MM-DD"),
-		berlaku_selesai: "",
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [unitOpen, setUnitOpen] = useState(false);
@@ -146,10 +144,7 @@ export default function PegawaiPresentase({ onDataChange }) {
 				id_unit: alokasi.id_unit.toString(),
 				id_pegawai: alokasi.id_pegawai.toString(),
 				presentase_dari_unit: alokasi.presentase_dari_unit.toString(),
-				berlaku_mulai: moment(alokasi.berlaku_mulai).format("YYYY-MM-DD"),
-				berlaku_selesai: alokasi.berlaku_selesai
-					? moment(alokasi.berlaku_selesai).format("YYYY-MM-DD")
-					: "",
+				presentase_dari_unit: alokasi.presentase_dari_unit.toString(),
 			});
 		} else {
 			setSelectedAlokasi(null);
@@ -157,8 +152,7 @@ export default function PegawaiPresentase({ onDataChange }) {
 				id_unit: filterUnit !== "all" ? filterUnit : "",
 				id_pegawai: "",
 				presentase_dari_unit: "",
-				berlaku_mulai: moment().format("YYYY-MM-DD"),
-				berlaku_selesai: "",
+				presentase_dari_unit: "",
 			});
 			// Reset pegawai list jika tidak ada unit yang dipilih
 			if (filterUnit === "all") {
@@ -226,8 +220,7 @@ export default function PegawaiPresentase({ onDataChange }) {
 		if (
 			!formData.id_unit ||
 			!formData.id_pegawai ||
-			!formData.presentase_dari_unit ||
-			!formData.berlaku_mulai
+			!formData.presentase_dari_unit
 		) {
 			toast.error("Semua field wajib harus diisi");
 			return;
@@ -396,7 +389,6 @@ export default function PegawaiPresentase({ onDataChange }) {
 											<TableHead>Nama Pegawai</TableHead>
 											<TableHead className="text-right">% dari Unit</TableHead>
 											<TableHead className="text-right">% dari Total</TableHead>
-											<TableHead>Berlaku</TableHead>
 											<TableHead className="text-center">Aksi</TableHead>
 										</TableRow>
 									</TableHeader>
@@ -416,20 +408,6 @@ export default function PegawaiPresentase({ onDataChange }) {
 												</TableCell>
 												<TableCell className="text-right text-gray-500">
 													{alokasi.presentase_dari_total_efektif}%
-												</TableCell>
-												<TableCell className="text-sm text-gray-500">
-													<div className="flex items-center gap-1">
-														<Calendar className="w-3 h-3" />
-														{moment(alokasi.berlaku_mulai).format("DD/MM/YYYY")}
-														{alokasi.berlaku_selesai && (
-															<>
-																<span>-</span>
-																{moment(alokasi.berlaku_selesai).format(
-																	"DD/MM/YYYY"
-																)}
-															</>
-														)}
-													</div>
 												</TableCell>
 												<TableCell>
 													<div className="flex items-center justify-center gap-2">
@@ -681,34 +659,6 @@ export default function PegawaiPresentase({ onDataChange }) {
 						</div>
 
 						<div className="grid grid-cols-2 gap-4">
-							<div className="space-y-2">
-								<Label htmlFor="berlaku_mulai">Berlaku Mulai</Label>
-								<Input
-									id="berlaku_mulai"
-									type="date"
-									value={formData.berlaku_mulai}
-									onChange={(e) =>
-										setFormData({ ...formData, berlaku_mulai: e.target.value })
-									}
-									required
-								/>
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="berlaku_selesai">
-									Berlaku Selesai (Opsional)
-								</Label>
-								<Input
-									id="berlaku_selesai"
-									type="date"
-									value={formData.berlaku_selesai}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											berlaku_selesai: e.target.value,
-										})
-									}
-								/>
-							</div>
 						</div>
 
 						<DialogFooter>

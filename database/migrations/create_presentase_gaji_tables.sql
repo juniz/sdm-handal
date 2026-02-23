@@ -40,20 +40,15 @@ CREATE TABLE IF NOT EXISTS `presentase_pegawai` (
   `id_unit` int(11) NOT NULL,
   `id_pegawai` int(11) NOT NULL,
   `presentase_dari_unit` decimal(5,2) NOT NULL CHECK (`presentase_dari_unit` between 0.00 and 100.00),
-  `berlaku_mulai` date NOT NULL,
-  `berlaku_selesai` date DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id_alokasi`),
-  UNIQUE KEY `unique_active_allocation` (`id_unit`,`id_pegawai`,`berlaku_selesai`) COMMENT 'Pastikan hanya 1 alokasi aktif per pegawai di unit',
+  UNIQUE KEY `unique_active_allocation` (`id_unit`,`id_pegawai`) COMMENT 'Pastikan hanya 1 alokasi per pegawai di unit',
   KEY `id_unit` (`id_unit`),
   KEY `id_pegawai` (`id_pegawai`),
   CONSTRAINT `presentase_pegawai_ibfk_1` FOREIGN KEY (`id_unit`) REFERENCES `presentase_unit` (`id_unit`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `presentase_pegawai_ibfk_2` FOREIGN KEY (`id_pegawai`) REFERENCES `pegawai` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- Index tambahan untuk performa query
-CREATE INDEX idx_presentase_pegawai_berlaku ON presentase_pegawai(berlaku_mulai, berlaku_selesai);
 
 -- View untuk melihat struktur lengkap persentase
 CREATE OR REPLACE VIEW `view_struktur_presentase` AS
@@ -69,8 +64,6 @@ SELECT
     p.nik,
     p.nama as nama_pegawai,
     pp.presentase_dari_unit,
-    pp.berlaku_mulai,
-    pp.berlaku_selesai,
     -- Kalkulasi persentase akhir dari total
     ROUND(
         (pk.presentase_dari_total / 100) * 
@@ -87,9 +80,9 @@ ORDER BY pk.nama_kategori, d.nama, p.nama;
 
 -- Stored procedure untuk kalkulasi distribusi gaji
 DELIMITER $$
+DELIMITER $$
 CREATE PROCEDURE IF NOT EXISTS `sp_kalkulasi_distribusi_gaji`(
-    IN p_total_jasa DECIMAL(15,2),
-    IN p_tanggal DATE
+    IN p_total_jasa DECIMAL(15,2)
 )
 BEGIN
     SELECT 
@@ -120,8 +113,6 @@ BEGIN
     JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit
     JOIN pegawai p ON pp.id_pegawai = p.id
     JOIN departemen d ON pu.dep_id = d.dep_id
-    WHERE pp.berlaku_mulai <= p_tanggal
-      AND (pp.berlaku_selesai IS NULL OR pp.berlaku_selesai >= p_tanggal)
     ORDER BY pk.nama_kategori, d.nama, p.nama;
 END$$
 DELIMITER ;

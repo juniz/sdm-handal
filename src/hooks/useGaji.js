@@ -7,7 +7,7 @@ export function useGaji() {
 	const [error, setError] = useState(null);
 	const [filters, setFilters] = useState({
 		periode_tahun: new Date().getFullYear(),
-		periode_bulan: new Date().getMonth() + 1,
+		periode_bulan: "", // Default to all months
 		search: "",
 	});
 
@@ -125,16 +125,14 @@ export function useGaji() {
 		}
 	};
 
-	// Buka halaman slip gaji HTML
+	// Buka preview slip gaji di tab yang sama
 	const downloadSlipGaji = async (gajiId) => {
 		try {
-			// Buka halaman slip gaji di tab baru
 			const url = `/dashboard/penggajian/slip/${gajiId}`;
-			window.open(url, "_blank");
+			window.location.href = url;
 		} catch (err) {
 			setError(err.message || "Gagal membuka slip gaji");
 			console.error("Error opening slip gaji:", err);
-			throw err;
 		}
 	};
 
@@ -180,7 +178,7 @@ export function useGaji() {
 	const resetFilters = () => {
 		setFilters({
 			periode_tahun: new Date().getFullYear(),
-			periode_bulan: new Date().getMonth() + 1,
+			periode_bulan: "",
 			search: "",
 		});
 	};

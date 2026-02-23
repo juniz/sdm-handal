@@ -30,9 +30,13 @@ import {
     ChevronRight, 
     Loader2, 
     Search, 
-    FileText 
+    FileText,
+    Printer,
+    Settings
 } from "lucide-react";
 import { toast } from "sonner";
+import { printGajiReport } from "@/components/penggajian/PrintGajiReport";
+import PenggajianSettingsModal from "@/components/penggajian/PenggajianSettingsModal";
 
 // Format currency
 const formatCurrency = (value) => {
@@ -66,6 +70,38 @@ export default function DataGajiPage() {
     const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
     const [year, setYear] = useState(new Date().getFullYear().toString());
     const [jenis, setJenis] = useState("all");
+    const [departemen, setDepartemen] = useState("all");
+    const [departemenList, setDepartemenList] = useState([]);
+    const [printing, setPrinting] = useState(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+    // Handle Print
+    const handlePrint = async () => {
+        // Validate filters for print - need specific month and year
+        if (month === "all") {
+            toast.error("Pilih bulan tertentu untuk mencetak");
+            return;
+        }
+        if (!year || year.length !== 4) {
+            toast.error("Masukkan tahun yang valid");
+            return;
+        }
+        
+        setPrinting(true);
+        try {
+            await printGajiReport(
+                parseInt(month),
+                parseInt(year),
+                jenis === "all" ? "Gaji" : jenis,
+                departemen === "all" ? undefined : departemen
+            );
+            toast.success("Laporan berhasil dibuka");
+        } catch (error) {
+            toast.error("Gagal mencetak", { description: error.message });
+        } finally {
+            setPrinting(false);
+        }
+    };
 
     // Columns definition
     const columns = useMemo(() => [
@@ -92,7 +128,7 @@ export default function DataGajiPage() {
             header: "Jenis",
             cell: ({ row }) => (
                 <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    row.getValue("jenis") === 'Gaji' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                    row.original.jenis && row.original.jenis.toString().trim().toUpperCase() === 'GAJI' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
                 }`}>
                     {row.getValue("jenis")}
                 </span>
@@ -125,7 +161,8 @@ export default function DataGajiPage() {
                 search: search,
                 bulan: month,
                 tahun: year,
-                jenis: jenis
+                jenis: jenis,
+                departemen: departemen
             });
 
             const response = await fetch(`/api/gaji-pegawai?${params}`);
@@ -144,6 +181,23 @@ export default function DataGajiPage() {
         }
     };
 
+    // Fetch Departments List
+    const fetchDepartments = async () => {
+        try {
+            const response = await fetch("/api/departemen");
+            const result = await response.json();
+            if (result.status === "success") {
+                setDepartemenList(result.data);
+            }
+        } catch (error) {
+            console.error("Error fetching departments:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchDepartments();
+    }, []);
+
     // Debounce search and effect
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -151,7 +205,7 @@ export default function DataGajiPage() {
         }, 500);
         return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pagination.pageIndex, pagination.pageSize, search, month, year, jenis]);
+    }, [pagination.pageIndex, pagination.pageSize, search, month, year, jenis, departemen]);
 
     const table = useReactTable({
         data,
@@ -180,7 +234,32 @@ export default function DataGajiPage() {
             <Card>
                 <CardHeader>
                     <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
-                        <CardTitle>Daftar Gaji</CardTitle>
+                        <div className="flex items-center gap-3">
+                            <CardTitle>Daftar Gaji</CardTitle>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handlePrint}
+                                disabled={printing || loading}
+                                className="gap-2"
+                            >
+                                {printing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Printer className="h-4 w-4" />
+                                )}
+                                Print
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsSettingsModalOpen(true)}
+                                className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                            >
+                                <Settings className="h-4 w-4" />
+                                Pengaturan
+                            </Button>
+                        </div>
                         <div className="flex flex-col sm:flex-row gap-4">
                             {/* Month Filter */}
                             <Select value={month} onValueChange={(val) => { setMonth(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
@@ -215,6 +294,21 @@ export default function DataGajiPage() {
                                     <SelectItem value="all">Semua</SelectItem>
                                     <SelectItem value="Gaji">Gaji</SelectItem>
                                     <SelectItem value="Jasa">Jasa</SelectItem>
+                                </SelectContent>
+                            </Select>
+
+                            {/* Departemen Filter */}
+                            <Select value={departemen} onValueChange={(val) => { setDepartemen(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
+                                <SelectTrigger className="w-[180px]">
+                                    <SelectValue placeholder="Departemen" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Departemen</SelectItem>
+                                    {departemenList.map((dep) => (
+                                        <SelectItem key={dep.dep_id} value={dep.dep_id}>
+                                            {dep.nama}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
 
@@ -315,6 +409,11 @@ export default function DataGajiPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <PenggajianSettingsModal 
+                isOpen={isSettingsModalOpen}
+                onClose={() => setIsSettingsModalOpen(false)}
+            />
         </div>
     );
 }

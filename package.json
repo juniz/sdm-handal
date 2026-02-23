@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "NODE_OPTIONS='--inspect' next dev --turbopack --experimental-https",
+		"dev": "NODE_OPTIONS='--inspect' next dev -H 0.0.0.0",
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
@@ -68,6 +68,7 @@
 		"js-cookie": "^3.0.5",
 		"jsonwebtoken": "^9.0.2",
 		"jspdf": "^3.0.1",
+		"jspdf-autotable": "^5.0.7",
 		"jwt-decode": "^4.0.0",
 		"leaflet": "^1.9.4",
 		"lucide-react": "^0.503.0",

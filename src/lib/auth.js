@@ -5,8 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export async function getUser() {
 	try {
-		const cookieStore = cookies();
-		const token = await cookieStore.get("auth_token")?.value;
+		const cookieStore = await cookies();
+		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) return null;
 

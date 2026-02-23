@@ -38,7 +38,7 @@ export default function GajiFilter({ filters, onFilterChange }) {
 	};
 
 	const handleMonthChange = (value) => {
-		onFilterChange({ periode_bulan: parseInt(value) });
+		onFilterChange({ periode_bulan: value === "all" ? "" : parseInt(value) });
 	};
 
 	return (
@@ -47,7 +47,7 @@ export default function GajiFilter({ filters, onFilterChange }) {
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					{/* Search */}
 					<div className="space-y-2">
-						<Label htmlFor="search">Cari NIK/Nama</Label>
+						<Label htmlFor="search">Cari</Label>
 						<Input
 							id="search"
 							type="text"
@@ -82,13 +82,14 @@ export default function GajiFilter({ filters, onFilterChange }) {
 					<div className="space-y-2">
 						<Label htmlFor="month">Bulan</Label>
 						<Select
-							value={String(filters.periode_bulan || new Date().getMonth() + 1)}
+							value={String(filters.periode_bulan || "all")}
 							onValueChange={handleMonthChange}
 						>
 							<SelectTrigger id="month" className="w-full">
 								<SelectValue placeholder="Pilih bulan" />
 							</SelectTrigger>
 							<SelectContent>
+								<SelectItem value="all">Semua Bulan</SelectItem>
 								{months.map((month) => (
 									<SelectItem key={month.value} value={String(month.value)}>
 										{month.label}

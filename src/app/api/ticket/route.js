@@ -245,7 +245,7 @@ export async function POST(request) {
 			return NextResponse.json(
 				{
 					status: "error",
-					error: "Semua field harus diisi",
+					error: "Semua field harus diisi ",
 				},
 				{ status: 400 }
 			);

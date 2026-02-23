@@ -14,19 +14,16 @@ CREATE TABLE IF NOT EXISTS gaji_validasi (
     jenis ENUM('Gaji', 'Jasa') NOT NULL DEFAULT 'Gaji',
     tanda_tangan TEXT NOT NULL COMMENT 'Base64 encoded signature image',
     catatan TEXT NULL COMMENT 'Catatan dari pegawai',
-    signed_by VARCHAR(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL COMMENT 'NIK pegawai yang menandatangani',
     signed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Waktu tanda tangan',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     FOREIGN KEY (gaji_id) REFERENCES gaji_pegawai(id) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (nik) REFERENCES pegawai(nik) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (signed_by) REFERENCES pegawai(nik) ON DELETE RESTRICT ON UPDATE CASCADE,
     
-    UNIQUE KEY uk_gaji_validasi (gaji_id, signed_by),
+    UNIQUE KEY uk_gaji_validasi (gaji_id),
     INDEX idx_periode (periode_tahun, periode_bulan),
     INDEX idx_nik (nik),
-    INDEX idx_signed_by (signed_by),
     INDEX idx_signed_at (signed_at)
 );
 

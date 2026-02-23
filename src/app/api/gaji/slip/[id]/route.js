@@ -45,10 +45,11 @@ export async function GET(request, { params }) {
 		// Ambil data gaji
 		const gajiData = await rawQuery(
 			`
-			SELECT gp.*, p.nik, p.nama, p.jbtn, p.departemen, d.nama as departemen_name
+			SELECT gp.*, p.nik, p.nama, p.jbtn, p.departemen, d.nama as departemen_name, gv.tanda_tangan
 			FROM gaji_pegawai gp
 			LEFT JOIN pegawai p ON gp.nik = p.nik
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
+			LEFT JOIN gaji_validasi gv ON gp.id = gv.gaji_id
 			WHERE gp.id = ?
 		`,
 			[parseInt(id)]

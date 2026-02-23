@@ -40,8 +40,6 @@ export async function POST(request) {
 				p.nik,
 				p.nama as nama_pegawai,
 				pp.presentase_dari_unit,
-				pp.berlaku_mulai,
-				pp.berlaku_selesai,
 				-- Kalkulasi nominal
 				ROUND(? * (pk.presentase_dari_total / 100), 2) as nominal_kategori,
 				ROUND(
@@ -61,11 +59,9 @@ export async function POST(request) {
 			LEFT JOIN presentase_unit pu ON pk.id_kategori = pu.id_kategori
 			LEFT JOIN departemen d ON pu.dep_id = d.dep_id
 			LEFT JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit
-				AND pp.berlaku_mulai <= ?
-				AND (pp.berlaku_selesai IS NULL OR pp.berlaku_selesai >= ?)
 			LEFT JOIN pegawai p ON pp.id_pegawai = p.id
 			ORDER BY pk.nama_kategori, d.nama, p.nama
-		`, [total_jasa, total_jasa, total_jasa, tanggalKalkulasi, tanggalKalkulasi]);
+		`, [total_jasa, total_jasa, total_jasa]);
 
 		// Kelompokkan data per kategori
 		const groupedData = {};
@@ -100,9 +96,7 @@ export async function POST(request) {
 					nik: row.nik,
 					nama: row.nama_pegawai,
 					presentase: row.presentase_dari_unit,
-					nominal: row.nominal_pegawai,
-					berlaku_mulai: row.berlaku_mulai,
-					berlaku_selesai: row.berlaku_selesai
+					nominal: row.nominal_pegawai
 				});
 				totalDistribusi += parseFloat(row.nominal_pegawai || 0);
 			}
@@ -155,8 +149,7 @@ export async function GET(request) {
 				(SELECT COALESCE(SUM(presentase_dari_total), 0) FROM presentase_kategori) as total_kategori_pct,
 				(SELECT COUNT(*) FROM presentase_kategori) as jumlah_kategori,
 				(SELECT COUNT(*) FROM presentase_unit) as jumlah_unit,
-				(SELECT COUNT(DISTINCT id_pegawai) FROM presentase_pegawai 
-					WHERE berlaku_selesai IS NULL OR berlaku_selesai >= CURDATE()) as jumlah_pegawai_aktif
+				(SELECT COUNT(DISTINCT id_pegawai) FROM presentase_pegawai) as jumlah_pegawai_aktif
 		`);
 
 		// Detail per kategori
@@ -171,7 +164,6 @@ export async function GET(request) {
 			FROM presentase_kategori pk
 			LEFT JOIN presentase_unit pu ON pk.id_kategori = pu.id_kategori
 			LEFT JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit
-				AND (pp.berlaku_selesai IS NULL OR pp.berlaku_selesai >= CURDATE())
 			GROUP BY pk.id_kategori
 			ORDER BY pk.nama_kategori
 		`);

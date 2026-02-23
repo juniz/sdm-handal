@@ -15,6 +15,8 @@ import {
 	MenuIcon,
 	RefreshCcw,
 	FileText,
+	Coins,
+	Percent,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -117,16 +119,16 @@ const QuickActions = () => {
 						<button
 							key={action.title}
 							onClick={() => router.push(action.href)}
-							className="group relative overflow-hidden rounded-lg p-0.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] h-20"
+							className="group relative overflow-hidden rounded-lg p-0.5 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] h-24"
 						>
-							<div className="relative bg-white/90 rounded-[7px] h-full flex flex-col justify-center items-center px-2 py-1">
-								<div className="flex flex-col items-center justify-center gap-1.5 h-full">
+							<div className="relative bg-white/90 rounded-[7px] h-full flex flex-col items-center px-1 py-2">
+								<div className="flex flex-col items-center gap-1.5">
 									<div
-										className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm flex items-center justify-center`}
+										className={`rounded-lg bg-gradient-to-br ${action.color} p-2.5 text-white shadow-sm flex items-center justify-center shrink-0`}
 									>
 										<action.icon className="w-4 h-4" />
 									</div>
-									<span className="font-medium text-gray-900 text-[10px] text-center leading-tight max-w-full break-words">
+									<span className="font-medium text-gray-900 text-[10px] text-center leading-tight px-1">
 										{action.title}
 									</span>
 								</div>
@@ -204,6 +206,71 @@ const AdminMenu = () => {
 	);
 };
 
+const FinanceMenu = () => {
+	const router = useRouter();
+	const financeActions = [
+		{
+			title: "Penggajian",
+			description: "Kelola data gaji pegawai",
+			icon: FileText,
+			href: "/dashboard/penggajian/data-gaji",
+			color: "from-blue-600 to-indigo-600",
+		},
+		{
+			title: "Presentase",
+			description: "Kelola presentase gaji",
+			icon: Percent,
+			href: "/dashboard/penggajian/presentase",
+			color: "from-emerald-600 to-teal-600",
+		},
+		{
+			title: "Riwayat Gaji",
+			description: "Lihat history gaji pegawai",
+			icon: Clock,
+			href: "/dashboard/penggajian",
+			color: "from-amber-600 to-orange-600",
+		},
+	];
+
+	return (
+		<Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
+			<CardHeader className="pb-2">
+				<CardTitle className="text-lg font-semibold flex items-center gap-2">
+					<Coins className="w-5 h-5 text-blue-600" />
+					Keuangan
+				</CardTitle>
+			</CardHeader>
+			<CardContent className="relative">
+				<div className="grid grid-cols-1 gap-2">
+					{financeActions.map((action) => (
+						<button
+							key={action.title}
+							onClick={() => router.push(action.href)}
+							className="group relative overflow-hidden rounded-lg p-2.5 transition-all duration-300 hover:scale-[1.01] active:scale-[0.99] bg-white/80 hover:bg-white shadow-sm hover:shadow-md"
+						>
+							<div className="flex items-center gap-3">
+								<div
+									className={`rounded-lg bg-gradient-to-br ${action.color} p-2 text-white shadow-sm flex-shrink-0`}
+								>
+									<action.icon className="w-4 h-4" />
+								</div>
+								<div className="flex-1 text-left min-w-0">
+									<span className="font-medium text-gray-900 text-sm block">
+										{action.title}
+									</span>
+									<span className="text-xs text-gray-500 line-clamp-1">
+										{action.description}
+									</span>
+								</div>
+							</div>
+						</button>
+					))}
+				</div>
+			</CardContent>
+		</Card>
+	);
+};
+
 export default function DashboardPage() {
 	const [userDepartment, setUserDepartment] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
@@ -219,14 +286,8 @@ export default function DashboardPage() {
 
 					console.log("User data:", userData); // Debug log
 
-					// Check if user is from IT department
-					const isIT =
-						userData.jbtn?.toLowerCase().includes("it") ||
-						userData.jbtn?.toLowerCase().includes("teknologi") ||
-						userData.jbtn?.toLowerCase().includes("sistem") ||
-						userData.departemen?.toLowerCase().includes("it") ||
-						userData.departemen?.toLowerCase().includes("teknologi") ||
-						userData.departemen?.toLowerCase().includes("sistem");
+					// Check if user is from IT department (Strict check per NEXT_PUBLIC_DEPARTMENT_IT)
+					const isIT = userData.departemen === process.env.NEXT_PUBLIC_DEPARTMENT_IT;
 
 					console.log("Is IT department:", isIT, "jbtn:", userData.jbtn); // Debug log
 
@@ -260,8 +321,15 @@ export default function DashboardPage() {
 						</div>
 					</div>
 				) : (
-					(userDepartment === adminType.IT && <AdminMenu />) ||
-					(userDepartment === adminType.SPI && <AdminMenu />)
+					<>
+						{userDepartment === adminType.IT && (
+							<>
+								<AdminMenu />
+								<FinanceMenu />
+							</>
+						)}
+						{userDepartment === adminType.SPI && <AdminMenu />}
+					</>
 				)}
 
 				{/* Aksi Cepat */}

@@ -21,13 +21,11 @@ export async function GET(request, { params }) {
 				p.nama,
 				p.jbtn,
 				p.departemen,
-				d.nama as departemen_name,
-				signed_by_pegawai.nama as signed_by_name
+				d.nama as departemen_name
 			FROM gaji_validasi gv
 			LEFT JOIN gaji_pegawai gp ON gv.gaji_id = gp.id
 			LEFT JOIN pegawai p ON gv.nik = p.nik
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
-			LEFT JOIN pegawai signed_by_pegawai ON gv.signed_by = signed_by_pegawai.nik
 			WHERE gv.id = ?
 		`,
 			[parseInt(id)]

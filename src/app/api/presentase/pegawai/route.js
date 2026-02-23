@@ -16,7 +16,6 @@ export async function GET(request) {
 
 		const { searchParams } = new URL(request.url);
 		const id_unit = searchParams.get("id_unit");
-		const active_only = searchParams.get("active_only") !== "false";
 
 		let whereClause = "WHERE 1=1";
 		let params = [];
@@ -24,10 +23,6 @@ export async function GET(request) {
 		if (id_unit) {
 			whereClause += " AND pp.id_unit = ?";
 			params.push(id_unit);
-		}
-
-		if (active_only) {
-			whereClause += " AND (pp.berlaku_selesai IS NULL OR pp.berlaku_selesai >= CURDATE())";
 		}
 
 		const data = await rawQuery(`
@@ -80,12 +75,12 @@ export async function POST(request) {
 			);
 		}
 
-		const { id_unit, id_pegawai, presentase_dari_unit, berlaku_mulai, berlaku_selesai } = await request.json();
+		const { id_unit, id_pegawai, presentase_dari_unit } = await request.json();
 
 		// Validasi input
-		if (!id_unit || !id_pegawai || presentase_dari_unit === undefined || !berlaku_mulai) {
+		if (!id_unit || !id_pegawai || presentase_dari_unit === undefined) {
 			return NextResponse.json(
-				{ message: "Unit, pegawai, presentase, dan tanggal mulai harus diisi" },
+				{ message: "Unit, pegawai dan presentase harus diisi" },
 				{ status: 400 }
 			);
 		}
@@ -102,7 +97,6 @@ export async function POST(request) {
 		const existing = await rawQuery(`
 			SELECT id_alokasi FROM presentase_pegawai 
 			WHERE id_unit = ? AND id_pegawai = ? 
-			AND (berlaku_selesai IS NULL OR berlaku_selesai >= CURDATE())
 		`, [id_unit, id_pegawai]);
 
 		if (existing.length > 0) {
@@ -117,7 +111,6 @@ export async function POST(request) {
 			SELECT COALESCE(SUM(presentase_dari_unit), 0) as total
 			FROM presentase_pegawai
 			WHERE id_unit = ?
-			AND (berlaku_selesai IS NULL OR berlaku_selesai >= CURDATE())
 		`, [id_unit]);
 		
 		const currentTotal = parseFloat(existingTotal[0]?.total || 0);
@@ -132,9 +125,9 @@ export async function POST(request) {
 
 		// Insert data
 		const result = await rawQuery(`
-			INSERT INTO presentase_pegawai (id_unit, id_pegawai, presentase_dari_unit, berlaku_mulai, berlaku_selesai)
-			VALUES (?, ?, ?, ?, ?)
-		`, [id_unit, id_pegawai, presentaseNum, berlaku_mulai, berlaku_selesai || null]);
+			INSERT INTO presentase_pegawai (id_unit, id_pegawai, presentase_dari_unit)
+			VALUES (?, ?, ?)
+		`, [id_unit, id_pegawai, presentaseNum]);
 
 		return NextResponse.json({
 			status: "success",
@@ -162,7 +155,7 @@ export async function PUT(request) {
 			);
 		}
 
-		const { id_alokasi, presentase_dari_unit, berlaku_mulai, berlaku_selesai } = await request.json();
+		const { id_alokasi, presentase_dari_unit } = await request.json();
 
 		if (!id_alokasi) {
 			return NextResponse.json(
@@ -196,7 +189,6 @@ export async function PUT(request) {
 			SELECT COALESCE(SUM(presentase_dari_unit), 0) as total
 			FROM presentase_pegawai
 			WHERE id_unit = ? AND id_alokasi != ?
-			AND (berlaku_selesai IS NULL OR berlaku_selesai >= CURDATE())
 		`, [currentAlokasi[0].id_unit, id_alokasi]);
 		
 		const currentTotal = parseFloat(existingTotal[0]?.total || 0);
@@ -211,9 +203,9 @@ export async function PUT(request) {
 
 		await rawQuery(`
 			UPDATE presentase_pegawai 
-			SET presentase_dari_unit = ?, berlaku_mulai = ?, berlaku_selesai = ?
+			SET presentase_dari_unit = ?
 			WHERE id_alokasi = ?
-		`, [presentaseNum, berlaku_mulai, berlaku_selesai || null, id_alokasi]);
+		`, [presentaseNum, id_alokasi]);
 
 		return NextResponse.json({
 			status: "success",

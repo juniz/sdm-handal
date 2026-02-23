@@ -38,8 +38,7 @@ export async function GET(request) {
 			FROM presentase_unit pu
 			JOIN presentase_kategori pk ON pu.id_kategori = pk.id_kategori
 			JOIN departemen d ON pu.dep_id = d.dep_id
-			LEFT JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit 
-				AND (pp.berlaku_selesai IS NULL OR pp.berlaku_selesai >= CURDATE())
+			LEFT JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit
 			${whereClause}
 			GROUP BY pu.id_unit
 			ORDER BY pk.nama_kategori, d.nama

@@ -75,7 +75,7 @@ export const generateSlipGajiHTML = (gajiData, pegawaiData) => {
 				html, body {
 					width: 210mm;
 					min-height: 297mm;
-					font-family: "Times New Roman", Times, serif;
+					font-family: "Arial Narrow", Arial, sans-serif;
 					font-size: 12pt;
 					line-height: 1.5;
 					color: #000000;
@@ -259,12 +259,30 @@ export const generateSlipGajiHTML = (gajiData, pegawaiData) => {
 							</tr>
 						</thead>
 						<tbody>
-							<tr>
+						<tr>
 								<td>Jenis</td>
 								<td>${gajiData.jenis}</td>
 							</tr>
-							<tr class="total-row">
-								<td>TOTAL GAJI</td>
+                            ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.gaji_original ? `
+                            <tr>
+                                <td>Sisa Gaji (Sebelum Potongan)</td>
+                                <td class="text-right">${formatRupiah(gajiData.gaji_original)}</td>
+                            </tr>
+                            ` : ""}
+                            ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.bpjs_kesehatan_nominal > 0 ? `
+                            <tr>
+                                <td>Potongan BPJS Kesehatan</td>
+                                <td class="text-right" style="color: #d00000;">- ${formatRupiah(gajiData.bpjs_kesehatan_nominal)}</td>
+                            </tr>
+                            ` : ""}
+                            ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.bpjs_ketenagakerjaan_nominal > 0 ? `
+                            <tr>
+                                <td>Potongan BPJS Ketenagakerjaan</td>
+                                <td class="text-right" style="color: #d00000;">- ${formatRupiah(gajiData.bpjs_ketenagakerjaan_nominal)}</td>
+                            </tr>
+                            ` : ""}
+							<tr class="total-row" style="background-color: #f0f7ff;">
+								<td>TOTAL GAJI (DITERIMA)</td>
 								<td class="text-right">${formatRupiah(gajiData.gaji)}</td>
 							</tr>
 						</tbody>
@@ -276,8 +294,12 @@ export const generateSlipGajiHTML = (gajiData, pegawaiData) => {
 					<div class="footer-section">
 						<div>Nganjuk, ${tanggalCetak}</div>
 						<div style="margin-top: 20px;">Yang Menerima</div>
-						<div class="signature-line">
-							<br>
+						<div class="signature-line" style="display: flex; flex-direction: column; align-items: center; min-height: 80px; justify-content: flex-end;">
+							${
+								gajiData.tanda_tangan
+									? `<img src="${gajiData.tanda_tangan}" alt="Tanda Tangan" style="max-height: 70px; margin-bottom: -10px;" />`
+									: '<div style="height: 60px;"></div>'
+							}
 							${pegawaiData.nama || ""}
 						</div>
 					</div>
@@ -304,362 +326,199 @@ export const generateSlipGajiHTML = (gajiData, pegawaiData) => {
 	`;
 };
 
+// Helper to get PDF Blob
+export const getSlipGajiPDFBlob = async (gajiData, pegawaiData) => {
+    const { jsPDF } = await import("jspdf");
+    
+    // We'll use the DIRECT generation logic for consistency and quality
+    // similar to PrintGajiReport.js
+    
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const formatBulanIndo = (bulan) => {
+        const bulanNama = ["", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
+        return bulanNama[bulan] || "";
+    };
+
+    const formatTanggalIndo = (tanggal) => {
+        const bulan = ["", "JANUARI", "FEBRUARI", "MARET", "APRIL", "MEI", "JUNI", "JULI", "AGUSTUS", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"];
+        const date = new Date(tanggal);
+        return `${date.getDate()} ${bulan[date.getMonth() + 1]} ${date.getFullYear()}`;
+    };
+
+    const formatRupiah = (angka) => {
+        return new Intl.NumberFormat("id-ID", {
+            style: "currency",
+            currency: "IDR",
+            minimumFractionDigits: 0,
+        }).format(angka);
+    };
+
+    let y = 20;
+
+    // Logo
+    try {
+        const logoResponse = await fetch("/logo.png");
+        if (logoResponse.ok) {
+            const logoBlob = await logoResponse.blob();
+            const logoBase64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(logoBlob);
+            });
+            pdf.addImage(logoBase64, "PNG", 20, y - 5, 20, 20);
+        }
+    } catch (e) { console.warn("Logo failed", e); }
+
+    const headerX = pageWidth / 2 + 10;
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("POLRI DAERAH JAWA TIMUR", headerX, y, { align: "center" });
+    y += 7;
+    pdf.setFontSize(12);
+    pdf.text("BIDANG KEDOKTERAN DAN KESEHATAN", headerX, y, { align: "center" });
+    y += 7;
+    pdf.setFontSize(11);
+    pdf.text("RUMAH SAKIT BHAYANGKARA TK. III NGANJUK", headerX, y, { align: "center" });
+    y += 8;
+    pdf.setLineWidth(0.5);
+    pdf.line(20, y, pageWidth - 20, y);
+    y += 15;
+
+    // Title
+    pdf.setFontSize(14);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("SLIP GAJI", pageWidth / 2, y, { align: "center" });
+    y += 10;
+    pdf.setFontSize(11);
+    pdf.text(`Periode: ${formatBulanIndo(gajiData.periode_bulan)} ${gajiData.periode_tahun}`, pageWidth / 2, y, { align: "center" });
+    y += 15;
+
+    // Info
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(11);
+    const leftMargin = 20;
+    const labelWidth = 40;
+    
+    pdf.setFont("helvetica", "bold");
+    pdf.text("NIK:", leftMargin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(pegawaiData.nik || "-", leftMargin + labelWidth, y);
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Nama:", leftMargin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(pegawaiData.nama || "-", leftMargin + labelWidth, y);
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Jabatan:", leftMargin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(pegawaiData.jbtn || "-", leftMargin + labelWidth, y);
+    y += 7;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Departemen:", leftMargin, y);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(pegawaiData.departemen_name || "-", leftMargin + labelWidth, y);
+    y += 15;
+
+    // Table
+    const col1Width = 60;
+    const col2Width = pageWidth - 40 - col1Width;
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(leftMargin, y, col1Width, 10, "F");
+    pdf.rect(leftMargin + col1Width, y, col2Width, 10, "F");
+    pdf.setDrawColor(0);
+    pdf.rect(leftMargin, y, col1Width, 10);
+    pdf.rect(leftMargin + col1Width, y, col2Width, 10);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Keterangan", leftMargin + col1Width / 2, y + 7, { align: "center" });
+    pdf.text("Jumlah", leftMargin + col1Width + col2Width / 2, y + 7, { align: "center" });
+    y += 10;
+
+    pdf.rect(leftMargin, y, col1Width, 10);
+    pdf.rect(leftMargin + col1Width, y, col2Width, 10);
+    pdf.setFont("helvetica", "normal");
+    pdf.text("Jenis", leftMargin + 3, y + 7);
+    pdf.text(gajiData.jenis || "-", leftMargin + col1Width + 3, y + 7);
+    y += 10;
+
+    if (gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI") {
+        if (gajiData.gaji_original) {
+            pdf.rect(leftMargin, y, col1Width, 10);
+            pdf.rect(leftMargin + col1Width, y, col2Width, 10);
+            pdf.text("Sisa Gaji (Awal)", leftMargin + 3, y + 7);
+            pdf.text(formatRupiah(gajiData.gaji_original), leftMargin + col1Width + col2Width - 3, y + 7, { align: "right" });
+            y += 10;
+        }
+        if (gajiData.bpjs_kesehatan_nominal > 0) {
+            pdf.rect(leftMargin, y, col1Width, 10);
+            pdf.rect(leftMargin + col1Width, y, col2Width, 10);
+            pdf.setTextColor(200, 0, 0);
+            pdf.text("Pot. BPJS Kesehatan", leftMargin + 3, y + 7);
+            pdf.text("- " + formatRupiah(gajiData.bpjs_kesehatan_nominal), leftMargin + col1Width + col2Width - 3, y + 7, { align: "right" });
+            pdf.setTextColor(0, 0, 0);
+            y += 10;
+        }
+        if (gajiData.bpjs_ketenagakerjaan_nominal > 0) {
+            pdf.rect(leftMargin, y, col1Width, 10);
+            pdf.rect(leftMargin + col1Width, y, col2Width, 10);
+            pdf.setTextColor(200, 0, 0);
+            pdf.text("Pot. BPJS TK", leftMargin + 3, y + 7);
+            pdf.text("- " + formatRupiah(gajiData.bpjs_ketenagakerjaan_nominal), leftMargin + col1Width + col2Width - 3, y + 7, { align: "right" });
+            pdf.setTextColor(0, 0, 0);
+            y += 10;
+        }
+    }
+
+    pdf.setFillColor(240, 247, 255);
+    pdf.rect(leftMargin, y, col1Width, 10, "FD");
+    pdf.rect(leftMargin + col1Width, y, col2Width, 10, "FD");
+    pdf.setFont("helvetica", "bold");
+    pdf.text("TOTAL GAJI (DITERIMA)", leftMargin + 3, y + 7);
+    pdf.text(formatRupiah(gajiData.gaji), leftMargin + col1Width + col2Width - 3, y + 7, { align: "right" });
+    y += 25;
+
+    // Footer
+    const footerY = y + 20;
+    const colWidth = (pageWidth - 40) / 2;
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Nganjuk, ${formatTanggalIndo(new Date())}`, leftMargin + colWidth / 2, footerY, { align: "center" });
+    pdf.text("Yang Menerima", leftMargin + colWidth / 2, footerY + 10, { align: "center" });
+
+    if (gajiData.tanda_tangan) {
+        try {
+            pdf.addImage(gajiData.tanda_tangan, "PNG", leftMargin + colWidth / 2 - 15, footerY + 15, 30, 30);
+        } catch (e) { console.warn("Signature failed", e); }
+    }
+
+    pdf.line(leftMargin + 10, footerY + 50, leftMargin + colWidth - 10, footerY + 50);
+    pdf.text(pegawaiData.nama || "", leftMargin + colWidth / 2, footerY + 55, { align: "center" });
+
+    pdf.text("Mengetahui", leftMargin + colWidth + colWidth / 2, footerY, { align: "center" });
+    pdf.text("KEPALA RUMAH SAKIT", leftMargin + colWidth + colWidth / 2, footerY + 10, { align: "center" });
+    pdf.line(leftMargin + colWidth + 10, footerY + 50, leftMargin + colWidth + colWidth - 10, footerY + 50);
+    pdf.setFontSize(10);
+    pdf.text("drg. WAHYU ARI PRANANTO, M.A.R.S.", leftMargin + colWidth + colWidth / 2, footerY + 55, { align: "center" });
+    pdf.setFontSize(9);
+    pdf.text("AJUN KOMISARIS BESAR POLISI NRP 76030927", leftMargin + colWidth + colWidth / 2, footerY + 60, { align: "center" });
+
+    return pdf.output('blob');
+};
+
 export const generateSlipGajiPDF = async (gajiData, pegawaiData) => {
-	let element = null;
 	try {
-		// Import libraries
-		const html2canvas = (await import("html2canvas")).default;
-		const { jsPDF } = await import("jspdf");
-
-		// Buat element HTML untuk slip gaji (gunakan versi sederhana untuk menghindari CSS parsing issues)
-		element = document.createElement("div");
-		element.id = "slip-gaji-pdf-container";
-		const htmlContent = generateSlipGajiHTMLSimple(gajiData, pegawaiData);
-		element.innerHTML = htmlContent;
-
-		// Style element untuk PDF - gunakan posisi fixed untuk memastikan terlihat di viewport
-		element.style.position = "fixed";
-		element.style.left = "0px";
-		element.style.top = "0px";
-		element.style.width = "210mm";
-		element.style.minHeight = "297mm";
-		element.style.backgroundColor = "#ffffff";
-		element.style.padding = "0";
-		element.style.margin = "0";
-		element.style.fontFamily = "Times New Roman, serif";
-		element.style.color = "#000000";
-		element.style.zIndex = "-9999";
-		element.style.overflow = "visible";
-
-		// Tambahkan ke DOM
-		document.body.appendChild(element);
-
-		// Tunggu sebentar untuk render
-		await new Promise((resolve) => setTimeout(resolve, 500));
-
-		// Capture element sebagai canvas dengan konfigurasi sederhana
-		const canvas = await html2canvas(element, {
-			scale: 2,
-			useCORS: true,
-			allowTaint: true,
-			backgroundColor: "#ffffff",
-			logging: false,
-			foreignObjectRendering: false,
-		});
-
-		// Hapus element dari DOM
-		if (element && element.parentNode) {
-			document.body.removeChild(element);
-		}
-
-		// Buat PDF
-		const imgData = canvas.toDataURL("image/png");
-		const pdf = new jsPDF("p", "mm", "a4");
-
-		// Hitung dimensi untuk A4 (210mm x 297mm)
-		const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
-		const pdfHeight = pdf.internal.pageSize.getHeight(); // 297mm
-
-		// Hitung ratio berdasarkan pixel (scale 2 berarti 2x resolution)
-		// html2canvas dengan scale 2 menghasilkan pixel yang lebih tinggi
-		// Konversi pixel ke mm: 1mm = 3.7795 pixels (pada 96 DPI)
-		const imgWidthMM = canvas.width / 2 / 3.7795; // Bagi 2 karena scale 2
-		const imgHeightMM = canvas.height / 2 / 3.7795;
-
-		// Hitung ratio untuk fit ke halaman A4
-		const widthRatio = pdfWidth / imgWidthMM;
-		const heightRatio = pdfHeight / imgHeightMM;
-		const ratio = Math.min(widthRatio, heightRatio, 1); // Max ratio 1 untuk tidak melebihi ukuran asli
-
-		// Hitung posisi untuk center
-		const finalWidth = imgWidthMM * ratio;
-		const finalHeight = imgHeightMM * ratio;
-		const imgX = (pdfWidth - finalWidth) / 2;
-		const imgY = 0;
-
-		// Tambahkan gambar ke PDF
-		pdf.addImage(imgData, "PNG", imgX, imgY, finalWidth, finalHeight);
-
-		// Save PDF
+		const blob = await getSlipGajiPDFBlob(gajiData, pegawaiData);
+		const url = URL.createObjectURL(blob);
 		const fileName = `Slip_Gaji_${pegawaiData.nik}_${gajiData.periode_bulan}_${gajiData.periode_tahun}.pdf`;
-		pdf.save(fileName);
+		
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = fileName;
+		link.click();
+		URL.revokeObjectURL(url);
 	} catch (error) {
-		console.error("Error generating PDF with html2canvas:", error);
-
-		// Cleanup element jika masih ada
-		if (element && element.parentNode) {
-			try {
-				document.body.removeChild(element);
-			} catch (e) {
-				// Ignore cleanup error
-			}
-		}
-
-		// Fallback: gunakan jsPDF langsung tanpa html2canvas
-		try {
-			await generateSlipGajiPDFDirect(gajiData, pegawaiData);
-			return;
-		} catch (fallbackError) {
-			console.error("Fallback jsPDF direct also failed:", fallbackError);
-		}
-
-		throw new Error(
-			"Gagal generate PDF. Silakan gunakan tombol Print sebagai alternatif."
-		);
+		console.error("Error generating PDF:", error);
+		alert("Gagal generate PDF.");
 	}
 };
 
-// Fungsi fallback: generate PDF langsung dengan jsPDF tanpa html2canvas
-const generateSlipGajiPDFDirect = async (gajiData, pegawaiData) => {
-	const { jsPDF } = await import("jspdf");
-
-	const pdf = new jsPDF("p", "mm", "a4");
-	const pageWidth = pdf.internal.pageSize.getWidth();
-
-	// Format helper
-	const formatBulanIndo = (bulan) => {
-		const bulanNama = [
-			"",
-			"JANUARI",
-			"FEBRUARI",
-			"MARET",
-			"APRIL",
-			"MEI",
-			"JUNI",
-			"JULI",
-			"AGUSTUS",
-			"SEPTEMBER",
-			"OKTOBER",
-			"NOVEMBER",
-			"DESEMBER",
-		];
-		return bulanNama[bulan] || "";
-	};
-
-	const formatTanggalIndo = (tanggal) => {
-		const bulan = [
-			"",
-			"JANUARI",
-			"FEBRUARI",
-			"MARET",
-			"APRIL",
-			"MEI",
-			"JUNI",
-			"JULI",
-			"AGUSTUS",
-			"SEPTEMBER",
-			"OKTOBER",
-			"NOVEMBER",
-			"DESEMBER",
-		];
-		const date = new Date(tanggal);
-		return `${date.getDate()} ${
-			bulan[date.getMonth() + 1]
-		} ${date.getFullYear()}`;
-	};
-
-	const formatRupiah = (angka) => {
-		return new Intl.NumberFormat("id-ID", {
-			style: "currency",
-			currency: "IDR",
-			minimumFractionDigits: 0,
-		}).format(angka);
-	};
-
-	let y = 20;
-
-	// Tambahkan logo (jika tersedia)
-	try {
-		// Load logo sebagai base64
-		const logoResponse = await fetch("/logo.png");
-		if (logoResponse.ok) {
-			const logoBlob = await logoResponse.blob();
-			const logoBase64 = await new Promise((resolve) => {
-				const reader = new FileReader();
-				reader.onloadend = () => resolve(reader.result);
-				reader.readAsDataURL(logoBlob);
-			});
-
-			// Tambahkan logo di kiri header
-			pdf.addImage(logoBase64, "PNG", 20, y - 5, 20, 20);
-		}
-	} catch (logoError) {
-		console.warn("Could not load logo:", logoError);
-	}
-
-	// Header (geser ke kanan untuk memberi ruang logo)
-	const headerX = pageWidth / 2 + 10;
-
-	pdf.setFontSize(14);
-	pdf.setFont("helvetica", "bold");
-	pdf.text("POLRI DAERAH JAWA TIMUR", headerX, y, { align: "center" });
-	y += 7;
-
-	pdf.setFontSize(12);
-	pdf.text("BIDANG KEDOKTERAN DAN KESEHATAN", headerX, y, { align: "center" });
-	y += 7;
-
-	pdf.setFontSize(11);
-	pdf.text("RUMAH SAKIT BHAYANGKARA TK. III NGANJUK", headerX, y, {
-		align: "center",
-	});
-	y += 8;
-
-	// Garis bawah header
-	pdf.setLineWidth(0.5);
-	pdf.line(20, y, pageWidth - 20, y);
-	y += 15;
-
-	// Title
-	pdf.setFontSize(14);
-	pdf.setFont("helvetica", "bold");
-	pdf.text("SLIP GAJI", pageWidth / 2, y, { align: "center" });
-	y += 10;
-
-	// Periode
-	pdf.setFontSize(11);
-	pdf.text(
-		`Periode: ${formatBulanIndo(gajiData.periode_bulan)} ${
-			gajiData.periode_tahun
-		}`,
-		pageWidth / 2,
-		y,
-		{ align: "center" }
-	);
-	y += 15;
-
-	// Info Pegawai
-	pdf.setFont("helvetica", "normal");
-	pdf.setFontSize(11);
-
-	const leftMargin = 20;
-	const labelWidth = 40;
-
-	pdf.setFont("helvetica", "bold");
-	pdf.text("NIK:", leftMargin, y);
-	pdf.setFont("helvetica", "normal");
-	pdf.text(pegawaiData.nik || "-", leftMargin + labelWidth, y);
-	y += 7;
-
-	pdf.setFont("helvetica", "bold");
-	pdf.text("Nama:", leftMargin, y);
-	pdf.setFont("helvetica", "normal");
-	pdf.text(pegawaiData.nama || "-", leftMargin + labelWidth, y);
-	y += 7;
-
-	pdf.setFont("helvetica", "bold");
-	pdf.text("Jabatan:", leftMargin, y);
-	pdf.setFont("helvetica", "normal");
-	pdf.text(pegawaiData.jbtn || "-", leftMargin + labelWidth, y);
-	y += 7;
-
-	pdf.setFont("helvetica", "bold");
-	pdf.text("Departemen:", leftMargin, y);
-	pdf.setFont("helvetica", "normal");
-	pdf.text(pegawaiData.departemen_name || "-", leftMargin + labelWidth, y);
-	y += 15;
-
-	// Tabel Gaji
-	const tableStartY = y;
-	const col1Width = 60;
-	const col2Width = pageWidth - 40 - col1Width;
-
-	// Header tabel
-	pdf.setFillColor(240, 240, 240);
-	pdf.rect(leftMargin, y, col1Width, 10, "F");
-	pdf.rect(leftMargin + col1Width, y, col2Width, 10, "F");
-
-	pdf.setDrawColor(0);
-	pdf.rect(leftMargin, y, col1Width, 10);
-	pdf.rect(leftMargin + col1Width, y, col2Width, 10);
-
-	pdf.setFont("helvetica", "bold");
-	pdf.text("Keterangan", leftMargin + col1Width / 2, y + 7, {
-		align: "center",
-	});
-	pdf.text("Jumlah", leftMargin + col1Width + col2Width / 2, y + 7, {
-		align: "center",
-	});
-	y += 10;
-
-	// Row 1: Jenis
-	pdf.rect(leftMargin, y, col1Width, 10);
-	pdf.rect(leftMargin + col1Width, y, col2Width, 10);
-	pdf.setFont("helvetica", "normal");
-	pdf.text("Jenis", leftMargin + 3, y + 7);
-	pdf.text(gajiData.jenis || "-", leftMargin + col1Width + 3, y + 7);
-	y += 10;
-
-	// Row 2: Total Gaji
-	pdf.rect(leftMargin, y, col1Width, 10);
-	pdf.rect(leftMargin + col1Width, y, col2Width, 10);
-	pdf.setFont("helvetica", "bold");
-	pdf.text("TOTAL GAJI", leftMargin + 3, y + 7);
-	pdf.text(
-		formatRupiah(gajiData.gaji),
-		leftMargin + col1Width + col2Width - 3,
-		y + 7,
-		{ align: "right" }
-	);
-	y += 25;
-
-	// Footer - Tanda Tangan
-	const footerY = y + 20;
-	const colWidth = (pageWidth - 40) / 2;
-
-	// Yang Menerima
-	pdf.setFont("helvetica", "normal");
-	pdf.text(
-		`Nganjuk, ${formatTanggalIndo(new Date())}`,
-		leftMargin + colWidth / 2,
-		footerY,
-		{ align: "center" }
-	);
-	pdf.text("Yang Menerima", leftMargin + colWidth / 2, footerY + 10, {
-		align: "center",
-	});
-	pdf.line(
-		leftMargin + 10,
-		footerY + 50,
-		leftMargin + colWidth - 10,
-		footerY + 50
-	);
-	pdf.text(pegawaiData.nama || "", leftMargin + colWidth / 2, footerY + 55, {
-		align: "center",
-	});
-
-	// Mengetahui
-	pdf.text("Mengetahui", leftMargin + colWidth + colWidth / 2, footerY, {
-		align: "center",
-	});
-	pdf.text(
-		"KEPALA RUMAH SAKIT",
-		leftMargin + colWidth + colWidth / 2,
-		footerY + 10,
-		{ align: "center" }
-	);
-	pdf.line(
-		leftMargin + colWidth + 10,
-		footerY + 50,
-		leftMargin + colWidth + colWidth - 10,
-		footerY + 50
-	);
-	pdf.setFontSize(10);
-	pdf.text(
-		"drg. WAHYU ARI PRANANTO, M.A.R.S.",
-		leftMargin + colWidth + colWidth / 2,
-		footerY + 55,
-		{ align: "center" }
-	);
-	pdf.setFontSize(9);
-	pdf.text(
-		"AJUN KOMISARIS BESAR POLISI NRP 76030927",
-		leftMargin + colWidth + colWidth / 2,
-		footerY + 60,
-		{ align: "center" }
-	);
-
-	// Save PDF
-	const fileName = `Slip_Gaji_${pegawaiData.nik}_${gajiData.periode_bulan}_${gajiData.periode_tahun}.pdf`;
-	pdf.save(fileName);
-};

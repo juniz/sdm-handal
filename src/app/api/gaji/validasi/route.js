@@ -24,13 +24,11 @@ export async function GET(request) {
 				p.nama,
 				p.jbtn,
 				p.departemen,
-				d.nama as departemen_name,
-				signed_by_pegawai.nama as signed_by_name
+				d.nama as departemen_name
 			FROM gaji_validasi gv
 			LEFT JOIN gaji_pegawai gp ON gv.gaji_id = gp.id
 			LEFT JOIN pegawai p ON gv.nik = p.nik
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
-			LEFT JOIN pegawai signed_by_pegawai ON gv.signed_by = signed_by_pegawai.nik
 			WHERE 1=1
 		`;
 
@@ -117,9 +115,9 @@ export async function POST(request) {
 		const existingValidasi = await rawQuery(
 			`
 			SELECT id FROM gaji_validasi 
-			WHERE gaji_id = ? AND signed_by = ?
+			WHERE gaji_id = ?
 		`,
-			[parseInt(gaji_id), user.username]
+			[parseInt(gaji_id)]
 		);
 
 		if (existingValidasi.length > 0) {
@@ -144,9 +142,8 @@ export async function POST(request) {
 					periode_bulan,
 					jenis,
 					tanda_tangan,
-					catatan,
-					signed_by
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+					catatan
+				) VALUES (?, ?, ?, ?, ?, ?, ?)
 			`,
 				[
 					parseInt(gaji_id),
@@ -156,7 +153,6 @@ export async function POST(request) {
 					gaji.jenis,
 					tanda_tangan,
 					catatan || null,
-					user.username,
 				]
 			);
 

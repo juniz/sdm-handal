@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download, Printer } from "lucide-react";
-import { generateSlipGajiPDF } from "@/components/penggajian/utils/pdfSlipGenerator";
+import { generateSlipGajiPDF, getSlipGajiPDFBlob } from "@/components/penggajian/utils/pdfSlipGenerator";
 
 // Style untuk print
 const printStyles = `
@@ -39,6 +39,7 @@ export default function SlipGajiPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [downloading, setDownloading] = useState(false);
+	const [pdfUrl, setPdfUrl] = useState(null);
 
 	useEffect(() => {
 		fetchSlipGaji();
@@ -74,6 +75,22 @@ export default function SlipGajiPage() {
 			console.error("Error fetching slip gaji:", err);
 		} finally {
 			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		if (gajiData && pegawaiData) {
+			generatePreview();
+		}
+	}, [gajiData, pegawaiData]);
+
+	const generatePreview = async () => {
+		try {
+			const blob = await getSlipGajiPDFBlob(gajiData, pegawaiData);
+			const url = URL.createObjectURL(blob);
+			setPdfUrl(url);
+		} catch (err) {
+			console.error("Error generating preview:", err);
 		}
 	};
 
@@ -141,38 +158,59 @@ export default function SlipGajiPage() {
 					<div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
 						<button
 							onClick={() => router.back()}
-							className="flex items-center text-gray-600 hover:text-gray-900"
+							className="flex items-center text-gray-600 hover:text-gray-900 pr-2"
 						>
-							<ArrowLeft className="h-5 w-5 mr-2" />
-							Kembali
+							<ArrowLeft className="h-5 w-5 mr-1 sm:mr-2" />
+							<span className="hidden sm:inline">Kembali</span>
 						</button>
-						<div className="flex items-center space-x-3">
+						<div className="flex items-center space-x-2 sm:space-x-3">
 							<button
 								onClick={handlePrint}
-								className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center"
+								className="px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center transition-colors"
+								title="Print"
 							>
-								<Printer className="h-4 w-4 mr-2" />
-								Print
+								<Printer className="h-4 w-4 sm:mr-2" />
+								<span className="hidden sm:inline">Print</span>
 							</button>
 							<button
 								onClick={handleDownloadPDF}
 								disabled={downloading}
-								className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+								className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+								title="Download PDF"
 							>
-								<Download className="h-4 w-4 mr-2" />
-								{downloading ? "Mengunduh..." : "Download PDF"}
+								<Download className="h-4 w-4 sm:mr-2" />
+								<span className="hidden sm:inline">
+									{downloading ? "Mengunduh..." : "Download PDF"}
+								</span>
+								<span className="sm:hidden text-xs">
+									{downloading ? "..." : "PDF"}
+								</span>
 							</button>
 						</div>
 					</div>
 				</div>
 
 				{/* Slip Gaji Content */}
-				<div className="max-w-4xl mx-auto p-4 print:p-0">
+				<div className="max-w-4xl mx-auto p-2 sm:p-4 print:p-0">
 					<div
-						className="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none"
+						className="bg-white shadow-lg rounded-lg overflow-hidden h-[600px] sm:h-[800px] print:shadow-none print:h-auto"
 						id="slip-gaji-content"
 					>
-						<SlipGajiHTML gajiData={gajiData} pegawaiData={pegawaiData} />
+						{pdfUrl ? (
+							<iframe 
+								src={pdfUrl} 
+								className="w-full h-full border-none print:hidden"
+								title="Slip Gaji Preview"
+							/>
+						) : (
+							<div className="flex items-center justify-center h-full">
+								<p className="text-gray-500">Menyiapkan preview...</p>
+							</div>
+						)}
+						{/* Fallback for print - original HTML component */}
+						<div className="hidden print:block">
+							<SlipGajiHTML gajiData={gajiData} pegawaiData={pegawaiData} />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -239,7 +277,7 @@ function SlipGajiHTML({ gajiData, pegawaiData }) {
 		<div 
 			className="p-8 print:p-6 bg-white" 
 			style={{ 
-				fontFamily: "Times New Roman, serif",
+				fontFamily: "Arial Narrow, Arial, sans-serif",
 				maxWidth: "210mm",
 				margin: "0 auto"
 			}}
@@ -309,8 +347,36 @@ function SlipGajiHTML({ gajiData, pegawaiData }) {
 							<td className="border border-black p-2">Jenis</td>
 							<td className="border border-black p-2">{gajiData.jenis}</td>
 						</tr>
-						<tr className="font-bold text-base">
-							<td className="border border-black p-2">TOTAL GAJI</td>
+                        {gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && (gajiData.gaji_original || gajiData.bpjs_kesehatan_nominal > 0 || gajiData.bpjs_ketenagakerjaan_nominal > 0) && (
+                            <>
+                            {gajiData.gaji_original && (
+                                <tr>
+                                    <td className="border border-black p-2">Sisa Gaji (Sebelum Potongan)</td>
+                                    <td className="border border-black p-2 text-right">
+                                        {formatRupiah(gajiData.gaji_original)}
+                                    </td>
+                                </tr>
+                            )}
+                            {gajiData.bpjs_kesehatan_nominal > 0 && (
+                                <tr>
+                                    <td className="border border-black p-2">Potongan BPJS Kesehatan</td>
+                                    <td className="border border-black p-2 text-right text-red-600">
+                                        - {formatRupiah(gajiData.bpjs_kesehatan_nominal)}
+                                    </td>
+                                </tr>
+                            )}
+                            {gajiData.bpjs_ketenagakerjaan_nominal > 0 && (
+                                <tr>
+                                    <td className="border border-black p-2">Potongan BPJS Ketenagakerjaan</td>
+                                    <td className="border border-black p-2 text-right text-red-600">
+                                        - {formatRupiah(gajiData.bpjs_ketenagakerjaan_nominal)}
+                                    </td>
+                                </tr>
+                            )}
+                            </>
+                        )}
+						<tr className="font-bold text-base bg-blue-50">
+							<td className="border border-black p-2">TOTAL GAJI (DITERIMA)</td>
 							<td className="border border-black p-2 text-right">
 								{formatRupiah(gajiData.gaji)}
 							</td>
@@ -321,12 +387,22 @@ function SlipGajiHTML({ gajiData, pegawaiData }) {
 
 			{/* Footer */}
 			<div className="mt-10 flex justify-between">
-				<div className="text-center w-[45%]">
+				<div className="text-center w-[45%] flex flex-col items-center">
 					<div>Nganjuk, {tanggalCetak}</div>
 					<div className="mt-5">Yang Menerima</div>
-					<div className="mt-16 pt-2 border-t border-black">
-						<br />
-						{pegawaiData.nama || ""}
+					<div className="mt-2 flex flex-col items-center justify-end min-h-[80px] w-full">
+						{gajiData.tanda_tangan ? (
+							<img 
+								src={gajiData.tanda_tangan} 
+								alt="Tanda Tangan" 
+								className="max-h-[70px] mb-[-10px]"
+							/>
+						) : (
+							<div className="h-[60px]"></div>
+						)}
+						<div className="w-full pt-2 border-t border-black">
+							{pegawaiData.nama || ""}
+						</div>
 					</div>
 				</div>
 				<div className="text-center w-[45%]">

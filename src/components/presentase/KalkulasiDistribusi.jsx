@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	Accordion,
 	AccordionContent,
@@ -27,7 +34,11 @@ import {
 	Building2,
 	Users,
 	DollarSign,
-	AlertCircle
+	AlertCircle,
+	Search,
+	Filter,
+	X,
+	Save
 } from "lucide-react";
 import { toast } from "sonner";
 import moment from "moment-timezone";
@@ -38,6 +49,12 @@ export default function KalkulasiDistribusi() {
 	const [totalJasaDisplay, setTotalJasaDisplay] = useState(""); // Nilai yang diformat untuk display
 	const [tanggal, setTanggal] = useState(moment().format("YYYY-MM-DD"));
 	const [result, setResult] = useState(null);
+	const [saving, setSaving] = useState(false);
+	
+	// Filter States
+	const [filterNama, setFilterNama] = useState("");
+	const [filterKategori, setFilterKategori] = useState("all");
+	const [filterDepartemen, setFilterDepartemen] = useState("all");
 
 	const formatRupiah = (angka) => {
 		return new Intl.NumberFormat("id-ID", {
@@ -112,6 +129,35 @@ export default function KalkulasiDistribusi() {
 		}
 	};
 
+	const handleSimpan = async () => {
+		if (!result || !totalJasa) return;
+
+		setSaving(true);
+		try {
+			const response = await fetch("/api/presentase/simpan", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					total_jasa: parseFloat(totalJasa),
+					tanggal
+				})
+			});
+
+			const data = await response.json();
+
+			if (response.ok) {
+				toast.success(data.message || "Data gaji berhasil disimpan");
+			} else {
+				toast.error(data.message || "Gagal menyimpan data gaji");
+			}
+		} catch (error) {
+			console.error("Error saving salary:", error);
+			toast.error("Terjadi kesalahan saat menyimpan data");
+		} finally {
+			setSaving(false);
+		}
+	};
+
 	const handleExport = () => {
 		if (!result) return;
 
@@ -141,6 +187,63 @@ export default function KalkulasiDistribusi() {
 		document.body.removeChild(link);
 	};
 
+	// Filtered Logic using useMemo
+	const filteredData = useMemo(() => {
+		if (!result || !result.data) return [];
+
+		return result.data
+			.filter(kategori => {
+				if (filterKategori !== "all" && kategori.id_kategori.toString() !== filterKategori) return false;
+				return true;
+			})
+			.map(kategori => {
+				// Filter units matches proper department
+				const filteredUnits = kategori.units
+					.filter(unit => {
+						if (filterDepartemen !== "all" && unit.nama_departemen !== filterDepartemen) return false;
+						return true;
+					})
+					.map(unit => {
+						// Filter pegawai matches name/nik
+						const filteredPegawai = unit.pegawai.filter(p => 
+							p.nama.toLowerCase().includes(filterNama.toLowerCase()) || 
+							p.nik.includes(filterNama)
+						);
+						
+						// Return items with filtered pegawai
+						return { ...unit, pegawai: filteredPegawai };
+					})
+					.filter(unit => {
+						// Only show units that have pegawai if searching by name
+						if (filterNama) return unit.pegawai.length > 0;
+						// If filtering by department, we want to see the unit even if empty (unless we want to hide empty units generally)
+						// For now, let's keep unit if it matches department filter, or if no department filter
+						return true;
+					});
+
+				return { ...kategori, units: filteredUnits };
+			})
+			.filter(kategori => {
+				// Show category if it has any units left
+				return kategori.units.length > 0;
+			});
+	}, [result, filterNama, filterKategori, filterDepartemen]);
+
+	// Extract unique Lists for Select Options
+	const kategoriOptions = useMemo(() => {
+		if (!result?.data) return [];
+		return result.data.map(k => ({ id: k.id_kategori.toString(), nama: k.nama_kategori }));
+	}, [result]);
+
+	const departemenOptions = useMemo(() => {
+		if (!result?.data) return [];
+		const depts = new Set();
+		result.data.forEach(k => {
+			k.units.forEach(u => depts.add(u.nama_departemen));
+		});
+		return Array.from(depts).sort();
+	}, [result]);
+
 	return (
 		<div className="space-y-6">
 			{/* Input Form */}
@@ -156,7 +259,9 @@ export default function KalkulasiDistribusi() {
 						<div className="space-y-2">
 							<Label htmlFor="total_jasa">Total Jasa Rumah Sakit (Rp)</Label>
 							<div className="relative">
-								<DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+								<span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10 font-medium">
+									Rp
+								</span>
 								<Input
 									id="total_jasa"
 									type="text"
@@ -166,9 +271,6 @@ export default function KalkulasiDistribusi() {
 									className="pl-10 pr-12"
 									inputMode="numeric"
 								/>
-								<span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500 font-medium">
-									Rp
-								</span>
 							</div>
 							{totalJasa && parseFloat(totalJasa) > 0 && (
 								<p className="text-xs text-gray-500 italic">
@@ -185,7 +287,7 @@ export default function KalkulasiDistribusi() {
 								onChange={(e) => setTanggal(e.target.value)}
 							/>
 						</div>
-						<div className="flex items-end gap-2">
+						<div className="flex items-center gap-2">
 							<Button 
 								onClick={handleKalkulasi}
 								disabled={loading}
@@ -199,10 +301,24 @@ export default function KalkulasiDistribusi() {
 								Hitung Distribusi
 							</Button>
 							{result && (
-								<Button variant="outline" onClick={handleExport}>
-									<Download className="w-4 h-4 mr-2" />
-									Export
-								</Button>
+								<>
+									<Button 
+										onClick={handleSimpan} 
+										disabled={saving}
+										className="bg-emerald-600 hover:bg-emerald-700"
+									>
+										{saving ? (
+											<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+										) : (
+											<Save className="w-4 h-4 mr-2" />
+										)}
+										Simpan Gaji
+									</Button>
+									<Button variant="outline" onClick={handleExport}>
+										<Download className="w-4 h-4 mr-2" />
+										Export
+									</Button>
+								</>
 							)}
 						</div>
 					</div>
@@ -267,7 +383,68 @@ export default function KalkulasiDistribusi() {
 					{/* Detailed Results */}
 					<Card>
 						<CardHeader>
-							<CardTitle>Detail Distribusi per Kategori</CardTitle>
+							<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+								<CardTitle>Detail Distribusi per Kategori</CardTitle>
+								
+								{/* Filters */}
+								<div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+									<div className="relative">
+										<Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+										<Input 
+											placeholder="Cari NIK / Nama..." 
+											className="pl-9 w-full md:w-[200px] h-9 bg-slate-50 border-slate-200"
+											value={filterNama}
+											onChange={(e) => setFilterNama(e.target.value)}
+										/>
+									</div>
+
+									<Select value={filterKategori} onValueChange={setFilterKategori}>
+										<SelectTrigger className="w-full md:w-[180px] h-9 bg-slate-50 border-slate-200">
+											<div className="flex items-center gap-2 truncate">
+												<PieChart className="w-3.5 h-3.5 text-slate-400" />
+												<span className="truncate">{filterKategori === "all" ? "Semua Kategori" : kategoriOptions.find(k => k.id === filterKategori)?.nama}</span>
+											</div>
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">Semua Kategori</SelectItem>
+											{kategoriOptions.map(opt => (
+												<SelectItem key={opt.id} value={opt.id}>{opt.nama}</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+
+									<Select value={filterDepartemen} onValueChange={setFilterDepartemen}>
+										<SelectTrigger className="w-full md:w-[180px] h-9 bg-slate-50 border-slate-200">
+											<div className="flex items-center gap-2 truncate">
+												<Building2 className="w-3.5 h-3.5 text-slate-400" />
+												<span className="truncate">{filterDepartemen === "all" ? "Semua Departemen" : filterDepartemen}</span>
+											</div>
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">Semua Departemen</SelectItem>
+											{departemenOptions.map(dept => (
+												<SelectItem key={dept} value={dept}>{dept}</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+
+									{(filterNama || filterKategori !== "all" || filterDepartemen !== "all") && (
+										<Button 
+											variant="ghost" 
+											size="icon" 
+											className="h-9 w-9 text-slate-400 hover:text-slate-600"
+											onClick={() => {
+												setFilterNama("");
+												setFilterKategori("all");
+												setFilterDepartemen("all");
+											}}
+											title="Reset Filter"
+										>
+											<X className="w-4 h-4" />
+										</Button>
+									)}
+								</div>
+							</div>
 						</CardHeader>
 						<CardContent>
 							{result.data.length === 0 ? (
@@ -278,7 +455,13 @@ export default function KalkulasiDistribusi() {
 								</div>
 							) : (
 								<Accordion type="multiple" className="space-y-4">
-									{result.data.map((kategori) => (
+									{filteredData.length === 0 ? (
+										<div className="text-center py-12 text-slate-400">
+											<Filter className="w-12 h-12 mx-auto mb-2 opacity-20" />
+											<p>Tidak ada data yang cocok dengan filter</p>
+										</div>
+									) : (
+										filteredData.map((kategori) => (
 										<AccordionItem 
 											key={kategori.id_kategori} 
 											value={kategori.id_kategori.toString()}
@@ -360,7 +543,7 @@ export default function KalkulasiDistribusi() {
 												)}
 											</AccordionContent>
 										</AccordionItem>
-									))}
+									)))}
 								</Accordion>
 							)}
 						</CardContent>

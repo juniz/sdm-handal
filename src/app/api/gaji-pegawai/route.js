@@ -20,11 +20,13 @@ export async function GET(request) {
         const bulan = searchParams.get("bulan");
         const tahun = searchParams.get("tahun");
         const jenis = searchParams.get("jenis");
+        const departemen = searchParams.get("departemen");
         
         const offset = (page - 1) * limit;
 
         // Base query conditions
         let whereClause = "WHERE 1=1";
+        whereClause += " AND p.stts_kerja <> 'POL' AND p.stts_kerja <> 'PNS'";
         const params = [];
 
         if (bulan) {
@@ -45,6 +47,11 @@ export async function GET(request) {
         if (search) {
             whereClause += " AND (gp.nik LIKE ? OR p.nama LIKE ?)";
             params.push(`%${search}%`, `%${search}%`);
+        }
+
+        if (departemen && departemen !== "all") {
+            whereClause += " AND p.departemen = ?";
+            params.push(departemen);
         }
 
         // Count total queries
@@ -74,15 +81,38 @@ export async function GET(request) {
             FROM gaji_pegawai gp
             JOIN pegawai p ON gp.nik = p.nik
             ${whereClause}
-            ORDER BY gp.periode_tahun DESC, gp.periode_bulan DESC, p.nama ASC
+            ORDER BY p.nik ASC
             LIMIT ? OFFSET ?
         `;
 
         const data = await rawQuery(dataQuery, [...params, limit, offset]);
 
+        // Ambil settings untuk BPJS
+        const settingsQuery = `SELECT * FROM penggajian_settings ORDER BY id DESC LIMIT 1`;
+        const settingsData = await rawQuery(settingsQuery);
+        const settings = settingsData.length > 0 ? settingsData[0] : null;
+
+        // Terapkan potongan BPJS jika tipe GAJI
+        const formattedData = data.map((item) => {
+            if (item.jenis && item.jenis.toString().trim().toUpperCase() === "GAJI" && settings) {
+                const nominalBPJSKes = parseFloat(settings.bpjs_kesehatan_nominal) || 0;
+                const nominalBPJSTK = parseFloat(settings.bpjs_ketenagakerjaan_nominal) || 0;
+                
+                // Kurangi nominal gaji dengan BPJS
+                return {
+                    ...item,
+                    gaji_original: item.gaji,
+                    gaji: parseFloat(item.gaji) - (nominalBPJSKes + nominalBPJSTK),
+                    bpjs_kesehatan_nominal: nominalBPJSKes,
+                    bpjs_ketenagakerjaan_nominal: nominalBPJSTK
+                };
+            }
+            return item;
+        });
+
         return NextResponse.json({
             status: "success",
-            data,
+            data: formattedData,
             pagination: {
                 page,
                 limit,

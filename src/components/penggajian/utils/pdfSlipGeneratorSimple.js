@@ -60,7 +60,7 @@ export const generateSlipGajiHTMLSimple = (gajiData, pegawaiData) => {
 
 	// Gunakan table layout untuk kompatibilitas dengan html2canvas
 	return `
-		<div style="width: 794px; min-height: 1123px; padding: 60px; font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000000; background-color: #ffffff; box-sizing: border-box;">
+		<div style="width: 794px; min-height: 1123px; padding: 60px; font-family: 'Arial Narrow', Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000000; background-color: #ffffff; box-sizing: border-box;">
 			<!-- Header dengan Logo -->
 			<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; border: none;">
 				<tr>
@@ -118,9 +118,27 @@ export const generateSlipGajiHTMLSimple = (gajiData, pegawaiData) => {
 						<td style="border: 1px solid #000000; padding: 8px; color: #000000; background-color: #ffffff;">Jenis</td>
 						<td style="border: 1px solid #000000; padding: 8px; color: #000000; background-color: #ffffff;">${gajiData.jenis}</td>
 					</tr>
+                    ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.gaji_original ? `
+                    <tr>
+                        <td style="border: 1px solid #000000; padding: 8px; color: #000000; background-color: #ffffff;">Sisa Gaji (Sebelum Potongan)</td>
+                        <td style="border: 1px solid #000000; padding: 8px; text-align: right; color: #000000; background-color: #ffffff;">${formatRupiah(gajiData.gaji_original)}</td>
+                    </tr>
+                    ` : ""}
+                    ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.bpjs_kesehatan_nominal > 0 ? `
+                    <tr>
+                        <td style="border: 1px solid #000000; padding: 8px; color: #000000; background-color: #ffffff;">Potongan BPJS Kesehatan</td>
+                        <td style="border: 1px solid #000000; padding: 8px; text-align: right; color: #d00000; background-color: #ffffff;">- ${formatRupiah(gajiData.bpjs_kesehatan_nominal)}</td>
+                    </tr>
+                    ` : ""}
+                    ${gajiData.jenis && gajiData.jenis.toString().trim().toUpperCase() === "GAJI" && gajiData.bpjs_ketenagakerjaan_nominal > 0 ? `
+                    <tr>
+                        <td style="border: 1px solid #000000; padding: 8px; color: #000000; background-color: #ffffff;">Potongan BPJS Ketenagakerjaan</td>
+                        <td style="border: 1px solid #000000; padding: 8px; text-align: right; color: #d00000; background-color: #ffffff;">- ${formatRupiah(gajiData.bpjs_ketenagakerjaan_nominal)}</td>
+                    </tr>
+                    ` : ""}
 					<tr>
-						<td style="border: 1px solid #000000; padding: 8px; color: #000000; font-weight: bold; font-size: 13pt; background-color: #ffffff;">TOTAL GAJI</td>
-						<td style="border: 1px solid #000000; padding: 8px; text-align: right; color: #000000; font-weight: bold; font-size: 13pt; background-color: #ffffff;">${formatRupiah(gajiData.gaji)}</td>
+						<td style="border: 1px solid #000000; padding: 8px; color: #000000; font-weight: bold; font-size: 13pt; background-color: #f0f7ff;">TOTAL GAJI (DITERIMA)</td>
+						<td style="border: 1px solid #000000; padding: 8px; text-align: right; color: #000000; font-weight: bold; font-size: 13pt; background-color: #f0f7ff;">${formatRupiah(gajiData.gaji)}</td>
 					</tr>
 				</tbody>
 			</table>
@@ -130,8 +148,14 @@ export const generateSlipGajiHTMLSimple = (gajiData, pegawaiData) => {
 				<tr>
 					<td style="width: 50%; text-align: center; vertical-align: top; color: #000000; padding: 10px; border: none;">
 						<div>Nganjuk, ${tanggalCetak}</div>
-						<div style="margin-top: 20px;">Yang Menerima</div>
-						<div style="margin-top: 60px; border-top: 1px solid #000000; padding-top: 5px; display: inline-block; min-width: 150px;">
+						<div style="margin-top: 10px; display: flex; flex-direction: column; align-items: center; min-height: 50px;">
+							${
+								gajiData.tanda_tangan
+									? `<img src="${gajiData.tanda_tangan}" alt="Tanda Tangan" style="max-height: 50px; margin-bottom: -10px;" crossorigin="anonymous" />`
+									: ""
+							}
+						</div>
+						<div style="border-top: 1px solid #000000; padding-top: 5px; display: inline-block; min-width: 150px;">
 							${pegawaiData.nama || ""}
 						</div>
 					</td>
