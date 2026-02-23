@@ -17,6 +17,7 @@ import {
 	FileText,
 	Coins,
 	Percent,
+	BadgeDollarSign,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -229,6 +230,13 @@ const FinanceMenu = () => {
 			icon: Clock,
 			href: "/dashboard/penggajian",
 			color: "from-amber-600 to-orange-600",
+		},
+		{
+			title: "Gapok",
+			description: "Kelola gaji pokok pegawai",
+			icon: BadgeDollarSign,
+			href: "/dashboard/penggajian/gapok",
+			color: "from-rose-600 to-pink-600",
 		},
 	];
 
