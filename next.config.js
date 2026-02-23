@@ -58,9 +58,9 @@ const nextConfig = {
 		config.resolve.alias.encoding = false;
 		return config;
 	},
-	experimental: {
-		serverActions: true,
-	},
+	// experimental: {
+	// 	serverActions: true,
+	// },
 	// SECURITY FIX: Headers untuk mencegah RCE dan XSS attacks
 	// Headers untuk PWA Android compatibility dan foto presensi
 	async headers() {
