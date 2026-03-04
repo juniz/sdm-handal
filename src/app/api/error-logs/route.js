@@ -122,7 +122,7 @@ export async function POST(request) {
 		// Get user info from token (optional)
 		let userInfo = { user_id: null, user_name: null };
 		try {
-			const cookieStore = cookies();
+			const cookieStore = await cookies();
 			const token = await cookieStore.get("auth_token")?.value;
 
 			if (token) {
@@ -201,7 +201,7 @@ export async function POST(request) {
 export async function GET(request) {
 	try {
 		// Verify admin token
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -331,7 +331,7 @@ export async function GET(request) {
 export async function PUT(request) {
 	try {
 		// Verify admin token
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {

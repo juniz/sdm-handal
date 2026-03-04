@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createConnection } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 
-export async function POST(request, { params }) {
-	try {
+export async function POST(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 		const body = await request.json();
 		const { action, reason } = body; // action: 'approve' or 'reject', reason: string

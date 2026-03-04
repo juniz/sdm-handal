@@ -28,8 +28,9 @@ const calculateWorkingHours = (startDate, endDate) => {
 	return workingDays * 8;
 };
 
-export async function POST(request, { params }) {
-	try {
+export async function POST(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 		const body = await request.json();
 		const { assigned_to, assignment_notes, estimated_completion_date } = body;
@@ -271,8 +272,9 @@ export async function POST(request, { params }) {
 }
 
 // GET endpoint untuk mengambil daftar developer yang bisa di-assign
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 
 		// Get user info from token

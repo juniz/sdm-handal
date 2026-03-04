@@ -49,8 +49,9 @@ function validateFilename(filename) {
 	return normalized;
 }
 
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		const { filename } = params;
 
 		// SECURITY FIX CVE-003: Validasi filename dengan fungsi yang lebih ketat

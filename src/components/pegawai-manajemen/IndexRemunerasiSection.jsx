@@ -1,0 +1,493 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+	Plus,
+	Pencil,
+	Trash2,
+	Loader2,
+	Briefcase,
+	Users,
+	AlertTriangle,
+	Zap,
+	GraduationCap,
+	Search,
+	BarChart3,
+} from "lucide-react";
+import { toast } from "sonner";
+import { getClientToken } from "@/lib/client-auth";
+
+const CONFIGS = {
+	jnj: {
+		title: "Jenis Jabatan",
+		apiPath: "/api/pegawai-manajemen/jnj-jabatan",
+		icon: Briefcase,
+		fields: [
+			{ key: "kode", label: "Kode", required: true },
+			{ key: "nama", label: "Nama", required: true },
+			{ key: "tnj", label: "Tunjangan", type: "number" },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode",
+	},
+	kelompok: {
+		title: "Kelompok Jabatan",
+		apiPath: "/api/pegawai-manajemen/kelompok-jabatan",
+		icon: Users,
+		fields: [
+			{ key: "kode_kelompok", label: "Kode", required: true },
+			{ key: "nama_kelompok", label: "Nama Kelompok" },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode_kelompok",
+	},
+	resiko: {
+		title: "Resiko Kerja",
+		apiPath: "/api/pegawai-manajemen/resiko-kerja",
+		icon: AlertTriangle,
+		fields: [
+			{ key: "kode_resiko", label: "Kode", required: true },
+			{ key: "nama_resiko", label: "Nama Resiko" },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode_resiko",
+	},
+	emergency: {
+		title: "Emergency Index",
+		apiPath: "/api/pegawai-manajemen/emergency-index",
+		icon: Zap,
+		fields: [
+			{ key: "kode_emergency", label: "Kode", required: true },
+			{ key: "nama_emergency", label: "Nama Emergency" },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode_emergency",
+	},
+	pendidikan: {
+		title: "Pendidikan",
+		apiPath: "/api/pegawai-manajemen/pendidikan",
+		icon: GraduationCap,
+		fields: [
+			{ key: "tingkat", label: "Tingkat", required: true },
+			{ key: "indek", label: "Indek", type: "number" },
+			{ key: "gapok1", label: "Gaji Pokok 1", type: "number" },
+			{ key: "kenaikan", label: "Kenaikan", type: "number" },
+			{ key: "maksimal", label: "Maksimal", type: "number" },
+		],
+		pk: "tingkat",
+	},
+	evaluasi: {
+		title: "Evaluasi Kinerja",
+		apiPath: "/api/pegawai-manajemen/evaluasi-kinerja",
+		icon: BarChart3,
+		fields: [
+			{ key: "kode_evaluasi", label: "Kode", required: true },
+			{ key: "nama_evaluasi", label: "Nama Evaluasi", required: true },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode_evaluasi",
+	},
+	pencapaian: {
+		title: "Pencapaian Kinerja",
+		apiPath: "/api/pegawai-manajemen/pencapaian-kinerja",
+		icon: Zap,
+		fields: [
+			{ key: "kode_pencapaian", label: "Kode", required: true },
+			{ key: "nama_pencapaian", label: "Nama Pencapaian", required: true },
+			{ key: "indek", label: "Indek", type: "number" },
+		],
+		pk: "kode_pencapaian",
+	},
+};
+
+function RemunerasiTable({ type }) {
+	const config = CONFIGS[type];
+	const [data, setData] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [search, setSearch] = useState("");
+	const [showForm, setShowForm] = useState(false);
+	const [showDelete, setShowDelete] = useState(false);
+	const [selected, setSelected] = useState(null);
+	const [formData, setFormData] = useState({});
+
+	const displayCols = config.fields.map((f) => f.key);
+	const filteredData = data.filter((row) => {
+		if (!search.trim()) return true;
+		const searchLower = search.toLowerCase().trim();
+		return displayCols.some((col) => {
+			const val = row[col];
+			return val != null && String(val).toLowerCase().includes(searchLower);
+		});
+	});
+
+	const fetchData = useCallback(async () => {
+		try {
+			setLoading(true);
+			const token = getClientToken();
+			const headers = {};
+			if (token) headers["Authorization"] = `Bearer ${token}`;
+			const res = await fetch(config.apiPath, { headers });
+			const result = await res.json();
+			if (res.ok) setData(result.data || []);
+		} catch (err) {
+			toast.error("Gagal mengambil data");
+		} finally {
+			setLoading(false);
+		}
+	}, [config.apiPath]);
+
+	useEffect(() => {
+		fetchData();
+	}, [fetchData]);
+
+	const handleOpenForm = (item = null) => {
+		if (item) {
+			const fd = {};
+			config.fields.forEach((f) => {
+				fd[f.key] = item[f.key] ?? "";
+			});
+			setFormData(fd);
+			setSelected(item);
+		} else {
+			setFormData(
+				config.fields.reduce((acc, f) => ({ ...acc, [f.key]: "" }), {}),
+			);
+			setSelected(null);
+		}
+		setShowForm(true);
+	};
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		const token = getClientToken();
+		const headers = { "Content-Type": "application/json" };
+		if (token) headers["Authorization"] = `Bearer ${token}`;
+
+		const isEdit = !!selected;
+		const method = isEdit ? "PUT" : "POST";
+		const body = { ...formData };
+		config.fields.forEach((f) => {
+			if (f.type === "number" && body[f.key] !== undefined) {
+				body[f.key] =
+					f.key === "indek" || f.key === "maksimal"
+						? parseInt(body[f.key]) || 0
+						: parseFloat(body[f.key]) || 0;
+			}
+		});
+
+		try {
+			const res = await fetch(config.apiPath, {
+				method,
+				headers,
+				body: JSON.stringify(body),
+			});
+			const result = await res.json();
+			if (res.ok) {
+				toast.success(result.message);
+				setShowForm(false);
+				fetchData();
+			} else {
+				toast.error(result.message || "Terjadi kesalahan");
+			}
+		} catch (err) {
+			toast.error("Terjadi kesalahan");
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!selected) return;
+		const token = getClientToken();
+		const headers = {};
+		if (token) headers["Authorization"] = `Bearer ${token}`;
+		const pkVal = selected[config.pk];
+		try {
+			const res = await fetch(
+				`${config.apiPath}?${config.pk}=${encodeURIComponent(pkVal)}`,
+				{ method: "DELETE", headers },
+			);
+			const result = await res.json();
+			if (res.ok) {
+				toast.success(result.message);
+				setShowDelete(false);
+				setSelected(null);
+				fetchData();
+			} else {
+				toast.error(result.message || "Gagal menghapus");
+			}
+		} catch (err) {
+			toast.error("Terjadi kesalahan");
+		}
+	};
+
+	const Icon = config.icon;
+
+	return (
+		<>
+			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+				<h3 className="font-medium flex items-center gap-2">
+					<Icon className="w-4 h-4" />
+					{config.title}
+				</h3>
+				<div className="flex gap-2 flex-1 sm:flex-initial sm:max-w-xs">
+					<div className="relative flex-1">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+						<Input
+							placeholder="Cari..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							className="pl-9 h-9"
+						/>
+					</div>
+					<Button
+						size="sm"
+						onClick={() => handleOpenForm()}
+						className="shrink-0"
+					>
+						<Plus className="w-4 h-4 mr-2" />
+						Tambah
+					</Button>
+				</div>
+			</div>
+
+			{loading ? (
+				<div className="flex justify-center py-8">
+					<Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+				</div>
+			) : data.length === 0 ? (
+				<div className="text-center py-8 text-gray-500">
+					<p>Belum ada data</p>
+					<Button
+						variant="outline"
+						size="sm"
+						className="mt-2"
+						onClick={() => handleOpenForm()}
+					>
+						<Plus className="w-4 h-4 mr-2" />
+						Tambah Pertama
+					</Button>
+				</div>
+			) : filteredData.length === 0 ? (
+				<div className="text-center py-8 text-gray-500">
+					<p>
+						Tidak ada data yang sesuai dengan pencarian &quot;{search}&quot;
+					</p>
+				</div>
+			) : (
+				<div className="rounded-md border overflow-x-auto">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								{displayCols.map((col) => (
+									<TableHead key={col}>
+										{config.fields.find((f) => f.key === col)?.label || col}
+									</TableHead>
+								))}
+								<TableHead className="text-right">Aksi</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{filteredData.map((row, idx) => (
+								<TableRow key={row[config.pk] || idx}>
+									{displayCols.map((col) => (
+										<TableCell key={col}>{row[col] ?? "-"}</TableCell>
+									))}
+									<TableCell className="text-right">
+										<div className="flex justify-end gap-2">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => handleOpenForm(row)}
+											>
+												<Pencil className="w-4 h-4" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="sm"
+												className="text-red-600 hover:text-red-700 hover:bg-red-50"
+												onClick={() => {
+													setSelected(row);
+													setShowDelete(true);
+												}}
+											>
+												<Trash2 className="w-4 h-4" />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+			)}
+
+			<Dialog open={showForm} onOpenChange={setShowForm}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							{selected ? `Edit ${config.title}` : `Tambah ${config.title}`}
+						</DialogTitle>
+						<DialogDescription>
+							{selected
+								? "Ubah data"
+								: "Isi data baru. Field bertanda * wajib diisi."}
+						</DialogDescription>
+					</DialogHeader>
+					<form onSubmit={handleSubmit} className="space-y-4">
+						{config.fields.map((f) => (
+							<div key={f.key}>
+								<Label>
+									{f.label} {f.required && "*"}
+								</Label>
+								<Input
+									type={f.type || "text"}
+									value={formData[f.key] ?? ""}
+									onChange={(e) =>
+										setFormData((prev) => ({
+											...prev,
+											[f.key]: e.target.value,
+										}))
+									}
+									placeholder={f.label}
+									disabled={!!selected && f.key === config.pk}
+								/>
+							</div>
+						))}
+						<DialogFooter>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setShowForm(false)}
+							>
+								Batal
+							</Button>
+							<Button type="submit">Simpan</Button>
+						</DialogFooter>
+					</form>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog open={showDelete} onOpenChange={setShowDelete}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Hapus {config.title}</DialogTitle>
+						<DialogDescription>
+							Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak
+							dapat dibatalkan.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setShowDelete(false)}>
+							Batal
+						</Button>
+						<Button variant="destructive" onClick={handleDelete}>
+							Hapus
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
+	);
+}
+
+export default function IndexRemunerasiSection() {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle className="flex items-center gap-2">
+					<Briefcase className="w-5 h-5" />
+					Index Remunerasi
+				</CardTitle>
+				<p className="text-sm text-gray-500 mt-1">
+					Kelola data index remunerasi: jenis jabatan, kelompok jabatan, resiko
+					kerja, emergency index, pendidikan, dan evaluasi kinerja
+				</p>
+			</CardHeader>
+			<CardContent>
+				<Tabs defaultValue="jnj" className="w-full">
+					<div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+						<TabsList className="inline-flex h-auto w-max min-w-full justify-start sm:w-full sm:grid sm:grid-cols-3 lg:grid-cols-6 p-1">
+							<TabsTrigger value="jnj" className="whitespace-nowrap px-4 py-2">
+								Jenis Jabatan
+							</TabsTrigger>
+							<TabsTrigger
+								value="kelompok"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Kelompok Jabatan
+							</TabsTrigger>
+							<TabsTrigger
+								value="resiko"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Resiko Kerja
+							</TabsTrigger>
+							<TabsTrigger
+								value="emergency"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Emergency Index
+							</TabsTrigger>
+							<TabsTrigger
+								value="pendidikan"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Pendidikan
+							</TabsTrigger>
+							<TabsTrigger
+								value="evaluasi"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Evaluasi Kinerja
+							</TabsTrigger>
+							<TabsTrigger
+								value="pencapaian"
+								className="whitespace-nowrap px-4 py-2"
+							>
+								Pencapaian Kinerja
+							</TabsTrigger>
+						</TabsList>
+					</div>
+					<TabsContent value="jnj" className="mt-4">
+						<RemunerasiTable type="jnj" />
+					</TabsContent>
+					<TabsContent value="kelompok" className="mt-4">
+						<RemunerasiTable type="kelompok" />
+					</TabsContent>
+					<TabsContent value="resiko" className="mt-4">
+						<RemunerasiTable type="resiko" />
+					</TabsContent>
+					<TabsContent value="emergency" className="mt-4">
+						<RemunerasiTable type="emergency" />
+					</TabsContent>
+					<TabsContent value="pendidikan" className="mt-4">
+						<RemunerasiTable type="pendidikan" />
+					</TabsContent>
+					<TabsContent value="evaluasi" className="mt-4">
+						<RemunerasiTable type="evaluasi" />
+					</TabsContent>
+				</Tabs>
+			</CardContent>
+		</Card>
+	);
+}

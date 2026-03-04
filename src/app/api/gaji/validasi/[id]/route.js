@@ -3,8 +3,9 @@ import { getUser } from "@/lib/auth";
 import { rawQuery } from "@/lib/db-helper";
 
 // GET - Ambil detail validasi gaji
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		const user = await getUser();
 		if (!user) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

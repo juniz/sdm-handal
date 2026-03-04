@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 
-export async function PUT(request, { params }) {
-	try {
+export async function PUT(request, props) {
+    const params = await props.params;
+    try {
 		// Verifikasi user yang sedang login
 		const user = await getUser();
 		if (!user) {
@@ -99,8 +100,9 @@ export async function PUT(request, { params }) {
 	}
 }
 
-export async function DELETE(request, { params }) {
-	try {
+export async function DELETE(request, props) {
+    const params = await props.params;
+    try {
 		// Verifikasi user yang sedang login
 		const user = await getUser();
 		if (!user) {

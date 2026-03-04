@@ -91,7 +91,7 @@ function calculateTimeRemaining(attendance, currentTime) {
 
 export async function GET(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {

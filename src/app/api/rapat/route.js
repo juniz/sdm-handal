@@ -13,7 +13,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 // GET: Mengambil daftar rapat
 export async function GET(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -109,7 +109,7 @@ export async function GET(request) {
 // POST: Menambah rapat baru
 export async function POST(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -172,7 +172,7 @@ export async function POST(request) {
 // PUT: Mengupdate data rapat
 export async function PUT(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -236,7 +236,7 @@ export async function PUT(request) {
 // DELETE: Menghapus data rapat
 export async function DELETE(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -284,7 +284,7 @@ export async function DELETE(request) {
 // PATCH: Update urutan rapat (hanya untuk IT)
 export async function PATCH(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
 
 		if (!token) {

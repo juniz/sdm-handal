@@ -67,6 +67,14 @@ const ALLOWED_TABLES = [
 	"presentase_kategori",
 	"presentase_unit",
 	"presentase_pegawai",
+	"jnj_jabatan",
+	"resiko_kerja",
+	"emergency_index",
+	"bidang",
+	"stts_wp",
+	"bank",
+	"evaluasi_kinerja",
+	"evaluasi_kinerja_pegawai",
 ];
 
 /**

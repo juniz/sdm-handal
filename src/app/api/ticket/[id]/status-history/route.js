@@ -6,8 +6,9 @@ import moment from "moment-timezone";
 moment.tz.setDefault("Asia/Jakarta");
 
 // GET - Ambil status history ticket berdasarkan ID
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		// Ambil data user dari JWT token
 		const user = await getUser();
 		if (!user) {

@@ -83,7 +83,7 @@ export async function POST(request) {
 		});
 
 		const token = await createToken(tokenPayload);
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		setServerCookie(cookieStore, token);
 
 		// Hapus password dari response

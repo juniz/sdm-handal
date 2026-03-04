@@ -118,7 +118,7 @@ async function autoCheckoutOverdueAttendance(attendance, currentTime) {
 
 export async function POST(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {

@@ -3,8 +3,9 @@ import { createConnection } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { validateIdParam } from "@/lib/server-component-security";
 
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		// SECURITY FIX CVE-2025-66478: Validasi ID parameter untuk mencegah RCE
 		const id = validateIdParam(params.id);
 
@@ -211,8 +212,9 @@ export async function GET(request, { params }) {
 	}
 }
 
-export async function PUT(request, { params }) {
-	try {
+export async function PUT(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 		const body = await request.json();
 		const {
@@ -344,8 +346,9 @@ export async function PUT(request, { params }) {
 	}
 }
 
-export async function DELETE(request, { params }) {
-	try {
+export async function DELETE(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 
 		// Get user info from token

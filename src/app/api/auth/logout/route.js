@@ -4,7 +4,7 @@ import { removeServerCookie } from "@/lib/auth";
 
 export async function POST() {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		removeServerCookie(cookieStore);
 
 		return NextResponse.json({

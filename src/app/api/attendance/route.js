@@ -665,7 +665,7 @@ export async function POST(request) {
 				{ status: 400 }
 			);
 		}
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {
@@ -1038,7 +1038,7 @@ export async function POST(request) {
 // OPTIMIZED: Cached schedule query untuk GET
 export async function GET(request) {
 	try {
-		const cookieStore = cookies();
+		const cookieStore = await cookies();
 		const token = await cookieStore.get("auth_token")?.value;
 
 		if (!token) {

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { createConnection } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 		const currentUser = await getUser();
 
@@ -62,8 +63,9 @@ export async function GET(request, { params }) {
 	}
 }
 
-export async function POST(request, { params }) {
-	try {
+export async function POST(request, props) {
+    const params = await props.params;
+    try {
 		const { id } = params;
 		const currentUser = await getUser();
 

@@ -4,8 +4,9 @@ import { rawQuery } from "@/lib/db-helper";
 import { generateSlipGajiHTML } from "@/components/penggajian/utils/pdfSlipGenerator";
 
 // GET - Generate HTML untuk slip gaji (bisa digunakan untuk print atau convert ke PDF)
-export async function GET(request, { params }) {
-	try {
+export async function GET(request, props) {
+    const params = await props.params;
+    try {
 		const user = await getUser();
 		if (!user) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
