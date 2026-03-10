@@ -10,7 +10,7 @@ const recordStatusHistory = async (
 	ticketId,
 	oldStatusId,
 	newStatusId,
-	changedBy
+	changedBy,
 ) => {
 	try {
 		// Jangan record jika status sama
@@ -30,7 +30,7 @@ const recordStatusHistory = async (
 		});
 
 		console.log(
-			`Status history recorded: Ticket ${ticketId}, ${oldStatusId} -> ${newStatusId} by ${changedBy}`
+			`Status history recorded: Ticket ${ticketId}, ${oldStatusId} -> ${newStatusId} by ${changedBy}`,
 		);
 	} catch (error) {
 		console.error("Error recording status history:", error);
@@ -48,7 +48,7 @@ export async function GET(request) {
 					status: "error",
 					error: "Unauthorized - Token tidak valid",
 				},
-				{ status: 401 }
+				{ status: 401 },
 			);
 		}
 
@@ -59,7 +59,7 @@ export async function GET(request) {
 					status: "error",
 					error: "Akses ditolak - Hanya untuk departemen IT",
 				},
-				{ status: 403 }
+				{ status: 403 },
 			);
 		}
 
@@ -67,8 +67,12 @@ export async function GET(request) {
 		const status = searchParams.get("status");
 		const priority = searchParams.get("priority");
 		const category = searchParams.get("category");
+		const category_id = searchParams.get("category_id");
 		const assigned_to = searchParams.get("assigned_to");
 		const search = searchParams.get("search");
+		const start_date = searchParams.get("start_date");
+		const end_date = searchParams.get("end_date");
+		const department_id = searchParams.get("department_id");
 		const page = parseInt(searchParams.get("page")) || 1;
 		const limit = parseInt(searchParams.get("limit")) || 10;
 		const offset = (page - 1) * limit;
@@ -94,16 +98,40 @@ export async function GET(request) {
 			queryParams.push(category);
 		}
 
+		// Filter berdasarkan category_id jika ada
+		if (category_id) {
+			whereConditions.push("t.category_id = ?");
+			queryParams.push(category_id);
+		}
+
 		// Filter berdasarkan assigned_to jika ada
 		if (assigned_to) {
 			whereConditions.push("at.assigned_to = ?");
 			queryParams.push(assigned_to);
 		}
 
+		// Filter berdasarkan department jika ada
+		if (department_id) {
+			whereConditions.push("t.departement_id = ?");
+			queryParams.push(department_id);
+		}
+
+		// Filter berdasarkan rentang tanggal (resolved_date) jika ada
+		if (start_date && end_date) {
+			whereConditions.push("DATE(t.resolved_date) BETWEEN ? AND ?");
+			queryParams.push(start_date, end_date);
+		} else if (start_date) {
+			whereConditions.push("DATE(t.resolved_date) >= ?");
+			queryParams.push(start_date);
+		} else if (end_date) {
+			whereConditions.push("DATE(t.resolved_date) <= ?");
+			queryParams.push(end_date);
+		}
+
 		// Filter pencarian berdasarkan nomor ticket, judul, atau deskripsi
 		if (search) {
 			whereConditions.push(
-				"(t.no_ticket LIKE ? OR t.title LIKE ? OR t.description LIKE ?)"
+				"(t.no_ticket LIKE ? OR t.title LIKE ? OR t.description LIKE ?)",
 			);
 			const searchTerm = `%${search}%`;
 			queryParams.push(searchTerm, searchTerm, searchTerm);
@@ -137,7 +165,8 @@ export async function GET(request) {
 				at.assigned_date,
 				at.released_date,
 				assigned_p.nama as assigned_to_name,
-				COALESCE(notes_count.total_notes, 0) as notes_count
+				COALESCE(notes_count.total_notes, 0) as notes_count,
+				last_note.note as resolution_note
 			FROM tickets t
 			LEFT JOIN pegawai p ON t.user_id = p.nik
 			LEFT JOIN departemen d ON t.departement_id = d.dep_id
@@ -163,6 +192,17 @@ export async function GET(request) {
 				FROM ticket_notes
 				GROUP BY ticket_id
 			) notes_count ON t.ticket_id = notes_count.ticket_id
+			LEFT JOIN (
+				SELECT tn1.ticket_id, tn1.note
+				FROM ticket_notes tn1
+				WHERE tn1.note_id = (
+					SELECT tn2.note_id
+					FROM ticket_notes tn2
+					WHERE tn2.ticket_id = tn1.ticket_id
+					ORDER BY tn2.created_date DESC, tn2.note_id DESC
+					LIMIT 1
+				)
+			) last_note ON t.ticket_id = last_note.ticket_id
 			WHERE (at.released_date IS NULL OR s.status_name IN ('Closed', 'Resolved'))
 			${whereClause ? `AND ${whereClause.replace("WHERE ", "")}` : ""}
 			ORDER BY t.submission_date DESC
@@ -203,8 +243,12 @@ export async function GET(request) {
 		// Format tanggal
 		const formattedTickets = tickets.map((ticket) => ({
 			...ticket,
+			submission_date_raw: ticket.submission_date,
+			assigned_date_raw: ticket.assigned_date,
+			resolved_date_raw: ticket.resolved_date,
+			closed_date_raw: ticket.closed_date,
 			submission_date: moment(ticket.submission_date).format(
-				"DD MMMM YYYY HH:mm"
+				"DD MMMM YYYY HH:mm",
 			),
 			assigned_date: ticket.assigned_date
 				? moment(ticket.assigned_date).format("DD MMMM YYYY HH:mm")
@@ -235,7 +279,7 @@ export async function GET(request) {
 				status: "error",
 				error: "Gagal mengambil data ticket",
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -250,7 +294,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Unauthorized - Token tidak valid",
 				},
-				{ status: 401 }
+				{ status: 401 },
 			);
 		}
 
@@ -261,7 +305,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Akses ditolak - Hanya untuk departemen IT",
 				},
-				{ status: 403 }
+				{ status: 403 },
 			);
 		}
 
@@ -275,7 +319,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Ticket ID dan Assigned To harus diisi",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -291,7 +335,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Ticket tidak ditemukan",
 				},
-				{ status: 404 }
+				{ status: 404 },
 			);
 		}
 
@@ -307,7 +351,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Ticket sudah ditugaskan",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -323,7 +367,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Pegawai tidak ditemukan atau bukan dari departemen IT",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -339,7 +383,7 @@ export async function POST(request) {
 					status: "error",
 					error: "Status 'In Progress' tidak ditemukan",
 				},
-				{ status: 500 }
+				{ status: 500 },
 			);
 		}
 
@@ -371,7 +415,7 @@ export async function POST(request) {
 			ticket_id,
 			oldStatusId,
 			inProgressStatus.status_id,
-			user.username
+			user.username,
 		);
 
 		return NextResponse.json({
@@ -385,7 +429,7 @@ export async function POST(request) {
 				status: "error",
 				error: "Gagal menugaskan ticket: " + error.message,
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -401,7 +445,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Unauthorized - Token tidak valid",
 				},
-				{ status: 401 }
+				{ status: 401 },
 			);
 		}
 
@@ -412,7 +456,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Akses ditolak - Hanya untuk departemen IT",
 				},
-				{ status: 403 }
+				{ status: 403 },
 			);
 		}
 
@@ -427,7 +471,7 @@ export async function PUT(request) {
 						status: "error",
 						error: "Ticket ID harus diisi",
 					},
-					{ status: 400 }
+					{ status: 400 },
 				);
 			}
 
@@ -443,7 +487,7 @@ export async function PUT(request) {
 						status: "error",
 						error: "Assignment aktif tidak ditemukan",
 					},
-					{ status: 404 }
+					{ status: 404 },
 				);
 			}
 
@@ -465,7 +509,7 @@ export async function PUT(request) {
 						status: "error",
 						error: "Status 'Open' tidak ditemukan",
 					},
-					{ status: 500 }
+					{ status: 500 },
 				);
 			}
 
@@ -495,7 +539,7 @@ export async function PUT(request) {
 				ticket_id,
 				oldStatusId,
 				openStatus.status_id,
-				user.username
+				user.username,
 			);
 
 			return NextResponse.json({
@@ -511,7 +555,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Ticket ID dan Status harus diisi",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -523,7 +567,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Status tidak valid",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -539,7 +583,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Ticket tidak ditemukan",
 				},
-				{ status: 404 }
+				{ status: 404 },
 			);
 		}
 
@@ -555,7 +599,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Ticket belum ditugaskan atau assignment sudah dilepas",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -564,7 +608,7 @@ export async function PUT(request) {
 			// Cek apakah user adalah admin IT (bisa update semua ticket)
 			const isItAdmin = await rawQuery(
 				"SELECT COUNT(*) as count FROM pegawai WHERE nik = ? AND departemen = 'IT'",
-				[user.username]
+				[user.username],
 			);
 
 			if (isItAdmin[0].count === 0) {
@@ -574,7 +618,7 @@ export async function PUT(request) {
 						error:
 							"Anda hanya bisa mengupdate ticket yang ditugaskan kepada Anda",
 					},
-					{ status: 403 }
+					{ status: 403 },
 				);
 			}
 		}
@@ -591,7 +635,7 @@ export async function PUT(request) {
 					status: "error",
 					error: "Status tidak ditemukan dalam database",
 				},
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -633,7 +677,7 @@ export async function PUT(request) {
 			ticket_id,
 			oldStatusId,
 			statusData.status_id,
-			user.username
+			user.username,
 		);
 
 		return NextResponse.json({
@@ -647,7 +691,7 @@ export async function PUT(request) {
 				status: "error",
 				error: "Gagal mengupdate status ticket: " + error.message,
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

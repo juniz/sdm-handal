@@ -18,6 +18,7 @@ import {
 	AssignmentModal,
 	AssignmentFilterAccordion,
 	StatusUpdateModal,
+	CompletedTicketReport,
 } from "@/components/ticket-assignment";
 
 import {
@@ -116,7 +117,7 @@ const TicketAssignmentPage = () => {
 			!confirm(
 				`Apakah Anda yakin ingin melepas assignment ticket ${
 					ticket.no_ticket || `#${ticket.ticket_id}`
-				}?`
+				}?`,
 			)
 		) {
 			return;
@@ -205,16 +206,18 @@ const TicketAssignmentPage = () => {
 				</div>
 
 				{/* Filter Accordion */}
-				<AssignmentFilterAccordion
-					filters={filters}
-					setFilters={setFilters}
-					isOpen={isFilterOpen}
-					setIsOpen={setIsFilterOpen}
-					loading={loading}
-					masterData={masterData}
-					itEmployees={itEmployees}
-					tickets={tickets}
-				/>
+				{activeTab === "active" && (
+					<AssignmentFilterAccordion
+						filters={filters}
+						setFilters={setFilters}
+						isOpen={isFilterOpen}
+						setIsOpen={setIsFilterOpen}
+						loading={loading}
+						masterData={masterData}
+						itEmployees={itEmployees}
+						tickets={tickets}
+					/>
+				)}
 
 				{/* Tabs */}
 				<div className="border-b border-gray-200">
@@ -232,7 +235,7 @@ const TicketAssignmentPage = () => {
 							<span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
 								{
 									tickets.filter(
-										(t) => !["Closed", "Resolved"].includes(t.current_status)
+										(t) => !["Closed", "Resolved"].includes(t.current_status),
 									).length
 								}
 							</span>
@@ -245,49 +248,43 @@ const TicketAssignmentPage = () => {
 									: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
 							}`}
 						>
-							<CheckCircle className="w-4 h-4" />
-							Ticket Selesai
-							<span className="ml-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-								{
-									tickets.filter((t) =>
-										["Closed", "Resolved"].includes(t.current_status)
-									).length
-								}
-							</span>
+							<FileText className="w-4 h-4" />
+							Laporan & Ticket Selesai
 						</button>
 					</nav>
 				</div>
 
 				{/* Content */}
-				{loading ? (
-					<LoadingSkeleton />
-				) : filteredTickets.length === 0 ? (
-					<EmptyState
-						message={
-							activeTab === "active"
-								? "Tidak ada ticket yang sedang berjalan"
-								: "Tidak ada ticket yang sudah selesai"
-						}
-					/>
-				) : (
-					<>
-						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-							{filteredTickets.map((ticket) => (
-								<AssignmentCard
-									key={ticket.ticket_id}
-									ticket={ticket}
-									onAssign={handleAssign}
-									onRelease={handleRelease}
-									onUpdateStatus={handleUpdateStatus}
-									currentUser={currentUser}
-									isCompleted={activeTab === "completed"}
-								/>
-							))}
-						</div>
+				{activeTab === "active" ? (
+					loading ? (
+						<LoadingSkeleton />
+					) : filteredTickets.length === 0 ? (
+						<EmptyState message="Tidak ada ticket yang sedang berjalan" />
+					) : (
+						<>
+							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+								{filteredTickets.map((ticket) => (
+									<AssignmentCard
+										key={ticket.ticket_id}
+										ticket={ticket}
+										onAssign={handleAssign}
+										onRelease={handleRelease}
+										onUpdateStatus={handleUpdateStatus}
+										currentUser={currentUser}
+										isCompleted={false}
+									/>
+								))}
+							</div>
 
-						{/* Pagination */}
-						<Pagination pagination={pagination} onPageChange={fetchTickets} />
-					</>
+							{/* Pagination */}
+							<Pagination pagination={pagination} onPageChange={fetchTickets} />
+						</>
+					)
+				) : (
+					<CompletedTicketReport
+						masterData={masterData}
+						itEmployees={itEmployees}
+					/>
 				)}
 			</div>
 
