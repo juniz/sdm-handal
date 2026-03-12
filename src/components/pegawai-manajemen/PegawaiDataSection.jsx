@@ -68,6 +68,7 @@ export default function PegawaiDataSection() {
 		total: 0,
 		totalPages: 0,
 	});
+	const [totalAggregate, setTotalAggregate] = useState(0);
 	const [showForm, setShowForm] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
 	const [showEvaluasiForm, setShowEvaluasiForm] = useState(false);
@@ -107,6 +108,7 @@ export default function PegawaiDataSection() {
 			if (res.ok) {
 				setData(result.data || []);
 				setPagination(result.pagination || {});
+				setTotalAggregate(result.meta?.total_aggregate_index || 0);
 			} else {
 				toast.error(result.message || "Gagal mengambil data");
 			}
@@ -233,7 +235,9 @@ export default function PegawaiDataSection() {
 							Data Pegawai
 						</CardTitle>
 						<p className="text-sm text-gray-500 mt-1">
-							Kelola data pegawai dan informasi kepegawaian
+							Kelola data pegawai dan informasi kepegawaian. Total Index
+							Remunerasi Aktif:{" "}
+							<span className="font-semibold">{totalAggregate}</span>
 						</p>
 					</div>
 					<Button
@@ -332,6 +336,7 @@ export default function PegawaiDataSection() {
 										<TableHead>Jabatan</TableHead>
 										<TableHead>Departemen</TableHead>
 										<TableHead className="text-center">Total Index</TableHead>
+										<TableHead className="text-center">Persentase</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead className="text-right">Aksi</TableHead>
 									</TableRow>
@@ -349,6 +354,11 @@ export default function PegawaiDataSection() {
 											</TableCell>
 											<TableCell className="text-center font-medium">
 												{p.total_index_remunerasi ?? "-"}
+											</TableCell>
+											<TableCell className="text-center font-medium">
+												{p.remunerasi_percentage
+													? `${p.remunerasi_percentage}%`
+													: "-"}
 											</TableCell>
 											<TableCell>
 												<Badge
@@ -441,12 +451,22 @@ export default function PegawaiDataSection() {
 												{p.nama_departemen || p.departemen || "-"}
 											</div>
 										</div>
-										<div className="col-span-2">
+										<div className="col-span-2 sm:col-span-1">
 											<div className="text-xs text-gray-500 mb-0.5">
 												Total Index
 											</div>
 											<div className="font-medium">
 												{p.total_index_remunerasi ?? "-"}
+											</div>
+										</div>
+										<div className="col-span-2 sm:col-span-1">
+											<div className="text-xs text-gray-500 mb-0.5">
+												Persentase
+											</div>
+											<div className="font-medium">
+												{p.remunerasi_percentage
+													? `${p.remunerasi_percentage}%`
+													: "-"}
 											</div>
 										</div>
 									</div>
@@ -559,7 +579,7 @@ export default function PegawaiDataSection() {
 				onOpenChange={setShowEvaluasiForm}
 				pegawai={selectedPegawai}
 				onSuccess={() => {
-					// Optional: fetch something if needed, but evaluation doesn't affect list here
+					fetchPegawai();
 					toast.success("Evaluasi berhasil disimpan");
 				}}
 			/>
@@ -569,6 +589,7 @@ export default function PegawaiDataSection() {
 				onOpenChange={setShowPencapaianForm}
 				pegawai={selectedPegawai}
 				onSuccess={() => {
+					fetchPegawai();
 					toast.success("Pencapaian berhasil disimpan");
 				}}
 			/>

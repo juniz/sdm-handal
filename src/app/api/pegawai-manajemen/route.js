@@ -45,7 +45,15 @@ export async function GET(request) {
 		const data = await rawQuery(
 			`
 			SELECT p.*, d.nama as nama_departemen,
-				(COALESCE(jnj.indek, 0) + COALESCE(kel.indek, 0) + COALESCE(res.indek, 0) + COALESCE(em.indek, 0) + COALESCE(pend.indek, 0)) AS total_index_remunerasi
+				(
+					COALESCE(jnj.indek, 0) + 
+					COALESCE(kel.indek, 0) + 
+					COALESCE(res.indek, 0) + 
+					COALESCE(em.indek, 0) + 
+					COALESCE(pend.indek, 0) +
+					COALESCE(eval_latest.indek, 0) +
+					COALESCE(capai_latest.indek, 0)
+				) AS total_index_remunerasi
 			FROM pegawai p
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
 			LEFT JOIN jnj_jabatan jnj ON p.jnj_jabatan = jnj.kode
@@ -53,6 +61,31 @@ export async function GET(request) {
 			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
 			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
 			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
+			
+			-- Join with latest evaluation index
+			LEFT JOIN (
+				SELECT ekp.id, ek.indek
+				FROM evaluasi_kinerja_pegawai ekp
+				JOIN evaluasi_kinerja ek ON ekp.kode_evaluasi = ek.kode_evaluasi
+				WHERE (ekp.id, ekp.tahun, ekp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM evaluasi_kinerja_pegawai
+					GROUP BY id
+				)
+			) eval_latest ON p.id = eval_latest.id
+
+			-- Join with latest achievement index
+			LEFT JOIN (
+				SELECT pkp.id, pk.indek
+				FROM pencapaian_kinerja_pegawai pkp
+				JOIN pencapaian_kinerja pk ON pkp.kode_pencapaian = pk.kode_pencapaian
+				WHERE (pkp.id, pkp.tahun, pkp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM pencapaian_kinerja_pegawai
+					GROUP BY id
+				)
+			) capai_latest ON p.id = capai_latest.id
+
 			${whereClause}
 			ORDER BY p.id ASC
 			LIMIT ? OFFSET ?
@@ -60,10 +93,65 @@ export async function GET(request) {
 			params
 		);
 
+		// Calculate total aggregate index for all active employees to compute percentage
+		const totalAggregateResult = await rawQuery(`
+			SELECT SUM(
+				COALESCE(jnj.indek, 0) + 
+				COALESCE(kel.indek, 0) + 
+				COALESCE(res.indek, 0) + 
+				COALESCE(em.indek, 0) + 
+				COALESCE(pend.indek, 0) +
+				COALESCE(eval_latest.indek, 0) +
+				COALESCE(capai_latest.indek, 0)
+			) as total_aggregate
+			FROM pegawai p
+			LEFT JOIN jnj_jabatan jnj ON p.jnj_jabatan = jnj.kode
+			LEFT JOIN kelompok_jabatan kel ON p.kode_kelompok = kel.kode_kelompok
+			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
+			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
+			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
+			LEFT JOIN (
+				SELECT ekp.id, ek.indek
+				FROM evaluasi_kinerja_pegawai ekp
+				JOIN evaluasi_kinerja ek ON ekp.kode_evaluasi = ek.kode_evaluasi
+				WHERE (ekp.id, ekp.tahun, ekp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM evaluasi_kinerja_pegawai
+					GROUP BY id
+				)
+			) eval_latest ON p.id = eval_latest.id
+			LEFT JOIN (
+				SELECT pkp.id, pk.indek
+				FROM pencapaian_kinerja_pegawai pkp
+				JOIN pencapaian_kinerja pk ON pkp.kode_pencapaian = pk.kode_pencapaian
+				WHERE (pkp.id, pkp.tahun, pkp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM pencapaian_kinerja_pegawai
+					GROUP BY id
+				)
+			) capai_latest ON p.id = capai_latest.id
+			WHERE p.stts_aktif = 'AKTIF'
+		`);
+		
+		const totalAggregate = totalAggregateResult[0]?.total_aggregate || 1; // Avoid division by zero
+
+		// Calculate percentage for each employee in the current page
+		const dataWithPercentage = data.map(employee => {
+			const totalIndex = parseFloat(employee.total_index_remunerasi || 0);
+			const percentage = (totalIndex / totalAggregate) * 100;
+			return {
+				...employee,
+				remunerasi_percentage: percentage.toFixed(4) // 4 decimal places for precision
+			};
+		});
+
 		return NextResponse.json({
 			status: "success",
-			data,
+			data: dataWithPercentage,
 			pagination: { page, limit, total, totalPages },
+			meta: {
+				total_aggregate_index: totalAggregate
+			}
 		});
 	} catch (error) {
 		console.error("Error fetching pegawai:", error);

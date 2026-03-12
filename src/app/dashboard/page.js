@@ -292,14 +292,14 @@ export default function DashboardPage() {
 					const data = await response.json();
 					const userData = data.user;
 
-					console.log("User data:", userData); // Debug log
+					// console.log("User data:", userData); // Debug log
 
 					// Check if user is from IT department (Strict check per NEXT_PUBLIC_DEPARTMENT_IT)
-					const isIT = userData.departemen === process.env.NEXT_PUBLIC_DEPARTMENT_IT;
+					// const isIT = userData.departemen === process.env.NEXT_PUBLIC_DEPARTMENT_IT;
 
-					console.log("Is IT department:", isIT, "jbtn:", userData.jbtn); // Debug log
+					// console.log("Is IT department:", isIT, "jbtn:", userData.jbtn); // Debug log
 
-					setUserDepartment(isIT ? "IT" : userData.jbtn || userData.departemen);
+					setUserDepartment(userData.departemen);
 				}
 			} catch (error) {
 				console.error("Error checking user department:", error);
