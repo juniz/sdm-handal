@@ -20,17 +20,23 @@ export default function PegawaiOrganikPage() {
 	const [pegawaiData, setPegawaiData] = useState({
 		pns: [],
 		polri: [],
+		kontrak: [],
 	});
 	const [filteredData, setFilteredData] = useState({
 		pns: [],
 		polri: [],
+		kontrak: [],
 	});
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
 	const [activeTab, setActiveTab] = useState("pns");
-	const [currentPage, setCurrentPage] = useState({ pns: 1, polri: 1 });
+	const [currentPage, setCurrentPage] = useState({
+		pns: 1,
+		polri: 1,
+		kontrak: 1,
+	});
 	const [itemsPerPage] = useState(10);
 
 	// Debounce search term
@@ -58,19 +64,26 @@ export default function PegawaiOrganikPage() {
 						pegawai.nik?.toLowerCase().includes(searchLower) ||
 						pegawai.nama?.toLowerCase().includes(searchLower) ||
 						pegawai.jbtn?.toLowerCase().includes(searchLower) ||
-						pegawai.departemen?.toLowerCase().includes(searchLower)
+						pegawai.departemen?.toLowerCase().includes(searchLower),
 				),
 				polri: pegawaiData.polri.filter(
 					(pegawai) =>
 						pegawai.nik?.toLowerCase().includes(searchLower) ||
 						pegawai.nama?.toLowerCase().includes(searchLower) ||
 						pegawai.jbtn?.toLowerCase().includes(searchLower) ||
-						pegawai.departemen?.toLowerCase().includes(searchLower)
+						pegawai.departemen?.toLowerCase().includes(searchLower),
+				),
+				kontrak: pegawaiData.kontrak.filter(
+					(pegawai) =>
+						pegawai.nik?.toLowerCase().includes(searchLower) ||
+						pegawai.nama?.toLowerCase().includes(searchLower) ||
+						pegawai.jbtn?.toLowerCase().includes(searchLower) ||
+						pegawai.departemen?.toLowerCase().includes(searchLower),
 				),
 			});
 		}
 		// Reset page ke 1 saat search berubah
-		setCurrentPage({ pns: 1, polri: 1 });
+		setCurrentPage({ pns: 1, polri: 1, kontrak: 1 });
 	}, [debouncedSearchTerm, pegawaiData]);
 
 	// Reset page saat tab berubah
@@ -152,11 +165,16 @@ export default function PegawaiOrganikPage() {
 	const paginatedPns = getPaginatedData(filteredData.pns, currentPage.pns);
 	const paginatedPolri = getPaginatedData(
 		filteredData.polri,
-		currentPage.polri
+		currentPage.polri,
+	);
+	const paginatedKontrak = getPaginatedData(
+		filteredData.kontrak,
+		currentPage.kontrak,
 	);
 
 	const totalPagesPns = getTotalPages(filteredData.pns);
 	const totalPagesPolri = getTotalPages(filteredData.polri);
+	const totalPagesKontrak = getTotalPages(filteredData.kontrak);
 
 	if (isLoading) {
 		return (
@@ -198,10 +216,10 @@ export default function PegawaiOrganikPage() {
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
 					<div>
 						<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-							Pegawai Organik
+							Pegawai
 						</h1>
 						<p className="text-gray-600">
-							Daftar pegawai organik yang dikelompokkan berdasarkan status kerja
+							Daftar pegawai yang dikelompokkan berdasarkan status kerja
 						</p>
 					</div>
 					<div className="flex gap-2 mt-3 sm:mt-0">
@@ -214,32 +232,58 @@ export default function PegawaiOrganikPage() {
 						</button>
 					</div>
 				</div>
+			</div>
 
-				{/* Statistics Cards */}
-				<div className="hidden md:grid grid-cols-2 gap-3 sm:gap-4 mb-6">
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-blue-100 rounded-lg">
-								<UserCheck className="w-5 h-5 text-blue-600" />
-							</div>
+			{/* Statistics Cards */}
+			<div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+				<div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+					<div className="flex items-center justify-between mb-2">
+						<div className="p-1.5 sm:p-2 bg-purple-100 rounded-lg">
+							<Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{pegawaiData.pns.length || 0}
-						</p>
-						<p className="text-sm text-gray-600">Total PNS</p>
 					</div>
+					<p className="text-xl sm:text-2xl font-bold text-gray-900">
+						{(pegawaiData.pns.length || 0) +
+							(pegawaiData.polri.length || 0) +
+							(pegawaiData.kontrak.length || 0)}
+					</p>
+					<p className="text-xs sm:text-sm text-gray-600">Total Pegawai</p>
+				</div>
 
-					<div className="bg-white p-4 rounded-lg border border-gray-200">
-						<div className="flex items-center justify-between mb-2">
-							<div className="p-2 bg-red-100 rounded-lg">
-								<Shield className="w-5 h-5 text-red-600" />
-							</div>
+				<div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+					<div className="flex items-center justify-between mb-2">
+						<div className="p-1.5 sm:p-2 bg-blue-100 rounded-lg">
+							<UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
 						</div>
-						<p className="text-2xl font-bold text-gray-900">
-							{pegawaiData.polri.length || 0}
-						</p>
-						<p className="text-sm text-gray-600">Total POLRI</p>
 					</div>
+					<p className="text-xl sm:text-2xl font-bold text-gray-900">
+						{pegawaiData.pns.length || 0}
+					</p>
+					<p className="text-xs sm:text-sm text-gray-600">PNS</p>
+				</div>
+
+				<div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+					<div className="flex items-center justify-between mb-2">
+						<div className="p-1.5 sm:p-2 bg-red-100 rounded-lg">
+							<Shield className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />
+						</div>
+					</div>
+					<p className="text-xl sm:text-2xl font-bold text-gray-900">
+						{pegawaiData.polri.length || 0}
+					</p>
+					<p className="text-xs sm:text-sm text-gray-600">POLRI</p>
+				</div>
+
+				<div className="bg-white p-3 sm:p-4 rounded-lg border border-gray-200">
+					<div className="flex items-center justify-between mb-2">
+						<div className="p-1.5 sm:p-2 bg-green-100 rounded-lg">
+							<Users className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+						</div>
+					</div>
+					<p className="text-xl sm:text-2xl font-bold text-gray-900">
+						{pegawaiData.kontrak.length || 0}
+					</p>
+					<p className="text-xs sm:text-sm text-gray-600">KONTRAK</p>
 				</div>
 			</div>
 
@@ -294,28 +338,28 @@ export default function PegawaiOrganikPage() {
 			{/* Tabs */}
 			<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 				<div className="bg-gradient-to-r from-blue-50 via-white to-red-50 rounded-xl border border-gray-200 shadow-lg mb-6 overflow-hidden backdrop-blur-sm">
-					<TabsList className="w-full justify-start bg-transparent h-auto gap-2">
+					<TabsList className="w-full justify-start bg-transparent h-auto gap-1 sm:gap-2 overflow-x-auto p-1.5 sm:p-2">
 						<TabsTrigger
 							value="pns"
-							className={`group flex items-center gap-2.5 px-6 py-3.5 rounded-lg transition-all duration-300 ease-in-out relative ${
+							className={`group flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-6 py-2.5 sm:py-3.5 rounded-lg transition-all duration-300 ease-in-out relative flex-shrink-0 ${
 								activeTab === "pns"
-									? "bg-white shadow-lg scale-[1.02] text-blue-700 font-semibold"
+									? "bg-white shadow-md sm:shadow-lg scale-[1.02] text-blue-700 font-semibold"
 									: "text-gray-600 hover:bg-white/60 hover:text-gray-800"
 							}`}
 						>
 							<UserCheck
-								className={`w-5 h-5 transition-all duration-300 ${
+								className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
 									activeTab === "pns"
 										? "text-blue-600 scale-110"
 										: "text-gray-500 group-hover:text-gray-700"
 								}`}
 							/>
-							<span className="text-sm sm:text-base font-medium">
+							<span className="text-xs sm:text-sm md:text-base font-medium">
 								<span className="hidden sm:inline">Pegawai Negeri Sipil</span>
 								<span className="sm:hidden">PNS</span>
 							</span>
 							<span
-								className={`ml-2 px-2.5 py-1 text-xs font-bold rounded-full transition-all duration-300 ${
+								className={`ml-1.5 sm:ml-2 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-300 ${
 									activeTab === "pns"
 										? "bg-blue-600 text-white shadow-md"
 										: "bg-blue-100 text-blue-700"
@@ -329,25 +373,25 @@ export default function PegawaiOrganikPage() {
 						</TabsTrigger>
 						<TabsTrigger
 							value="polri"
-							className={`group flex items-center gap-1.5 px-6 py-3.5 rounded-lg transition-all duration-300 ease-in-out relative ${
+							className={`group flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-6 py-2.5 sm:py-3.5 rounded-lg transition-all duration-300 ease-in-out relative flex-shrink-0 ${
 								activeTab === "polri"
-									? "bg-white shadow-lg scale-[1.02] text-red-700 font-semibold"
+									? "bg-white shadow-md sm:shadow-lg scale-[1.02] text-red-700 font-semibold"
 									: "text-gray-600 hover:bg-white/60 hover:text-gray-800"
 							}`}
 						>
 							<Shield
-								className={`w-5 h-5 transition-all duration-300 ${
+								className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
 									activeTab === "polri"
 										? "text-red-600 scale-110"
 										: "text-gray-500 group-hover:text-gray-700"
 								}`}
 							/>
-							<span className="text-sm sm:text-base font-medium">
+							<span className="text-xs sm:text-sm md:text-base font-medium">
 								<span className="hidden sm:inline">Kepolisian RI</span>
 								<span className="sm:hidden">POLRI</span>
 							</span>
 							<span
-								className={`ml-2 px-2.5 py-1 text-xs font-bold rounded-full transition-all duration-300 ${
+								className={`ml-1.5 sm:ml-2 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-300 ${
 									activeTab === "polri"
 										? "bg-red-600 text-white shadow-md"
 										: "bg-red-100 text-red-700"
@@ -357,6 +401,38 @@ export default function PegawaiOrganikPage() {
 							</span>
 							{activeTab === "polri" && (
 								<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 to-red-600 rounded-t-full"></div>
+							)}
+						</TabsTrigger>
+						<TabsTrigger
+							value="kontrak"
+							className={`group flex items-center gap-1.5 sm:gap-2.5 px-3 sm:px-6 py-2.5 sm:py-3.5 rounded-lg transition-all duration-300 ease-in-out relative flex-shrink-0 ${
+								activeTab === "kontrak"
+									? "bg-white shadow-md sm:shadow-lg scale-[1.02] text-green-700 font-semibold"
+									: "text-gray-600 hover:bg-white/60 hover:text-gray-800"
+							}`}
+						>
+							<Users
+								className={`w-4 h-4 sm:w-5 sm:h-5 transition-all duration-300 ${
+									activeTab === "kontrak"
+										? "text-green-600 scale-110"
+										: "text-gray-500 group-hover:text-gray-700"
+								}`}
+							/>
+							<span className="text-xs sm:text-sm md:text-base font-medium">
+								<span className="hidden sm:inline">Pegawai Kontrak</span>
+								<span className="sm:hidden">Kontrak</span>
+							</span>
+							<span
+								className={`ml-1.5 sm:ml-2 px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold rounded-full transition-all duration-300 ${
+									activeTab === "kontrak"
+										? "bg-green-600 text-white shadow-md"
+										: "bg-green-100 text-green-700"
+								}`}
+							>
+								{filteredData.kontrak.length}
+							</span>
+							{activeTab === "kontrak" && (
+								<div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 to-green-600 rounded-t-full"></div>
 							)}
 						</TabsTrigger>
 					</TabsList>
@@ -629,6 +705,139 @@ export default function PegawaiOrganikPage() {
 						</div>
 					)}
 				</TabsContent>
+				{/* Kontrak Tab Content */}
+				<TabsContent value="kontrak" className="mt-0">
+					{/* Desktop Table */}
+					<div className="hidden lg:block bg-white rounded-lg border border-gray-200 overflow-hidden">
+						<div className="overflow-x-auto">
+							<table className="w-full">
+								<thead className="bg-gray-50">
+									<tr>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											NIK
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Nama
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Jabatan
+										</th>
+										<th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+											Departemen
+										</th>
+									</tr>
+								</thead>
+								<tbody className="bg-white divide-y divide-gray-200">
+									{filteredData.kontrak.length === 0 ? (
+										<tr>
+											<td colSpan="4" className="px-6 py-12 text-center">
+												<Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+												<h3 className="text-lg font-semibold text-gray-900 mb-2">
+													Tidak Ada Data
+												</h3>
+												<p className="text-gray-600">
+													{searchTerm
+														? "Tidak ada pegawai Kontrak yang sesuai dengan pencarian"
+														: "Tidak ada data pegawai Kontrak"}
+												</p>
+											</td>
+										</tr>
+									) : (
+										paginatedKontrak.map((pegawai, index) => (
+											<tr
+												key={`kontrak-${pegawai.nik}-${index}`}
+												className="hover:bg-gray-50"
+											>
+												<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+													{pegawai.nik || "-"}
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+													{pegawai.nama || "-"}
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+													{pegawai.jbtn || "-"}
+												</td>
+												<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+													{pegawai.departemen || "-"}
+												</td>
+											</tr>
+										))
+									)}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					{/* Pagination Desktop */}
+					{totalPagesKontrak > 1 && (
+						<div className="hidden lg:block">
+							<PaginationComponent
+								currentPage={currentPage.kontrak}
+								totalPages={totalPagesKontrak}
+								totalItems={filteredData.kontrak.length}
+								itemsPerPage={itemsPerPage}
+								onPageChange={(page) => handlePageChange(page)}
+							/>
+						</div>
+					)}
+
+					{/* Mobile Cards */}
+					<div className="lg:hidden space-y-4">
+						{filteredData.kontrak.length === 0 ? (
+							<div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+								<Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+								<h3 className="text-lg font-semibold text-gray-900 mb-2">
+									Tidak Ada Data
+								</h3>
+								<p className="text-gray-600">
+									{searchTerm
+										? "Tidak ada pegawai Kontrak yang sesuai dengan pencarian"
+										: "Tidak ada data pegawai Kontrak"}
+								</p>
+							</div>
+						) : (
+							paginatedKontrak.map((pegawai, index) => (
+								<div
+									key={`kontrak-${pegawai.nik}-${index}`}
+									className="bg-white rounded-lg border border-gray-200 p-4"
+								>
+									<div className="flex items-start justify-between mb-3">
+										<div className="flex-1">
+											<h3 className="font-semibold text-gray-900 mb-1">
+												{pegawai.nama || "-"}
+											</h3>
+											<p className="text-sm text-gray-600 mb-1">
+												{pegawai.nik || "-"}
+											</p>
+											<p className="text-sm text-gray-600">
+												{pegawai.departemen || "-"}
+											</p>
+										</div>
+									</div>
+									<div className="mt-3 pt-3 border-t border-gray-200">
+										<p className="text-xs text-gray-500 mb-1">Jabatan</p>
+										<p className="text-sm font-medium text-gray-900">
+											{pegawai.jbtn || "-"}
+										</p>
+									</div>
+								</div>
+							))
+						)}
+					</div>
+
+					{/* Pagination Mobile */}
+					{totalPagesKontrak > 1 && (
+						<div className="lg:hidden mt-4">
+							<PaginationComponent
+								currentPage={currentPage.kontrak}
+								totalPages={totalPagesKontrak}
+								totalItems={filteredData.kontrak.length}
+								itemsPerPage={itemsPerPage}
+								onPageChange={(page) => handlePageChange(page)}
+							/>
+						</div>
+					)}
+				</TabsContent>
 			</Tabs>
 		</div>
 	);
@@ -668,7 +877,7 @@ function PaginationComponent({
 		} else {
 			const startPage = Math.max(
 				1,
-				currentPage - Math.floor(maxVisiblePages / 2)
+				currentPage - Math.floor(maxVisiblePages / 2),
 			);
 			const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
 

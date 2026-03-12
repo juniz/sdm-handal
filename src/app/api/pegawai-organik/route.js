@@ -17,7 +17,7 @@ export async function GET(request) {
 					status: "error",
 					error: "Unauthorized - Token tidak valid",
 				},
-				{ status: 401 }
+				{ status: 401 },
 			);
 		}
 
@@ -55,9 +55,27 @@ export async function GET(request) {
 				p.id ASC
 		`;
 
-		const [pns, polri] = await Promise.all([
+		// Query untuk mengambil data pegawai KONTRAK
+		const kontrakQuery = `
+			SELECT 
+				p.nik,
+				p.nama,
+				p.jbtn,
+				d.nama AS departemen
+			FROM 
+				pegawai p
+				LEFT JOIN departemen d ON p.departemen = d.dep_id
+			WHERE 
+				p.stts_kerja = 'KB'
+				AND p.stts_aktif = 'AKTIF'
+			ORDER BY 
+				p.id ASC
+		`;
+
+		const [pns, polri, kontrak] = await Promise.all([
 			rawQuery(pnsQuery),
 			rawQuery(polriQuery),
+			rawQuery(kontrakQuery),
 		]);
 
 		return NextResponse.json({
@@ -65,6 +83,7 @@ export async function GET(request) {
 			data: {
 				pns: pns || [],
 				polri: polri || [],
+				kontrak: kontrak || [],
 			},
 		});
 	} catch (error) {
@@ -73,10 +92,10 @@ export async function GET(request) {
 			{
 				status: "error",
 				error: "Gagal mengambil data pegawai organik",
-				message: process.env.NODE_ENV === "development" ? error.message : undefined,
+				message:
+					process.env.NODE_ENV === "development" ? error.message : undefined,
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
-
