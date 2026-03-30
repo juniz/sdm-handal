@@ -1,10 +1,18 @@
 "use client";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Users, Briefcase, BarChart3 } from "lucide-react";
+import {
+	Users,
+	Briefcase,
+	BarChart3,
+	SlidersHorizontal,
+	Award,
+} from "lucide-react";
 import PegawaiDataSection from "@/components/pegawai-manajemen/PegawaiDataSection";
 import IndexRemunerasiSection from "@/components/pegawai-manajemen/IndexRemunerasiSection";
 import EvaluasiPegawaiSection from "@/components/pegawai-manajemen/EvaluasiPegawaiSection";
+import PencapaianPegawaiSection from "@/components/pegawai-manajemen/PencapaianPegawaiSection";
+import ThresholdSection from "@/components/pegawai-manajemen/ThresholdSection";
 
 export default function PegawaiManajemenPage() {
 	return (
@@ -14,14 +22,14 @@ export default function PegawaiManajemenPage() {
 					Manajemen Data Pegawai
 				</h1>
 				<p className="text-gray-600">
-					Kelola data pegawai, index remunerasi, dan evaluasi kinerja dalam satu
-					tempat
+					Kelola data pegawai, index remunerasi, evaluasi kinerja, pencapaian
+					kinerja, dan threshold kelompok jabatan dalam satu tempat
 				</p>
 			</div>
 
 			<Tabs defaultValue="pegawai" className="w-full">
 				<div className="overflow-x-auto pb-2">
-					<TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:max-w-2xl sm:grid-cols-3 mb-6 h-auto p-1">
+					<TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:max-w-5xl sm:grid-cols-5 mb-6 h-auto p-1">
 						<TabsTrigger
 							value="pegawai"
 							className="flex items-center gap-2 py-2 px-4"
@@ -43,6 +51,20 @@ export default function PegawaiManajemenPage() {
 							<BarChart3 className="w-4 h-4 shrink-0" />
 							<span className="whitespace-nowrap">Evaluasi Kinerja</span>
 						</TabsTrigger>
+						<TabsTrigger
+							value="pencapaian"
+							className="flex items-center gap-2 py-2 px-4"
+						>
+							<Award className="w-4 h-4 shrink-0" />
+							<span className="whitespace-nowrap">Pencapaian Kinerja</span>
+						</TabsTrigger>
+						<TabsTrigger
+							value="threshold"
+							className="flex items-center gap-2 py-2 px-4"
+						>
+							<SlidersHorizontal className="w-4 h-4 shrink-0" />
+							<span className="whitespace-nowrap">Threshold Kelompok</span>
+						</TabsTrigger>
 					</TabsList>
 				</div>
 
@@ -56,6 +78,14 @@ export default function PegawaiManajemenPage() {
 
 				<TabsContent value="evaluasi" className="mt-0">
 					<EvaluasiPegawaiSection />
+				</TabsContent>
+
+				<TabsContent value="pencapaian" className="mt-0">
+					<PencapaianPegawaiSection />
+				</TabsContent>
+
+				<TabsContent value="threshold" className="mt-0">
+					<ThresholdSection />
 				</TabsContent>
 			</Tabs>
 		</div>

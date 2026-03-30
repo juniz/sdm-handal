@@ -19,7 +19,21 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { getClientToken } from "@/lib/client-auth";
 
@@ -54,6 +68,37 @@ export default function EvaluasiFormDialog({
 		keterangan: "",
 	});
 	const [loading, setLoading] = useState(false);
+	const [pegawaiList, setPegawaiList] = useState([]);
+	const [openPegawai, setOpenPegawai] = useState(false);
+	const [pegawaiSearch, setPegawaiSearch] = useState("");
+
+	// Fetch employees for dropdown
+	const fetchPegawaiList = useCallback(async () => {
+		try {
+			const token = getClientToken();
+			const headers = {};
+			if (token) headers["Authorization"] = `Bearer ${token}`;
+			const res = await fetch(
+				"/api/pegawai-manajemen?limit=1000&stts_aktif=AKTIF",
+				{ headers },
+			);
+			const json = await res.json();
+			if (res.ok) setPegawaiList(json.data || []);
+		} catch (err) {
+			console.error("Failed to fetch pegawai", err);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (open) {
+			fetchEvaluasiList();
+			fetchPegawaiList();
+			setFormData({ kode_evaluasi: "", keterangan: "" });
+			setYear(new Date().getFullYear().toString());
+			setMonth((new Date().getMonth() + 1).toString());
+			setLoading(false);
+		}
+	}, [open]);
 
 	// History state
 	const [historyData, setHistoryData] = useState([]);
@@ -62,21 +107,12 @@ export default function EvaluasiFormDialog({
 	const [hasMoreHistory, setHasMoreHistory] = useState(true);
 	const observerTarget = useRef(null);
 
-	useEffect(() => {
-		if (open) {
-			fetchEvaluasiList();
-			setFormData({ kode_evaluasi: "", keterangan: "" });
-			setYear(new Date().getFullYear().toString());
-			setMonth((new Date().getMonth() + 1).toString());
-			setLoading(false);
-		}
-	}, [open]);
-
 	// Fetch history when pegawai or open changes, or page increments
 	// Define fetchHistory with useCallback to avoid dependency warnings and infinite loops
 	const fetchHistory = useCallback(
 		async (reset = false) => {
-			if (!pegawai?.id) return;
+			const targetPegawaiId = pegawai?.id || formData.id;
+			if (!targetPegawaiId) return;
 			if (!reset && (historyLoading || !hasMoreHistory)) return;
 
 			try {
@@ -87,7 +123,7 @@ export default function EvaluasiFormDialog({
 
 				const currentPage = reset ? 1 : historyPage;
 				const params = new URLSearchParams({
-					id: pegawai.id,
+					id: targetPegawaiId,
 					page: currentPage,
 					limit: HISTORY_LIMIT,
 				});
@@ -120,18 +156,26 @@ export default function EvaluasiFormDialog({
 				setHistoryLoading(false);
 			}
 		},
-		[pegawai?.id, historyPage, hasMoreHistory, historyLoading],
+		[pegawai?.id, formData.id, historyPage, hasMoreHistory, historyLoading],
 	);
 
 	useEffect(() => {
-		if (open && pegawai?.id) {
-			// Initial fetch or reset when modal opens
-			setHistoryData([]);
-			setHistoryPage(1);
-			setHasMoreHistory(true);
-			fetchHistory(true);
+		if (open) {
+			if (pegawai?.id) {
+				// Initial fetch or reset when modal opens
+				setHistoryData([]);
+				setHistoryPage(1);
+				setHasMoreHistory(true);
+				fetchHistory(true);
+			} else if (formData.id) {
+				// If formData.id is set (e.g. from select), fetch history for that pegawai
+				setHistoryData([]);
+				setHistoryPage(1);
+				setHasMoreHistory(true);
+				fetchHistory(true);
+			}
 		}
-	}, [open, pegawai?.id]); // Only trigger on open/pegawai change
+	}, [open, pegawai?.id, formData.id]); // Trigger on open, pegawai change, or selected pegawai change
 
 	// Trigger fetch when historyPage changes (for pagination/infinite scroll)
 	useEffect(() => {
@@ -179,7 +223,11 @@ export default function EvaluasiFormDialog({
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (!pegawai) return;
+		const targetPegawaiId = pegawai?.id || formData.id;
+		if (!targetPegawaiId) {
+			toast.error("Silakan pilih pegawai terlebih dahulu");
+			return;
+		}
 
 		setLoading(true);
 		const token = getClientToken();
@@ -189,7 +237,7 @@ export default function EvaluasiFormDialog({
 		};
 
 		const payload = {
-			id: pegawai.id,
+			id: targetPegawaiId,
 			kode_evaluasi: formData.kode_evaluasi,
 			keterangan: formData.keterangan,
 			tahun: year,
@@ -248,6 +296,93 @@ export default function EvaluasiFormDialog({
 				<ScrollArea className="flex-1 w-full">
 					<div className="px-6 py-2">
 						<form onSubmit={handleSubmit} className="space-y-6">
+							{!pegawai && (
+								<div className="space-y-2">
+									<Label>Pegawai *</Label>
+									<Popover open={openPegawai} onOpenChange={setOpenPegawai}>
+										<PopoverTrigger asChild>
+											<Button
+												variant="outline"
+												role="combobox"
+												aria-expanded={openPegawai}
+												className={cn(
+													"w-full justify-between font-normal",
+													!formData.id && "text-muted-foreground",
+												)}
+											>
+												{formData.id
+													? (() => {
+															const peg = pegawaiList.find(
+																(p) => String(p.id) === String(formData.id),
+															);
+															return peg
+																? `${peg.nik} - ${peg.nama}`
+																: "Pilih Pegawai";
+													  })()
+													: "Pilih Pegawai"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent
+											className="w-[var(--radix-popover-trigger-width)] p-0"
+											align="start"
+										>
+											<Command shouldFilter={false}>
+												<CommandInput
+													placeholder="Cari NIK atau Nama..."
+													value={pegawaiSearch}
+													onValueChange={setPegawaiSearch}
+												/>
+												<CommandList>
+													<CommandEmpty>
+														{pegawaiList.length === 0
+															? "Memuat data..."
+															: "Pegawai tidak ditemukan."}
+													</CommandEmpty>
+													<CommandGroup>
+														{pegawaiList
+															.filter((p) => {
+																if (!pegawaiSearch) return true;
+																const searchLower = pegawaiSearch.toLowerCase();
+																return (
+																	p.nik?.toLowerCase().includes(searchLower) ||
+																	p.nama?.toLowerCase().includes(searchLower)
+																);
+															})
+															.slice(0, 50) // Limit to 50 for performance
+															.map((p) => (
+																<CommandItem
+																	key={p.id}
+																	value={String(p.id)}
+																	onSelect={(currentValue) => {
+																		setFormData((prev) => ({
+																			...prev,
+																			id:
+																				currentValue === String(formData.id)
+																					? ""
+																					: currentValue,
+																		}));
+																		setOpenPegawai(false);
+																	}}
+																>
+																	<Check
+																		className={cn(
+																			"mr-2 h-4 w-4",
+																			String(formData.id) === String(p.id)
+																				? "opacity-100"
+																				: "opacity-0",
+																		)}
+																	/>
+																	{p.nik} - {p.nama}
+																</CommandItem>
+															))}
+													</CommandGroup>
+												</CommandList>
+											</Command>
+										</PopoverContent>
+									</Popover>
+								</div>
+							)}
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 								<div className="space-y-2">
 									<Label htmlFor="bulan">Bulan</Label>
@@ -300,7 +435,7 @@ export default function EvaluasiFormDialog({
 									</SelectTrigger>
 									<SelectContent>
 										{evaluasiList.map((e) => (
-											<SelectItem key={e.kode_evaluasi} value={e.kode_evaluasi}>
+											<SelectItem key={e.kode_evaluasi} value={String(e.kode_evaluasi)}>
 												{e.nama_evaluasi} (Indek: {e.indek})
 											</SelectItem>
 										))}

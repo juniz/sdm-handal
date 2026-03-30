@@ -48,12 +48,16 @@ import {
 	MoreHorizontal,
 	BarChart3,
 	Zap,
+	Info,
+	Bug,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getClientToken } from "@/lib/client-auth";
 import PegawaiFormDialog from "./PegawaiFormDialog";
 import EvaluasiFormDialog from "./EvaluasiFormDialog";
 import PencapaianFormDialog from "./PencapaianFormDialog";
+import RumusRemunerasiDialog from "./RumusRemunerasiDialog";
+import DebugPersentaseDialog from "./DebugPersentaseDialog";
 
 export default function PegawaiDataSection() {
 	const [data, setData] = useState([]);
@@ -73,6 +77,8 @@ export default function PegawaiDataSection() {
 	const [showDelete, setShowDelete] = useState(false);
 	const [showEvaluasiForm, setShowEvaluasiForm] = useState(false);
 	const [showPencapaianForm, setShowPencapaianForm] = useState(false);
+	const [showRumusDialog, setShowRumusDialog] = useState(false);
+	const [showDebugDialog, setShowDebugDialog] = useState(false);
 	const [selectedPegawai, setSelectedPegawai] = useState(null);
 	const [refs, setRefs] = useState({
 		departemen: [],
@@ -225,6 +231,13 @@ export default function PegawaiDataSection() {
 		}, 100);
 	};
 
+	const handleDebugClick = (p) => {
+		setTimeout(() => {
+			setSelectedPegawai(p);
+			setShowDebugDialog(true);
+		}, 100);
+	};
+
 	return (
 		<Card>
 			<CardHeader>
@@ -234,21 +247,31 @@ export default function PegawaiDataSection() {
 							<Users className="w-5 h-5" />
 							Data Pegawai
 						</CardTitle>
-						<p className="text-sm text-gray-500 mt-1">
+						{/* <p className="text-sm text-gray-500 mt-1">
 							Kelola data pegawai dan informasi kepegawaian. Total Index
 							Remunerasi Aktif:{" "}
 							<span className="font-semibold">{totalAggregate}</span>
-						</p>
+						</p> */}
 					</div>
-					<Button
-						onClick={() => {
-							setSelectedPegawai(null);
-							setShowForm(true);
-						}}
-					>
-						<Plus className="w-4 h-4 mr-2" />
-						Tambah Pegawai
-					</Button>
+					<div className="flex gap-2">
+						<Button
+							variant="outline"
+							onClick={() => setShowRumusDialog(true)}
+							className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+						>
+							<Info className="w-4 h-4 mr-2" />
+							Rumus Remunerasi
+						</Button>
+						<Button
+							onClick={() => {
+								setSelectedPegawai(null);
+								setShowForm(true);
+							}}
+						>
+							<Plus className="w-4 h-4 mr-2" />
+							Tambah Pegawai
+						</Button>
+					</div>
 				</div>
 				<div className="flex flex-col sm:flex-row gap-3 pt-2">
 					<div className="relative flex-1">
@@ -335,8 +358,16 @@ export default function PegawaiDataSection() {
 										<TableHead>Nama</TableHead>
 										<TableHead>Jabatan</TableHead>
 										<TableHead>Departemen</TableHead>
-										<TableHead className="text-center">Total Index</TableHead>
-										<TableHead className="text-center">Persentase</TableHead>
+										{/* <TableHead className="text-center">Total Index</TableHead> */}
+										<TableHead className="text-center group relative">
+											<div
+												className="flex items-center justify-center gap-1 cursor-help"
+												onClick={() => setShowRumusDialog(true)}
+											>
+												Persentase
+												<Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700" />
+											</div>
+										</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead className="text-right">Aksi</TableHead>
 									</TableRow>
@@ -352,9 +383,9 @@ export default function PegawaiDataSection() {
 											<TableCell>
 												{p.nama_departemen || p.departemen || "-"}
 											</TableCell>
-											<TableCell className="text-center font-medium">
+											{/* <TableCell className="text-center font-medium">
 												{p.total_index_remunerasi ?? "-"}
-											</TableCell>
+											</TableCell> */}
 											<TableCell className="text-center font-medium">
 												{p.remunerasi_percentage
 													? `${p.remunerasi_percentage}%`
@@ -395,6 +426,14 @@ export default function PegawaiDataSection() {
 															<Zap className="mr-2 h-4 w-4" />
 															Input Pencapaian
 														</DropdownMenuItem>
+														{process.env.NEXT_PUBLIC_DEBUG_MODE === "true" && (
+															<DropdownMenuItem
+																onClick={() => handleDebugClick(p)}
+															>
+																<Bug className="mr-2 h-4 w-4" />
+																Debug Persentase
+															</DropdownMenuItem>
+														)}
 														<DropdownMenuSeparator />
 														<DropdownMenuItem
 															onClick={() => handleDeleteClick(p)}
@@ -499,6 +538,17 @@ export default function PegawaiDataSection() {
 											<Zap className="w-3.5 h-3.5 mr-1.5" />
 											Pencapaian
 										</Button>
+										{process.env.NEXT_PUBLIC_DEBUG_MODE === "true" && (
+											<Button
+												variant="outline"
+												size="sm"
+												className="h-8 text-xs"
+												onClick={() => handleDebugClick(p)}
+											>
+												<Bug className="w-3.5 h-3.5 mr-1.5" />
+												Debug
+											</Button>
+										)}
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
@@ -614,6 +664,19 @@ export default function PegawaiDataSection() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			<RumusRemunerasiDialog
+				open={showRumusDialog}
+				onOpenChange={setShowRumusDialog}
+			/>
+
+			{process.env.NEXT_PUBLIC_DEBUG_MODE === "true" && (
+				<DebugPersentaseDialog
+					open={showDebugDialog}
+					onOpenChange={setShowDebugDialog}
+					pegawai={selectedPegawai}
+				/>
+			)}
 		</Card>
 	);
 }

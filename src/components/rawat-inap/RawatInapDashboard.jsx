@@ -168,15 +168,63 @@ export default function RawatInapDashboard() {
 		return acc;
 	}, {});
 
+	// Define consistent colors for common payment methods
+	const paymentColorMap = {
+		"BPJS KESEHATAN": "#10b981", // Green
+		UMUM: "#3b82f6", // Blue
+		"ASURANSI LAIN": "#f59e0b", // Amber
+		"POLRI ANGGOTA": "#8b5cf6", // Purple
+		"POLRI KELUARGA": "#ec4899", // Pink
+		WATTAH: "#06b6d4", // Cyan
+		"JASA RAHARJA": "#6366f1", // Indigo
+		Lainnya: "#ef4444", // Red
+	};
+
+	const paymentLabels = Object.keys(paymentDistribution);
+	const paymentSeries = Object.values(paymentDistribution);
+
+	// Assign colors based on label, fallback to gray/random if not mapped
+	const paymentColors = paymentLabels.map((label) => {
+		// Check for partial matches or exact matches
+		if (label.includes("BPJS")) return paymentColorMap["BPJS KESEHATAN"];
+		if (label.includes("UMUM") || label.includes("PRIBADI"))
+			return paymentColorMap["UMUM"];
+		if (label.includes("POLRI") && label.includes("ANGGOTA"))
+			return paymentColorMap["POLRI ANGGOTA"];
+		if (label.includes("POLRI") && label.includes("KELUARGA"))
+			return paymentColorMap["POLRI KELUARGA"];
+		if (label.includes("WATTAH")) return paymentColorMap["WATTAH"];
+		if (label.includes("JASA")) return paymentColorMap["JASA RAHARJA"];
+
+		return paymentColorMap[label] || "#94a3b8"; // Default slate gray
+	});
+
 	const paymentChartOptions = {
 		chart: { type: "donut" },
-		labels: Object.keys(paymentDistribution),
-		colors: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"],
-		legend: { position: "bottom" },
+		labels: paymentLabels,
+		colors: paymentColors,
+		legend: {
+			position: "bottom",
+			formatter: function (seriesName, opts) {
+				return (
+					seriesName +
+					" - (" +
+					opts.w.globals.series[opts.seriesIndex] +
+					") Pasien"
+				);
+			},
+		},
 		dataLabels: { enabled: true },
 		title: { text: "Distribusi Cara Bayar (Aktif)", align: "center" },
+		tooltip: {
+			y: {
+				formatter: function (val) {
+					return "(" + val + ") Pasien";
+				},
+			},
+		},
 	};
-	const paymentChartSeries = Object.values(paymentDistribution);
+	const paymentChartSeries = paymentSeries;
 
 	// 3. Top Diagnoses (Bar Chart) - based on active patients
 	const diagnosesCount = filteredPatients.reduce((acc, curr) => {

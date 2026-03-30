@@ -426,7 +426,7 @@ export default function IndexRemunerasiSection() {
 			<CardContent>
 				<Tabs defaultValue="jnj" className="w-full">
 					<div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-						<TabsList className="inline-flex h-auto w-max min-w-full justify-start sm:w-full sm:grid sm:grid-cols-3 lg:grid-cols-6 p-1">
+						<TabsList className="inline-flex h-auto w-max min-w-full justify-start sm:w-full sm:grid sm:grid-cols-3 lg:grid-cols-7 p-1">
 							<TabsTrigger value="jnj" className="whitespace-nowrap px-4 py-2">
 								Jenis Jabatan
 							</TabsTrigger>
@@ -485,6 +485,9 @@ export default function IndexRemunerasiSection() {
 					</TabsContent>
 					<TabsContent value="evaluasi" className="mt-4">
 						<RemunerasiTable type="evaluasi" />
+					</TabsContent>
+					<TabsContent value="pencapaian" className="mt-4">
+						<RemunerasiTable type="pencapaian" />
 					</TabsContent>
 				</Tabs>
 			</CardContent>

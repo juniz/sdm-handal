@@ -36,7 +36,7 @@ export async function GET(request) {
 
 		const countResult = await rawQuery(
 			`SELECT COUNT(*) as total FROM pegawai p ${whereClause}`,
-			params
+			params,
 		);
 		const total = countResult[0]?.total || 0;
 		const totalPages = Math.ceil(total / limit);
@@ -45,19 +45,35 @@ export async function GET(request) {
 		const data = await rawQuery(
 			`
 			SELECT p.*, d.nama as nama_departemen,
+				tkj.threshold_persen,
+				tkj.bobot_jabatan,
+				tkj.bobot_personal,
+				COALESCE(jnj.indek, 0) as jnj_indek,
+				COALESCE(kel.indek, 0) as kel_indek,
+				COALESCE(res.indek, 0) as res_indek,
+				COALESCE(em.indek, 0) as em_indek,
+				COALESCE(pend.indek, 0) as pend_indek,
+				COALESCE(eval_latest.indek, 0) as eval_indek,
+				COALESCE(capai_latest.indek, 0) as capai_indek,
 				(
-					COALESCE(jnj.indek, 0) + 
-					COALESCE(kel.indek, 0) + 
-					COALESCE(res.indek, 0) + 
-					COALESCE(em.indek, 0) + 
-					COALESCE(pend.indek, 0) +
-					COALESCE(eval_latest.indek, 0) +
-					COALESCE(capai_latest.indek, 0)
+					(
+						COALESCE(jnj.indek, 0) + 
+						COALESCE(kel.indek, 0) + 
+						COALESCE(res.indek, 0) + 
+						COALESCE(em.indek, 0)
+					) * (COALESCE(tkj.bobot_jabatan, 35.00) / 100)
+					+
+					(
+						COALESCE(pend.indek, 0) +
+						COALESCE(eval_latest.indek, 0) +
+						COALESCE(capai_latest.indek, 0)
+					) * (COALESCE(tkj.bobot_personal, 65.00) / 100)
 				) AS total_index_remunerasi
 			FROM pegawai p
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
 			LEFT JOIN jnj_jabatan jnj ON p.jnj_jabatan = jnj.kode
 			LEFT JOIN kelompok_jabatan kel ON p.kode_kelompok = kel.kode_kelompok
+			LEFT JOIN threshold_kelompok_jabatan tkj ON p.kode_kelompok = tkj.kode_kelompok
 			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
 			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
 			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
@@ -90,23 +106,29 @@ export async function GET(request) {
 			ORDER BY p.id ASC
 			LIMIT ? OFFSET ?
 		`,
-			params
+			params,
 		);
 
-		// Calculate total aggregate index for all active employees to compute percentage
+		// Calculate total aggregate index (using the new formula) for all active employees
 		const totalAggregateResult = await rawQuery(`
 			SELECT SUM(
-				COALESCE(jnj.indek, 0) + 
-				COALESCE(kel.indek, 0) + 
-				COALESCE(res.indek, 0) + 
-				COALESCE(em.indek, 0) + 
-				COALESCE(pend.indek, 0) +
-				COALESCE(eval_latest.indek, 0) +
-				COALESCE(capai_latest.indek, 0)
+				(
+					COALESCE(jnj.indek, 0) + 
+					COALESCE(kel.indek, 0) + 
+					COALESCE(res.indek, 0) + 
+					COALESCE(em.indek, 0)
+				) * (COALESCE(tkj.bobot_jabatan, 35.00) / 100)
+				+
+				(
+					COALESCE(pend.indek, 0) +
+					COALESCE(eval_latest.indek, 0) +
+					COALESCE(capai_latest.indek, 0)
+				) * (COALESCE(tkj.bobot_personal, 65.00) / 100)
 			) as total_aggregate
 			FROM pegawai p
 			LEFT JOIN jnj_jabatan jnj ON p.jnj_jabatan = jnj.kode
 			LEFT JOIN kelompok_jabatan kel ON p.kode_kelompok = kel.kode_kelompok
+			LEFT JOIN threshold_kelompok_jabatan tkj ON p.kode_kelompok = tkj.kode_kelompok
 			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
 			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
 			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
@@ -132,16 +154,19 @@ export async function GET(request) {
 			) capai_latest ON p.id = capai_latest.id
 			WHERE p.stts_aktif = 'AKTIF'
 		`);
-		
+
 		const totalAggregate = totalAggregateResult[0]?.total_aggregate || 1; // Avoid division by zero
 
-		// Calculate percentage for each employee in the current page
-		const dataWithPercentage = data.map(employee => {
+		// Calculate percentage based on Threshold
+		const dataWithPercentage = data.map((employee) => {
 			const totalIndex = parseFloat(employee.total_index_remunerasi || 0);
-			const percentage = (totalIndex / totalAggregate) * 100;
+			const threshold = parseFloat(employee.threshold_persen || 100);
+			// Percentage Achievement relative to Threshold
+			const percentage = (totalIndex / threshold) * 100;
+
 			return {
 				...employee,
-				remunerasi_percentage: percentage.toFixed(4) // 4 decimal places for precision
+				remunerasi_percentage: percentage.toFixed(2),
 			};
 		});
 
@@ -150,14 +175,14 @@ export async function GET(request) {
 			data: dataWithPercentage,
 			pagination: { page, limit, total, totalPages },
 			meta: {
-				total_aggregate_index: totalAggregate
-			}
+				total_aggregate_index: totalAggregate,
+			},
 		});
 	} catch (error) {
 		console.error("Error fetching pegawai:", error);
 		return NextResponse.json(
 			{ message: "Terjadi kesalahan saat mengambil data pegawai" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -173,14 +198,13 @@ export async function POST(request) {
 		const body = await request.json();
 
 		// Validasi NIK unique
-		const existingNik = await rawQuery(
-			"SELECT id FROM pegawai WHERE nik = ?",
-			[body.nik]
-		);
+		const existingNik = await rawQuery("SELECT id FROM pegawai WHERE nik = ?", [
+			body.nik,
+		]);
 		if (existingNik.length > 0) {
 			return NextResponse.json(
 				{ message: "NIK sudah terdaftar" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -188,7 +212,7 @@ export async function POST(request) {
 		if (!body.tgl_lahir || !body.mulai_kerja) {
 			return NextResponse.json(
 				{ message: "Tanggal lahir dan mulai kerja wajib diisi" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -238,7 +262,7 @@ export async function POST(request) {
 		console.error("Error creating pegawai:", error);
 		return NextResponse.json(
 			{ message: "Terjadi kesalahan saat menambah pegawai" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -257,7 +281,7 @@ export async function PUT(request) {
 		if (!id) {
 			return NextResponse.json(
 				{ message: "ID pegawai harus diisi" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -265,12 +289,12 @@ export async function PUT(request) {
 		if (body.nik) {
 			const existingNik = await rawQuery(
 				"SELECT id FROM pegawai WHERE nik = ? AND id != ?",
-				[body.nik, id]
+				[body.nik, id],
 			);
 			if (existingNik.length > 0) {
 				return NextResponse.json(
 					{ message: "NIK sudah terdaftar" },
-					{ status: 400 }
+					{ status: 400 },
 				);
 			}
 		}
@@ -330,7 +354,7 @@ export async function PUT(request) {
 		console.error("Error updating pegawai:", error);
 		return NextResponse.json(
 			{ message: "Terjadi kesalahan saat mengupdate pegawai" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
@@ -349,7 +373,7 @@ export async function DELETE(request) {
 		if (!id) {
 			return NextResponse.json(
 				{ message: "ID pegawai harus diisi" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 
@@ -367,7 +391,7 @@ export async function DELETE(request) {
 		console.error("Error updating pegawai status:", error);
 		return NextResponse.json(
 			{ message: "Terjadi kesalahan saat mengubah status pegawai" },
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }

@@ -75,6 +75,9 @@ const ALLOWED_TABLES = [
 	"bank",
 	"evaluasi_kinerja",
 	"evaluasi_kinerja_pegawai",
+	"pencapaian_kinerja",
+	"pencapaian_kinerja_pegawai",
+	"threshold_kelompok_jabatan",
 ];
 
 /**

@@ -40,6 +40,21 @@ export async function POST(request) {
 				p.nik,
 				p.nama as nama_pegawai,
 				pp.presentase_dari_unit,
+				COALESCE(tkj.threshold_persen, 100) as threshold_persen,
+				(
+					(
+						COALESCE(jnj.indek, 0) + 
+						COALESCE(kel.indek, 0) + 
+						COALESCE(res.indek, 0) + 
+						COALESCE(em.indek, 0)
+					) * (COALESCE(tkj.bobot_jabatan, 35.00) / 100)
+					+
+					(
+						COALESCE(pend.indek, 0) +
+						COALESCE(eval_latest.indek, 0) +
+						COALESCE(capai_latest.indek, 0)
+					) * (COALESCE(tkj.bobot_personal, 65.00) / 100)
+				) AS total_index_remunerasi,
 				-- Kalkulasi nominal
 				ROUND(? * (pk.presentase_dari_total / 100), 2) as nominal_kategori,
 				ROUND(
@@ -47,21 +62,40 @@ export async function POST(request) {
 					(pk.presentase_dari_total / 100) * 
 					(pu.presentase_dari_kategori / 100), 
 					2
-				) as nominal_unit,
-				ROUND(
-					? * 
-					(pk.presentase_dari_total / 100) * 
-					(pu.presentase_dari_kategori / 100) * 
-					(pp.presentase_dari_unit / 100), 
-					2
-				) as nominal_pegawai
+				) as nominal_unit
 			FROM presentase_kategori pk
 			LEFT JOIN presentase_unit pu ON pk.id_kategori = pu.id_kategori
 			LEFT JOIN departemen d ON pu.dep_id = d.dep_id
 			LEFT JOIN presentase_pegawai pp ON pu.id_unit = pp.id_unit
 			LEFT JOIN pegawai p ON pp.id_pegawai = p.id
+			LEFT JOIN jnj_jabatan jnj ON p.jnj_jabatan = jnj.kode
+			LEFT JOIN kelompok_jabatan kel ON p.kode_kelompok = kel.kode_kelompok
+			LEFT JOIN threshold_kelompok_jabatan tkj ON p.kode_kelompok = tkj.kode_kelompok
+			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
+			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
+			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
+			LEFT JOIN (
+				SELECT ekp.id, ek.indek
+				FROM evaluasi_kinerja_pegawai ekp
+				JOIN evaluasi_kinerja ek ON ekp.kode_evaluasi = ek.kode_evaluasi
+				WHERE (ekp.id, ekp.tahun, ekp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM evaluasi_kinerja_pegawai
+					GROUP BY id
+				)
+			) eval_latest ON p.id = eval_latest.id
+			LEFT JOIN (
+				SELECT pkp.id, pk.indek
+				FROM pencapaian_kinerja_pegawai pkp
+				JOIN pencapaian_kinerja pk ON pkp.kode_pencapaian = pk.kode_pencapaian
+				WHERE (pkp.id, pkp.tahun, pkp.bulan) IN (
+					SELECT id, MAX(tahun), MAX(bulan)
+					FROM pencapaian_kinerja_pegawai
+					GROUP BY id
+				)
+			) capai_latest ON p.id = capai_latest.id
 			ORDER BY pk.nama_kategori, d.nama, p.nama
-		`, [total_jasa, total_jasa, total_jasa]);
+		`, [total_jasa, total_jasa]);
 
 		// Kelompokkan data per kategori
 		const groupedData = {};
@@ -73,7 +107,7 @@ export async function POST(request) {
 					id_kategori: row.id_kategori,
 					nama_kategori: row.nama_kategori,
 					presentase: row.presentase_dari_total,
-					nominal: row.nominal_kategori,
+					nominal: parseFloat(row.nominal_kategori || 0),
 					units: {}
 				};
 			}
@@ -84,21 +118,38 @@ export async function POST(request) {
 					dep_id: row.dep_id,
 					nama_departemen: row.nama_departemen,
 					presentase: row.presentase_dari_kategori,
-					nominal: row.nominal_unit,
+					nominal: parseFloat(row.nominal_unit || 0),
 					pegawai: []
 				};
 			}
 
 			if (row.id_alokasi && row.id_pegawai) {
+				const total_index_remunerasi = parseFloat(row.total_index_remunerasi || 0);
+				const threshold_persen = parseFloat(row.threshold_persen || 100);
+				
+				let persentase_pencapaian = (total_index_remunerasi / threshold_persen);
+				if (persentase_pencapaian > 1) persentase_pencapaian = 1; // Cap at 100%
+				if (isNaN(persentase_pencapaian) || !isFinite(persentase_pencapaian)) persentase_pencapaian = 0;
+
+				const nominal_unit = parseFloat(row.nominal_unit || 0);
+				const presentase_dari_unit = parseFloat(row.presentase_dari_unit || 0);
+				
+				// Nominal full jika mencapai threshold
+				const nominal_full = nominal_unit * (presentase_dari_unit / 100);
+				// Nominal aktual sesuai pencapaian remunerasi
+				const nominal_aktual = nominal_full * persentase_pencapaian;
+
 				groupedData[row.id_kategori].units[row.id_unit].pegawai.push({
 					id_alokasi: row.id_alokasi,
 					id_pegawai: row.id_pegawai,
 					nik: row.nik,
 					nama: row.nama_pegawai,
 					presentase: row.presentase_dari_unit,
-					nominal: row.nominal_pegawai
+					presentase_remunerasi_aktual: (persentase_pencapaian * 100).toFixed(2),
+					nominal_full: nominal_full.toFixed(2),
+					nominal: nominal_aktual.toFixed(2)
 				});
-				totalDistribusi += parseFloat(row.nominal_pegawai || 0);
+				totalDistribusi += nominal_aktual;
 			}
 		});
 

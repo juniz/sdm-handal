@@ -165,7 +165,7 @@ export default function KalkulasiDistribusi() {
 
 		// Prepare data for export
 		let csvContent = "data:text/csv;charset=utf-8,";
-		csvContent += "Kategori,Departemen,NIK,Nama Pegawai,% dari Unit,% dari Total,Nominal\n";
+		csvContent += "Kategori,Departemen,NIK,Nama Pegawai,% Alokasi Unit,% dari Total,Capaian Threshold (%),Jasa Penuh,Jasa Diterima\n";
 
 		result.data.forEach(kategori => {
 			kategori.units.forEach(unit => {
@@ -173,7 +173,7 @@ export default function KalkulasiDistribusi() {
 					const persentaseTotal = numericTotalJasa > 0 
 						? (peg.nominal / numericTotalJasa * 100).toFixed(2)
 						: "0.00";
-					csvContent += `"${kategori.nama_kategori}","${unit.nama_departemen}","${peg.nik}","${peg.nama}",${peg.presentase}%,${persentaseTotal}%,${peg.nominal}\n`;
+					csvContent += `"${kategori.nama_kategori}","${unit.nama_departemen}","${peg.nik}","${peg.nama}",${peg.presentase}%,${persentaseTotal}%,${peg.presentase_remunerasi_aktual}%,${peg.nominal_full},${peg.nominal}\n`;
 				});
 			});
 		});
@@ -370,10 +370,10 @@ export default function KalkulasiDistribusi() {
 							<CardContent className="p-4 flex items-center gap-3">
 								<AlertCircle className="w-5 h-5 text-amber-600" />
 								<div>
-									<p className="font-medium text-amber-800">Distribusi Belum Lengkap</p>
+									<p className="font-medium text-amber-800">Sisa Jasa Belum Terdistribusi</p>
 									<p className="text-sm text-amber-700">
-										Masih ada {formatRupiah(result.summary.sisa_belum_terdistribusi)} yang belum terdistribusi.
-										Periksa kembali pengaturan persentase kategori, unit, dan pegawai.
+										Masih ada {formatRupiah(result.summary.sisa_belum_terdistribusi)} yang tidak terdistribusi ke pegawai. 
+										Hal ini dapat terjadi karena pengaturan persentase alokasi yang belum mencapai 100%, atau karena ada pegawai yang <strong>belum mencapai threshold remunerasi penuh</strong> (sehingga jasa dipotong proporsional).
 									</p>
 								</div>
 							</CardContent>
@@ -506,8 +506,10 @@ export default function KalkulasiDistribusi() {
 																	<TableRow>
 																		<TableHead>NIK</TableHead>
 																		<TableHead>Nama Pegawai</TableHead>
-																		<TableHead className="text-right">% dari Unit</TableHead>
-																		<TableHead className="text-right">Nominal</TableHead>
+																		<TableHead className="text-right">% Alokasi Unit</TableHead>
+																		<TableHead className="text-right">% Capaian Threshold</TableHead>
+																		<TableHead className="text-right">Jasa Penuh</TableHead>
+																		<TableHead className="text-right">Jasa Diterima</TableHead>
 																	</TableRow>
 																</TableHeader>
 																<TableBody>
@@ -519,6 +521,14 @@ export default function KalkulasiDistribusi() {
 																				<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
 																					{peg.presentase}%
 																				</span>
+																			</TableCell>
+																			<TableCell className="text-right">
+																				<span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${parseFloat(peg.presentase_remunerasi_aktual) >= 100 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+																					{peg.presentase_remunerasi_aktual}%
+																				</span>
+																			</TableCell>
+																			<TableCell className="text-right text-slate-500 line-through text-xs">
+																				{parseFloat(peg.presentase_remunerasi_aktual) < 100 ? formatRupiah(peg.nominal_full) : '-'}
 																			</TableCell>
 																			<TableCell className="text-right font-medium text-green-700">
 																				{formatRupiah(peg.nominal)}

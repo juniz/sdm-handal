@@ -301,7 +301,7 @@ export default function PencapaianFormDialog({
 										{pencapaianList.map((e) => (
 											<SelectItem
 												key={e.kode_pencapaian}
-												value={e.kode_pencapaian}
+												value={String(e.kode_pencapaian)}
 											>
 												{e.nama_pencapaian} (Indek: {e.indek})
 											</SelectItem>

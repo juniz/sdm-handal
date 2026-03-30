@@ -71,7 +71,7 @@ const MONTHS = [
 	"Desember",
 ];
 
-export default function EvaluasiPegawaiSection() {
+export default function PencapaianPegawaiSection() {
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [year, setYear] = useState(new Date().getFullYear().toString());
@@ -83,32 +83,32 @@ export default function EvaluasiPegawaiSection() {
 	const [selected, setSelected] = useState(null);
 
 	// Refs for dropdowns
-	const [evaluasiList, setEvaluasiList] = useState([]);
+	const [pencapaianList, setPencapaianList] = useState([]);
 	const [pegawaiList, setPegawaiList] = useState([]);
 
 	// Form state
 	const [formData, setFormData] = useState({
 		id: "",
-		kode_evaluasi: "",
+		kode_pencapaian: "",
 		keterangan: "",
 	});
-
+	
 	// Popover state for Pegawai Select
 	const [openPegawai, setOpenPegawai] = useState(false);
 	const [pegawaiSearch, setPegawaiSearch] = useState("");
 
-	const fetchEvaluasiList = useCallback(async () => {
+	const fetchPencapaianList = useCallback(async () => {
 		try {
 			const token = getClientToken();
 			const headers = {};
 			if (token) headers["Authorization"] = `Bearer ${token}`;
-			const res = await fetch("/api/pegawai-manajemen/evaluasi-kinerja", {
+			const res = await fetch("/api/pegawai-manajemen/pencapaian-kinerja", {
 				headers,
 			});
 			const json = await res.json();
-			if (res.ok) setEvaluasiList(json.data || []);
+			if (res.ok) setPencapaianList(json.data || []);
 		} catch (err) {
-			console.error("Failed to fetch evaluasi types", err);
+			console.error("Failed to fetch pencapaian types", err);
 		}
 	}, []);
 
@@ -143,7 +143,7 @@ export default function EvaluasiPegawaiSection() {
 			});
 
 			const res = await fetch(
-				`/api/pegawai-manajemen/evaluasi-kinerja-pegawai?${params}`,
+				`/api/pegawai-manajemen/pencapaian-kinerja-pegawai?${params}`,
 				{ headers },
 			);
 			const result = await res.json();
@@ -162,9 +162,9 @@ export default function EvaluasiPegawaiSection() {
 	}, [year, month]);
 
 	useEffect(() => {
-		fetchEvaluasiList();
+		fetchPencapaianList();
 		fetchPegawaiList();
-	}, [fetchEvaluasiList, fetchPegawaiList]);
+	}, [fetchPencapaianList, fetchPegawaiList]);
 
 	useEffect(() => {
 		fetchData();
@@ -176,7 +176,7 @@ export default function EvaluasiPegawaiSection() {
 		return (
 			item.nama_pegawai?.toLowerCase().includes(s) ||
 			item.nik?.toLowerCase().includes(s) ||
-			item.nama_evaluasi?.toLowerCase().includes(s)
+			item.nama_pencapaian?.toLowerCase().includes(s)
 		);
 	});
 
@@ -184,14 +184,14 @@ export default function EvaluasiPegawaiSection() {
 		if (item) {
 			setFormData({
 				id: item.id,
-				kode_evaluasi: item.kode_evaluasi,
+				kode_pencapaian: item.kode_pencapaian,
 				keterangan: item.keterangan || "",
 			});
 			setSelected(item);
 		} else {
 			setFormData({
 				id: "",
-				kode_evaluasi: "",
+				kode_pencapaian: "",
 				keterangan: "",
 			});
 			setSelected(null);
@@ -219,7 +219,7 @@ export default function EvaluasiPegawaiSection() {
 
 		try {
 			const res = await fetch(
-				"/api/pegawai-manajemen/evaluasi-kinerja-pegawai",
+				"/api/pegawai-manajemen/pencapaian-kinerja-pegawai",
 				{
 					method,
 					headers,
@@ -249,13 +249,13 @@ export default function EvaluasiPegawaiSection() {
 		try {
 			const params = new URLSearchParams({
 				id: selected.id,
-				kode_evaluasi: selected.kode_evaluasi,
+				kode_pencapaian: selected.kode_pencapaian,
 				tahun: selected.tahun,
 				bulan: selected.bulan,
 			});
 
 			const res = await fetch(
-				`/api/pegawai-manajemen/evaluasi-kinerja-pegawai?${params}`,
+				`/api/pegawai-manajemen/pencapaian-kinerja-pegawai?${params}`,
 				{ method: "DELETE", headers },
 			);
 			const result = await res.json();
@@ -280,7 +280,7 @@ export default function EvaluasiPegawaiSection() {
 					<div>
 						<CardTitle className="flex items-center gap-2">
 							<BarChart3 className="w-5 h-5" />
-							Evaluasi Kinerja Pegawai
+							Pencapaian Kinerja Pegawai
 						</CardTitle>
 						<p className="text-sm text-gray-500 mt-1">
 							Kelola penilaian kinerja pegawai per periode
@@ -288,7 +288,7 @@ export default function EvaluasiPegawaiSection() {
 					</div>
 					<Button onClick={() => handleOpenForm()}>
 						<Plus className="w-4 h-4 mr-2" />
-						Input Evaluasi
+						Input Pencapaian
 					</Button>
 				</div>
 
@@ -325,7 +325,7 @@ export default function EvaluasiPegawaiSection() {
 					<div className="relative flex-1">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
 						<Input
-							placeholder="Cari nama pegawai atau jenis evaluasi..."
+							placeholder="Cari nama pegawai atau jenis pencapaian..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
 							className="pl-9"
@@ -341,7 +341,7 @@ export default function EvaluasiPegawaiSection() {
 				) : filteredData.length === 0 ? (
 					<div className="text-center py-12 text-gray-500">
 						<FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-						<p>Tidak ada data evaluasi untuk periode ini</p>
+						<p>Tidak ada data pencapaian untuk periode ini</p>
 					</div>
 				) : (
 					<div className="rounded-md border overflow-x-auto">
@@ -350,7 +350,7 @@ export default function EvaluasiPegawaiSection() {
 								<TableRow>
 									<TableHead className="hidden md:table-cell">NIK</TableHead>
 									<TableHead>Nama Pegawai</TableHead>
-									<TableHead>Jenis Evaluasi</TableHead>
+									<TableHead>Jenis Pencapaian</TableHead>
 									<TableHead className="text-center hidden sm:table-cell">
 										Indek
 									</TableHead>
@@ -362,7 +362,7 @@ export default function EvaluasiPegawaiSection() {
 							</TableHeader>
 							<TableBody>
 								{filteredData.map((item, idx) => (
-									<TableRow key={`${item.id}-${item.kode_evaluasi}`}>
+									<TableRow key={`${item.id}-${item.kode_pencapaian}`}>
 										<TableCell className="font-mono text-sm hidden md:table-cell">
 											{item.nik}
 										</TableCell>
@@ -372,7 +372,7 @@ export default function EvaluasiPegawaiSection() {
 												Indek: {item.indek}
 											</div>
 										</TableCell>
-										<TableCell>{item.nama_evaluasi}</TableCell>
+										<TableCell>{item.nama_pencapaian}</TableCell>
 										<TableCell className="text-center hidden sm:table-cell">
 											{item.indek}
 										</TableCell>
@@ -413,7 +413,7 @@ export default function EvaluasiPegawaiSection() {
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>
-							{selected ? "Edit Evaluasi" : "Input Evaluasi"}
+							{selected ? "Edit Pencapaian" : "Input Pencapaian"}
 						</DialogTitle>
 						<DialogDescription>
 							Periode: {MONTHS[parseInt(month) - 1]} {year}
@@ -431,75 +431,62 @@ export default function EvaluasiPegawaiSection() {
 											aria-expanded={openPegawai}
 											className={cn(
 												"w-full justify-between font-normal",
-												!formData.id && "text-muted-foreground",
+												!formData.id && "text-muted-foreground"
 											)}
 										>
 											{formData.id
 												? (() => {
 														const peg = pegawaiList.find(
-															(p) => String(p.id) === String(formData.id),
+															(p) => String(p.id) === String(formData.id)
 														);
-														return peg
-															? `${peg.nik} - ${peg.nama}`
-															: "Pilih Pegawai";
+														return peg ? `${peg.nik} - ${peg.nama}` : "Pilih Pegawai";
 												  })()
 												: "Pilih Pegawai"}
 											<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 										</Button>
 									</PopoverTrigger>
-									<PopoverContent
-										className="w-[var(--radix-popover-trigger-width)] p-0"
-										align="start"
-									>
+									<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
 										<Command shouldFilter={false}>
-											<CommandInput
-												placeholder="Cari NIK atau Nama..."
+											<CommandInput 
+												placeholder="Cari NIK atau Nama..." 
 												value={pegawaiSearch}
 												onValueChange={setPegawaiSearch}
 											/>
 											<CommandList>
 												<CommandEmpty>
-													{pegawaiList.length === 0
-														? "Memuat data..."
+													{pegawaiList.length === 0 
+														? "Memuat data..." 
 														: "Pegawai tidak ditemukan."}
 												</CommandEmpty>
 												<CommandGroup>
 													{pegawaiList
-														.filter((p) => {
+														.filter(p => {
 															if (!pegawaiSearch) return true;
 															const searchLower = pegawaiSearch.toLowerCase();
-															return (
-																p.nik?.toLowerCase().includes(searchLower) ||
-																p.nama?.toLowerCase().includes(searchLower)
-															);
+															return (p.nik?.toLowerCase().includes(searchLower) || p.nama?.toLowerCase().includes(searchLower));
 														})
 														.slice(0, 50) // Limit to 50 for performance
 														.map((p) => (
-															<CommandItem
-																key={p.id}
-																value={String(p.id)}
-																onSelect={(currentValue) => {
-																	setFormData((prev) => ({
-																		...prev,
-																		id:
-																			currentValue === String(formData.id)
-																				? ""
-																				: currentValue,
-																	}));
-																	setOpenPegawai(false);
-																}}
-															>
-																<Check
-																	className={cn(
-																		"mr-2 h-4 w-4",
-																		String(formData.id) === String(p.id)
-																			? "opacity-100"
-																			: "opacity-0",
-																	)}
-																/>
-																{p.nik} - {p.nama}
-															</CommandItem>
-														))}
+														<CommandItem
+															key={p.id}
+															value={String(p.id)}
+															onSelect={(currentValue) => {
+																setFormData((prev) => ({ 
+																	...prev, 
+																	id: currentValue === String(formData.id) ? "" : currentValue 
+																}));
+																setOpenPegawai(false);
+															}}
+														>
+															<Check
+																className={cn(
+																	"mr-2 h-4 w-4",
+																	String(formData.id) === String(p.id) ? "opacity-100" : "opacity-0"
+																)}
+															/>
+															{p.nik} - {p.nama}
+														</CommandItem>
+													))}
 												</CommandGroup>
 											</CommandList>
 										</Command>
@@ -520,23 +507,20 @@ export default function EvaluasiPegawaiSection() {
 
 						{!selected && (
 							<div className="space-y-2">
-								<Label>Jenis Evaluasi *</Label>
+								<Label>Jenis Pencapaian *</Label>
 								<Select
-									value={formData.kode_evaluasi}
+									value={formData.kode_pencapaian}
 									onValueChange={(v) =>
-										setFormData((prev) => ({ ...prev, kode_evaluasi: v }))
+										setFormData((prev) => ({ ...prev, kode_pencapaian: v }))
 									}
 								>
 									<SelectTrigger className="w-full">
-										<SelectValue placeholder="Pilih Jenis Evaluasi" />
+										<SelectValue placeholder="Pilih Jenis Pencapaian" />
 									</SelectTrigger>
 									<SelectContent>
-										{evaluasiList.map((e) => (
-											<SelectItem
-												key={e.kode_evaluasi}
-												value={String(e.kode_evaluasi)}
-											>
-												{e.nama_evaluasi} (Indek: {e.indek})
+										{pencapaianList.map((e) => (
+											<SelectItem key={e.kode_pencapaian} value={String(e.kode_pencapaian)}>
+												{e.nama_pencapaian} (Indek: {e.indek})
 											</SelectItem>
 										))}
 									</SelectContent>
@@ -545,12 +529,8 @@ export default function EvaluasiPegawaiSection() {
 						)}
 						{selected && (
 							<div className="space-y-2">
-								<Label>Jenis Evaluasi</Label>
-								<Input
-									value={selected.nama_evaluasi}
-									disabled
-									className="w-full bg-muted"
-								/>
+								<Label>Jenis Pencapaian</Label>
+								<Input value={selected.nama_pencapaian} disabled className="w-full bg-muted" />
 							</div>
 						)}
 
@@ -586,9 +566,9 @@ export default function EvaluasiPegawaiSection() {
 			<Dialog open={showDelete} onOpenChange={setShowDelete}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Hapus Evaluasi</DialogTitle>
+						<DialogTitle>Hapus Pencapaian</DialogTitle>
 						<DialogDescription>
-							Apakah Anda yakin ingin menghapus evaluasi untuk{" "}
+							Apakah Anda yakin ingin menghapus pencapaian untuk{" "}
 							<strong>{selected?.nama_pegawai}</strong>?
 						</DialogDescription>
 					</DialogHeader>
