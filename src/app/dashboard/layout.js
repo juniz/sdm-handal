@@ -121,6 +121,11 @@ const MENU_CONFIG = [
 				label: "Gapok",
 				href: "/dashboard/penggajian/gapok",
 			},
+			{
+				icon: DollarSign,
+				label: "Pembagian Presentase",
+				href: "/dashboard/penggajian/presentase",
+			},
 		],
 	},
 	{
