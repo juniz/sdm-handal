@@ -108,7 +108,8 @@ export default function PegawaiPresentase({ onDataChange }) {
 
 	const fetchPegawai = useCallback(async (dep_id = null) => {
 		try {
-			const url = dep_id ? `/api/pegawai?dep_id=${dep_id}` : "/api/pegawai";
+			// const url = dep_id ? `/api/pegawai?dep_id=${dep_id}` : "/api/pegawai";
+			const url = "/api/pegawai";
 			const response = await fetch(url);
 			if (response.ok) {
 				const result = await response.json();
