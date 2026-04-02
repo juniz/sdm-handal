@@ -107,7 +107,7 @@ export async function POST(request) {
 					id_kategori: row.id_kategori,
 					nama_kategori: row.nama_kategori,
 					presentase: row.presentase_dari_total,
-					nominal: parseFloat(row.nominal_kategori || 0),
+					nominal: Math.round(parseFloat(row.nominal_kategori || 0)),
 					units: {}
 				};
 			}
@@ -118,7 +118,7 @@ export async function POST(request) {
 					dep_id: row.dep_id,
 					nama_departemen: row.nama_departemen,
 					presentase: row.presentase_dari_kategori,
-					nominal: parseFloat(row.nominal_unit || 0),
+					nominal: Math.round(parseFloat(row.nominal_unit || 0)),
 					pegawai: []
 				};
 			}
@@ -149,7 +149,7 @@ export async function POST(request) {
 					nik: row.nik,
 					nama: row.nama_pegawai,
 					presentase: row.presentase_dari_unit,
-					presentase_remunerasi_aktual: (persentase_pencapaian * 100).toFixed(2),
+					presentase_remunerasi_aktual: Math.round(persentase_pencapaian * 100),
 					nominal_full: nominal_full,
 					nominal: nominal_aktual
 				});
