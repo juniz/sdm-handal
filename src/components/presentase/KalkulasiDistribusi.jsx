@@ -50,6 +50,7 @@ export default function KalkulasiDistribusi() {
 	const [tanggal, setTanggal] = useState(moment().format("YYYY-MM-DD"));
 	const [result, setResult] = useState(null);
 	const [saving, setSaving] = useState(false);
+	const [abaikanThreshold, setAbaikanThreshold] = useState(false);
 	
 	// Filter States
 	const [filterNama, setFilterNama] = useState("");
@@ -109,7 +110,8 @@ export default function KalkulasiDistribusi() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					total_jasa: numericValue,
-					tanggal
+					tanggal,
+					abaikan_threshold: abaikanThreshold
 				})
 			});
 
@@ -139,7 +141,8 @@ export default function KalkulasiDistribusi() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
 					total_jasa: parseFloat(totalJasa),
-					tanggal
+					tanggal,
+					abaikan_threshold: abaikanThreshold
 				})
 			});
 
@@ -255,7 +258,7 @@ export default function KalkulasiDistribusi() {
 					</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b pb-4 mb-4">
 						<div className="space-y-2">
 							<Label htmlFor="total_jasa">Total Jasa Rumah Sakit (Rp)</Label>
 							<div className="relative">
@@ -287,40 +290,59 @@ export default function KalkulasiDistribusi() {
 								onChange={(e) => setTanggal(e.target.value)}
 							/>
 						</div>
-						<div className="flex items-center gap-2">
-							<Button 
-								onClick={handleKalkulasi}
-								disabled={loading}
-								className="bg-amber-600 hover:bg-amber-700 flex-1"
-							>
-								{loading ? (
-									<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-								) : (
-									<Calculator className="w-4 h-4 mr-2" />
-								)}
-								Hitung Distribusi
-							</Button>
-							{result && (
-								<>
-									<Button 
-										onClick={handleSimpan} 
-										disabled={saving}
-										className="bg-emerald-600 hover:bg-emerald-700"
-									>
-										{saving ? (
-											<Loader2 className="w-4 h-4 mr-2 animate-spin" />
-										) : (
-											<Save className="w-4 h-4 mr-2" />
-										)}
-										Simpan Gaji
-									</Button>
-									<Button variant="outline" onClick={handleExport}>
-										<Download className="w-4 h-4 mr-2" />
-										Export
-									</Button>
-								</>
-							)}
+						<div className="space-y-2">
+							<Label>Opsi Kalkulasi</Label>
+							<div className="flex items-center space-x-2 pt-2">
+								<input
+									type="checkbox"
+									id="abaikan_threshold"
+									checked={abaikanThreshold}
+									onChange={(e) => setAbaikanThreshold(e.target.checked)}
+									className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+								/>
+								<Label
+									htmlFor="abaikan_threshold"
+									className="text-sm font-medium leading-none cursor-pointer"
+								>
+									Abaikan Potongan Threshold (Beri Jasa Penuh 100%)
+								</Label>
+							</div>
 						</div>
+					</div>
+					
+					<div className="flex items-center gap-2">
+						<Button 
+							onClick={handleKalkulasi}
+							disabled={loading}
+							className="bg-amber-600 hover:bg-amber-700 flex-1"
+						>
+							{loading ? (
+								<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+							) : (
+								<Calculator className="w-4 h-4 mr-2" />
+							)}
+							Hitung Distribusi
+						</Button>
+						{result && (
+							<>
+								<Button 
+									onClick={handleSimpan} 
+									disabled={saving}
+									className="bg-emerald-600 hover:bg-emerald-700"
+								>
+									{saving ? (
+										<Loader2 className="w-4 h-4 mr-2 animate-spin" />
+									) : (
+										<Save className="w-4 h-4 mr-2" />
+									)}
+									Simpan Gaji
+								</Button>
+								<Button variant="outline" onClick={handleExport}>
+									<Download className="w-4 h-4 mr-2" />
+									Export
+								</Button>
+							</>
+						)}
 					</div>
 				</CardContent>
 			</Card>

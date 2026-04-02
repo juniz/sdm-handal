@@ -14,7 +14,7 @@ export async function POST(request) {
 			);
 		}
 
-		const { total_jasa, tanggal } = await request.json();
+		const { total_jasa, tanggal, abaikan_threshold } = await request.json();
 
 		if (!total_jasa || total_jasa <= 0) {
 			return NextResponse.json(
@@ -99,8 +99,12 @@ export async function POST(request) {
 			const threshold_persen = parseFloat(row.threshold_persen || 100);
 			
 			let persentase_pencapaian = (total_index_remunerasi / threshold_persen);
-			if (persentase_pencapaian > 1) persentase_pencapaian = 1; // Cap at 100%
-			if (isNaN(persentase_pencapaian) || !isFinite(persentase_pencapaian)) persentase_pencapaian = 0;
+			if (abaikan_threshold) {
+				persentase_pencapaian = 1;
+			} else {
+				if (persentase_pencapaian > 1) persentase_pencapaian = 1; // Cap at 100%
+				if (isNaN(persentase_pencapaian) || !isFinite(persentase_pencapaian)) persentase_pencapaian = 0;
+			}
 
 			const nominal_full = parseFloat(row.nominal_pegawai_full || 0);
 			const nominal_aktual = nominal_full * persentase_pencapaian;
