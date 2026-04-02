@@ -298,9 +298,11 @@ export default function PegawaiPresentase({ onDataChange }) {
 				presentase_kategori: item.presentase_dari_total,
 				presentase_unit: item.presentase_dari_kategori,
 				items: [],
+				total_presentase_pegawai: 0,
 			};
 		}
 		acc[key].items.push(item);
+		acc[key].total_presentase_pegawai += parseFloat(item.presentase_dari_unit || 0);
 		return acc;
 	}, {});
 
@@ -382,6 +384,18 @@ export default function PegawaiPresentase({ onDataChange }) {
 											{group.presentase_kategori}% × {group.presentase_unit}%
 										</span>
 									</div>
+									{Number(group.total_presentase_pegawai.toFixed(2)) !== 100 && (
+										<div className="mt-3 flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2.5 rounded-md border border-red-200">
+											<AlertCircle className="w-4 h-4 shrink-0" />
+											<span>
+												Peringatan: Total presentase pegawai di unit ini adalah{" "}
+												<span className="font-semibold">
+													{Number(group.total_presentase_pegawai.toFixed(2))}%
+												</span>
+												, seharusnya 100%. Harap sesuaikan presentase.
+											</span>
+										</div>
+									)}
 								</div>
 								<Table>
 									<TableHeader>
@@ -434,6 +448,24 @@ export default function PegawaiPresentase({ onDataChange }) {
 												</TableCell>
 											</TableRow>
 										))}
+										<TableRow className="bg-gray-50/50">
+											<TableCell colSpan={2} className="font-medium text-right py-3">
+												Total Presentase Unit:
+											</TableCell>
+											<TableCell className="text-right py-3">
+												<span
+													className={cn(
+														"inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold",
+														Number(group.total_presentase_pegawai.toFixed(2)) === 100
+															? "bg-green-100 text-green-800 border border-green-200"
+															: "bg-red-100 text-red-800 border border-red-200"
+													)}
+												>
+													{Number(group.total_presentase_pegawai.toFixed(2))}%
+												</span>
+											</TableCell>
+											<TableCell colSpan={2}></TableCell>
+										</TableRow>
 									</TableBody>
 								</Table>
 							</div>
