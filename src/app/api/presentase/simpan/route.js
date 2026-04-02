@@ -106,12 +106,12 @@ export async function POST(request) {
 				if (isNaN(persentase_pencapaian) || !isFinite(persentase_pencapaian)) persentase_pencapaian = 0;
 			}
 
-			const nominal_full = parseFloat(row.nominal_pegawai_full || 0);
-			const nominal_aktual = nominal_full * persentase_pencapaian;
+			const nominal_full = Math.round(parseFloat(row.nominal_pegawai_full || 0));
+			const nominal_aktual = Math.round(nominal_full * persentase_pencapaian);
 
 			return {
 				nik: row.nik,
-				nominal_pegawai: nominal_aktual.toFixed(2)
+				nominal_pegawai: nominal_aktual
 			};
 		}).filter(row => parseFloat(row.nominal_pegawai) > 0);
 

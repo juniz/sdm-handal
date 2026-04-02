@@ -139,9 +139,9 @@ export async function POST(request) {
 				const presentase_dari_unit = parseFloat(row.presentase_dari_unit || 0);
 				
 				// Nominal full jika mencapai threshold
-				const nominal_full = nominal_unit * (presentase_dari_unit / 100);
+				const nominal_full = Math.round(nominal_unit * (presentase_dari_unit / 100));
 				// Nominal aktual sesuai pencapaian remunerasi
-				const nominal_aktual = nominal_full * persentase_pencapaian;
+				const nominal_aktual = Math.round(nominal_full * persentase_pencapaian);
 
 				groupedData[row.id_kategori].units[row.id_unit].pegawai.push({
 					id_alokasi: row.id_alokasi,
@@ -150,8 +150,8 @@ export async function POST(request) {
 					nama: row.nama_pegawai,
 					presentase: row.presentase_dari_unit,
 					presentase_remunerasi_aktual: (persentase_pencapaian * 100).toFixed(2),
-					nominal_full: nominal_full.toFixed(2),
-					nominal: nominal_aktual.toFixed(2)
+					nominal_full: nominal_full,
+					nominal: nominal_aktual
 				});
 				totalDistribusi += nominal_aktual;
 			}
