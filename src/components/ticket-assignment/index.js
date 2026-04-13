@@ -6,3 +6,4 @@ export { default as TicketTimeline } from "./TicketTimeline";
 export { default as StatusUpdateModal } from "./StatusUpdateModal";
 export { default as TicketNotes } from "./TicketNotes";
 export { default as CompletedTicketReport } from "./CompletedTicketReport";
+export { default as QualityIndicatorReport } from "./QualityIndicatorReport";

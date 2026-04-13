@@ -253,9 +253,7 @@ export default function DashboardLayout({ children }) {
 	};
 
 	return (
-		<div className="min-h-screen bg-gray-100">
-			{/* Floating Notification for Mobile */}
-			<FloatingNotification />
+		<div className="bg-gray-100">
 
 			{/* Sidebar - hidden on mobile */}
 			<aside

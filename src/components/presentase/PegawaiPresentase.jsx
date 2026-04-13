@@ -76,6 +76,8 @@ export default function PegawaiPresentase({ onDataChange }) {
 	const [unitSearch, setUnitSearch] = useState("");
 	const [pegawaiOpen, setPegawaiOpen] = useState(false);
 	const [pegawaiSearch, setPegawaiSearch] = useState("");
+	const [filterUnitOpen, setFilterUnitOpen] = useState(false);
+	const [filterUnitSearch, setFilterUnitSearch] = useState("");
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -172,7 +174,7 @@ export default function PegawaiPresentase({ onDataChange }) {
 		setShowDialog(true);
 	};
 
-	// Filter unit berdasarkan pencarian
+	// Filter unit berdasarkan pencarian untuk dialog
 	const filteredUnitList = useMemo(() => {
 		if (!unitSearch) return unitList;
 		const search = unitSearch.toLowerCase();
@@ -182,6 +184,17 @@ export default function PegawaiPresentase({ onDataChange }) {
 				unit.nama_departemen.toLowerCase().includes(search)
 		);
 	}, [unitList, unitSearch]);
+
+	// Filter unit berdasarkan pencarian untuk filter header
+	const filteredFilterUnitList = useMemo(() => {
+		if (!filterUnitSearch) return unitList;
+		const search = filterUnitSearch.toLowerCase();
+		return unitList.filter(
+			(unit) =>
+				unit.nama_kategori.toLowerCase().includes(search) ||
+				unit.nama_departemen.toLowerCase().includes(search)
+		);
+	}, [unitList, filterUnitSearch]);
 
 	// Filter pegawai berdasarkan pencarian
 	const filteredPegawaiList = useMemo(() => {
@@ -288,23 +301,34 @@ export default function PegawaiPresentase({ onDataChange }) {
 		}
 	};
 
-	// Group data by unit for display
-	const groupedData = data.reduce((acc, item) => {
-		const key = `${item.nama_kategori} - ${item.nama_departemen}`;
-		if (!acc[key]) {
-			acc[key] = {
-				kategori: item.nama_kategori,
-				departemen: item.nama_departemen,
-				presentase_kategori: item.presentase_dari_total,
-				presentase_unit: item.presentase_dari_kategori,
-				items: [],
-				total_presentase_pegawai: 0,
-			};
-		}
-		acc[key].items.push(item);
-		acc[key].total_presentase_pegawai += parseFloat(item.presentase_dari_unit || 0);
-		return acc;
-	}, {});
+	// Group data by unit for display and sort by mulai_kontrak
+	const groupedData = useMemo(() => {
+		// Sort data first based on mulai_kontrak
+		const sorted = [...data].sort((a, b) => {
+			const dateA = a.mulai_kontrak ? moment(a.mulai_kontrak).valueOf() : 0;
+			const dateB = b.mulai_kontrak ? moment(b.mulai_kontrak).valueOf() : 0;
+			return dateA - dateB; // Oldest first (ASC)
+		});
+
+		return sorted.reduce((acc, item) => {
+			const key = `${item.nama_kategori} - ${item.nama_departemen}`;
+			if (!acc[key]) {
+				acc[key] = {
+					kategori: item.nama_kategori,
+					departemen: item.nama_departemen,
+					presentase_kategori: item.presentase_dari_total,
+					presentase_unit: item.presentase_dari_kategori,
+					items: [],
+					total_presentase_pegawai: 0,
+				};
+			}
+			acc[key].items.push(item);
+			acc[key].total_presentase_pegawai += parseFloat(
+				item.presentase_dari_unit || 0
+			);
+			return acc;
+		}, {});
+	}, [data]);
 
 	return (
 		<Card>
@@ -320,23 +344,93 @@ export default function PegawaiPresentase({ onDataChange }) {
 						</p>
 					</div>
 					<div className="flex gap-2">
-						<Select value={filterUnit} onValueChange={setFilterUnit}>
-							<SelectTrigger className="w-[250px]">
-								<Filter className="w-4 h-4 mr-2" />
-								<SelectValue placeholder="Filter Unit" />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">Semua Unit</SelectItem>
-								{unitList.map((unit) => (
-									<SelectItem
-										key={unit.id_unit}
-										value={unit.id_unit.toString()}
-									>
-										{unit.nama_kategori} - {unit.nama_departemen}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
+						<Popover open={filterUnitOpen} onOpenChange={setFilterUnitOpen}>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									role="combobox"
+									aria-expanded={filterUnitOpen}
+									className="w-[280px] justify-between font-normal"
+								>
+									<div className="flex items-center gap-2 overflow-hidden truncate">
+										<Filter className="w-4 h-4 shrink-0" />
+										<span className="truncate">
+											{filterUnit === "all"
+												? "Semua Unit"
+												: (() => {
+														const unit = unitList.find(
+															(u) => u.id_unit.toString() === filterUnit
+														);
+														return unit
+															? `${unit.nama_kategori} - ${unit.nama_departemen}`
+															: "Filter Unit";
+												  })()}
+										</span>
+									</div>
+									<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-[280px] p-0" align="end">
+								<Command shouldFilter={false}>
+									<CommandInput
+										placeholder="Cari unit..."
+										value={filterUnitSearch}
+										onValueChange={setFilterUnitSearch}
+									/>
+									<CommandList>
+										<CommandEmpty>Unit tidak ditemukan.</CommandEmpty>
+										<CommandGroup>
+											<CommandItem
+												value="all"
+												onSelect={() => {
+													setFilterUnit("all");
+													setFilterUnitOpen(false);
+													setFilterUnitSearch("");
+												}}
+												className="cursor-pointer"
+											>
+												<Check
+													className={cn(
+														"mr-2 h-4 w-4",
+														filterUnit === "all" ? "opacity-100" : "opacity-0"
+													)}
+												/>
+												Semua Unit
+											</CommandItem>
+											{filteredFilterUnitList.map((unit) => (
+												<CommandItem
+													key={unit.id_unit}
+													value={unit.id_unit.toString()}
+													onSelect={(currentValue) => {
+														setFilterUnit(currentValue);
+														setFilterUnitOpen(false);
+														setFilterUnitSearch("");
+													}}
+													className="cursor-pointer"
+												>
+													<Check
+														className={cn(
+															"mr-2 h-4 w-4",
+															filterUnit === unit.id_unit.toString()
+																? "opacity-100"
+																: "opacity-0"
+														)}
+													/>
+													<div className="flex flex-col">
+														<span className="font-medium">
+															{unit.nama_kategori}
+														</span>
+														<span className="text-xs text-gray-500">
+															{unit.nama_departemen}
+														</span>
+													</div>
+												</CommandItem>
+											))}
+										</CommandGroup>
+									</CommandList>
+								</Command>
+							</PopoverContent>
+						</Popover>
 						<Button
 							onClick={() => handleOpenDialog()}
 							className="bg-purple-600 hover:bg-purple-700"
@@ -402,6 +496,7 @@ export default function PegawaiPresentase({ onDataChange }) {
 										<TableRow>
 											<TableHead>NIK</TableHead>
 											<TableHead>Nama Pegawai</TableHead>
+											<TableHead>Mulai Kontrak</TableHead>
 											<TableHead className="text-right">% dari Unit</TableHead>
 											<TableHead className="text-right">% dari Total</TableHead>
 											<TableHead className="text-center">Aksi</TableHead>
@@ -415,6 +510,11 @@ export default function PegawaiPresentase({ onDataChange }) {
 												</TableCell>
 												<TableCell className="font-medium">
 													{alokasi.nama_pegawai}
+												</TableCell>
+												<TableCell className="text-sm text-gray-500">
+													{alokasi.mulai_kontrak
+														? moment(alokasi.mulai_kontrak).format("DD/MM/YYYY")
+														: "-"}
 												</TableCell>
 												<TableCell className="text-right">
 													<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">

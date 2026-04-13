@@ -56,186 +56,155 @@ const NotificationBellMobile = () => {
 
 	return (
 		<div className="relative">
-			{/* Bell Icon for Mobile */}
+			{/* Bell Icon Trigger - Styled as a soft button next to search */}
 			<button
 				onClick={() => setIsOpen(!isOpen)}
-				className={`flex flex-col items-center transition-colors duration-300 px-3 ${
-					isOpen ? "text-blue-600" : "text-gray-500 hover:text-blue-500"
+				className={`relative w-12 h-12 flex items-center justify-center rounded-[20px] bg-white border border-slate-200/40 shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 active:scale-95 ${
+					isOpen ? "text-[#0093dd] ring-2 ring-[#0093dd]/20" : "text-slate-500"
 				}`}
 			>
-				<div className="relative">
-					{unreadCount > 0 ? (
-						<BellRing
-							className={`w-6 h-6 ${
-								isOpen ? "stroke-[2.5px]" : "stroke-[2px]"
-							}`}
-						/>
-					) : (
-						<Bell
-							className={`w-6 h-6 ${
-								isOpen ? "stroke-[2.5px]" : "stroke-[2px]"
-							}`}
-						/>
-					)}
+				{unreadCount > 0 ? (
+					<BellRing className={`w-5 h-5 ${isOpen ? "animate-none" : "animate-bounce"}`} />
+				) : (
+					<Bell className="w-5 h-5" />
+				)}
 
-					{/* Badge */}
-					{unreadCount > 0 && (
-						<span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium text-[10px]">
-							{unreadCount > 9 ? "9+" : unreadCount}
-						</span>
-					)}
-				</div>
-				<span className={`text-xs mt-1 ${isOpen ? "font-medium" : ""}`}>
-					Notifikasi
-				</span>
+				{/* Soft Notification Badge - Repositioned to not cover the icon */}
+				{unreadCount > 0 && (
+					<span className="absolute -top-1 -right-1 bg-red-500 text-white border-2 border-white text-[9px] rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center font-bold shadow-md transform translate-x-1/4 -translate-y-1/4">
+						{unreadCount > 9 ? "9+" : unreadCount}
+					</span>
+				)}
 			</button>
 
-			{/* Mobile Modal */}
+			{/* Mobile Modal - Soft & Trustworthy Bottom Sheet */}
 			<AnimatePresence>
 				{isOpen && (
 					<>
-						{/* Backdrop */}
-						<div
-							className="fixed inset-0 bg-black bg-opacity-50 z-40"
+						{/* Backdrop with blurring glass effect */}
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
 							onClick={() => setIsOpen(false)}
 						/>
 
-						{/* Modal Panel - Bottom Sheet Style */}
+						{/* Bottom Sheet */}
 						<motion.div
 							initial={{ opacity: 0, y: "100%" }}
 							animate={{ opacity: 1, y: 0 }}
 							exit={{ opacity: 0, y: "100%" }}
-							className="fixed bottom-0 left-0 right-0 bg-white rounded-t-lg shadow-lg z-50 max-h-[80vh] overflow-hidden"
+							transition={{ type: "spring", damping: 25, stiffness: 200 }}
+							className="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[110] max-h-[85vh] flex flex-col overflow-hidden"
 						>
+							{/* Handle for bottom sheet */}
+							<div className="flex justify-center pt-3 pb-1">
+								<div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+							</div>
+
 							{/* Header */}
-							<div className="p-4 border-b bg-gray-50 rounded-t-lg">
-								<div className="flex items-center justify-between">
-									<div className="flex items-center gap-2">
-										<BellRing className="w-5 h-5 text-blue-500" />
-										<h3 className="font-semibold text-gray-900">
-											Notifikasi Assignment
+							<div className="px-6 py-4 flex items-center justify-between border-b border-slate-50">
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 rounded-2xl bg-[#0093dd]/10 flex items-center justify-center">
+										<BellRing className="w-5 h-5 text-[#0093dd]" />
+									</div>
+									<div>
+										<h3 className="font-bold text-slate-800 text-base">
+											Notifikasi
 										</h3>
+										<p className="text-xs text-slate-500 font-medium">
+											{unreadCount > 0 ? `${unreadCount} pesan baru` : "Semua sudah dibaca"}
+										</p>
 									</div>
-									<div className="flex items-center gap-2">
-										{unreadCount > 0 && (
-											<button
-												onClick={handleMarkAllAsRead}
-												className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-1 bg-blue-50 rounded"
-												title="Tandai semua sebagai sudah dibaca"
-											>
-												<CheckCheck className="w-3 h-3" />
-												Semua
-											</button>
-										)}
+								</div>
+								<div className="flex items-center gap-2">
+									{unreadCount > 0 && (
 										<button
-											onClick={() => setIsOpen(false)}
-											className="text-gray-400 hover:text-gray-600 p-1"
+											onClick={handleMarkAllAsRead}
+											className="text-[11px] font-bold text-[#0093dd] bg-[#0093dd]/5 px-3 py-2 rounded-xl active:bg-[#0093dd]/10 transition-colors"
 										>
-											<X className="w-5 h-5" />
+											Baca Semua
 										</button>
-									</div>
+									)}
+									<button
+										onClick={() => setIsOpen(false)}
+										className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"
+									>
+										<X className="w-4 h-4" />
+									</button>
 								</div>
 							</div>
 
 							{/* Content */}
-							<div className="max-h-[60vh] overflow-y-auto">
+							<div className="flex-1 overflow-y-auto overscroll-contain pb-10">
 								{loading ? (
-									<div className="p-6 text-center">
-										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-										<p className="text-sm text-gray-500 mt-3">
-											Memuat notifikasi...
-										</p>
+									<div className="p-12 text-center">
+										<div className="w-10 h-10 border-4 border-[#0093dd]/20 border-t-[#0093dd] rounded-full animate-spin mx-auto" />
+										<p className="text-sm text-slate-400 mt-4 font-medium">Memuat pemberitahuan...</p>
 									</div>
 								) : notifications.length === 0 ? (
-									<div className="p-8 text-center">
-										<Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-										<p className="text-gray-500">Tidak ada notifikasi</p>
+									<div className="px-10 py-16 text-center">
+										<div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+											<Bell className="w-10 h-10 text-slate-200" />
+										</div>
+										<h4 className="font-bold text-slate-800 mb-1">Cukup Tenang Di Sini</h4>
+										<p className="text-sm text-slate-500 px-4">Belum ada notifikasi baru untuk saat ini.</p>
 									</div>
 								) : (
-									<div className="divide-y">
+									<div className="divide-y divide-slate-50">
 										{notifications.map((notification) => (
 											<motion.div
 												key={notification.assignment_id}
-												initial={{ opacity: 0 }}
-												animate={{ opacity: 1 }}
-												className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+												whileTap={{ scale: 0.98 }}
+												className={`p-5 flex gap-4 transition-colors ${
 													!notification.is_read
-														? "bg-blue-50 border-l-4 border-l-blue-500"
-														: ""
+														? "bg-[#0093dd]/[0.02]"
+														: "hover:bg-slate-50"
 												}`}
 												onClick={() => handleNotificationClick(notification)}
 											>
-												<div className="flex items-start gap-3">
-													{/* Icon */}
-													<div className="flex-shrink-0">
-														<div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-															<Ticket className="w-5 h-5 text-blue-600" />
-														</div>
+												<div className="relative flex-shrink-0">
+													<div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+														!notification.is_read ? "bg-[#0093dd]/20 shadow-[0_4px_12px_rgba(0,147,221,0.2)]" : "bg-slate-100"
+													}`}>
+														<Ticket className={`w-6 h-6 ${!notification.is_read ? "text-[#0093dd]" : "text-slate-400"}`} />
 													</div>
-
-													{/* Content */}
-													<div className="flex-1 min-w-0">
-														<div className="flex items-center justify-between mb-1">
-															<p className="text-sm font-medium text-gray-900 truncate">
-																{notification.no_ticket ||
-																	`#${notification.ticket_id}`}
-															</p>
-															{!notification.is_read && (
-																<div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
-															)}
-														</div>
-
-														<p className="text-sm text-gray-600 line-clamp-2 mb-2">
-															{notification.title}
-														</p>
-
-														<div className="space-y-1">
-															<div className="flex items-center gap-4 text-xs text-gray-500">
-																<div className="flex items-center gap-1">
-																	<Flag
-																		className={`w-3 h-3 ${getPriorityColor(
-																			notification.priority_name
-																		)}`}
-																	/>
-																	<span>{notification.priority_name}</span>
-																</div>
-																<div className="flex items-center gap-1">
-																	<Clock className="w-3 h-3" />
-																	<span>{notification.time_ago}</span>
-																</div>
-															</div>
-															<div className="flex items-center gap-1 text-xs text-gray-500">
-																<User className="w-3 h-3" />
-																<span>Dari: {notification.requester_name}</span>
-															</div>
-														</div>
-
-														{notification.assigned_by_name && (
-															<p className="text-xs text-gray-500 mt-1">
-																Ditugaskan oleh: {notification.assigned_by_name}
-															</p>
-														)}
-													</div>
+													{!notification.is_read && (
+														<span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full" />
+													)}
 												</div>
 
-												{/* Urgent indicator */}
-												{notification.is_urgent && (
-													<div className="mt-2 flex items-center gap-1 text-xs text-red-600 bg-red-50 p-2 rounded">
-														<Flag className="w-3 h-3" />
-														<span className="font-medium">
-															URGENT - Prioritas Tinggi
+												<div className="flex-1 min-w-0">
+													<div className="flex justify-between items-start mb-1">
+														<span className="text-[10px] font-bold text-[#0093dd] bg-[#0093dd]/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
+															{notification.no_ticket || `#${notification.ticket_id}`}
+														</span>
+														<span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+															<Clock className="w-3 h-3" />
+															{notification.time_ago}
 														</span>
 													</div>
-												)}
+													
+													<h4 className={`text-[13px] leading-snug mb-1 ${!notification.is_read ? "font-bold text-slate-800" : "font-medium text-slate-600"}`}>
+														{notification.title}
+													</h4>
+													
+													<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+														<div className="flex items-center gap-1">
+															<Flag className={`w-3 h-3 ${getPriorityColor(notification.priority_name)}`} />
+															<span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{notification.priority_name}</span>
+														</div>
+														<div className="flex items-center gap-1">
+															<User className="w-3 h-3 text-slate-400" />
+															<span className="text-[11px] font-medium text-slate-400 truncate">Dari: {notification.requester_name}</span>
+														</div>
+													</div>
+												</div>
 											</motion.div>
 										))}
 									</div>
 								)}
-							</div>
-
-							{/* Footer - Pull indicator */}
-							<div className="p-3 border-t bg-gray-50">
-								<div className="w-12 h-1 bg-gray-300 rounded-full mx-auto"></div>
 							</div>
 						</motion.div>
 					</>

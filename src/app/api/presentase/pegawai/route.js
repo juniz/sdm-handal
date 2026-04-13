@@ -30,6 +30,7 @@ export async function GET(request) {
 				pp.*,
 				p.nik,
 				p.nama as nama_pegawai,
+				p.mulai_kontrak,
 				pu.presentase_dari_kategori,
 				pk.presentase_dari_total,
 				pk.nama_kategori,
@@ -47,7 +48,7 @@ export async function GET(request) {
 			JOIN presentase_kategori pk ON pu.id_kategori = pk.id_kategori
 			JOIN departemen d ON pu.dep_id = d.dep_id
 			${whereClause}
-			ORDER BY pk.nama_kategori, d.nama, p.nama
+			ORDER BY pk.nama_kategori, d.nama, p.mulai_kontrak ASC
 		`, params);
 
 		return NextResponse.json({

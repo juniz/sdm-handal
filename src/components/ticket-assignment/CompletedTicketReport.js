@@ -18,86 +18,8 @@ import * as XLSX from "xlsx";
 moment.locale("id");
 moment.tz.setDefault("Asia/Jakarta");
 
-const CompletedTicketReport = ({ masterData, itEmployees }) => {
-	const [tickets, setTickets] = useState([]);
-	const [loading, setLoading] = useState(false);
-	const [filters, setFilters] = useState({
-		start_date: moment().subtract(1, "month").format("YYYY-MM-DD"),
-		end_date: moment().format("YYYY-MM-DD"),
-		department_id: "",
-		assigned_to: "",
-		category_id: "",
-		search: "",
-		enable_date_filter: true,
-	});
-
+const CompletedTicketReport = ({ masterData, itEmployees, tickets, loading, filters, setFilters }) => {
 	const tableRef = useRef(null);
-
-	const fetchCompletedTickets = async () => {
-		setLoading(true);
-		try {
-			const params = new URLSearchParams({
-				status: "Resolved", // Or 'Closed', depending on logic. The API handles OR if we don't specify or if we specify one.
-				// Actually, the API filters (at.released_date IS NULL OR s.status_name IN ('Closed', 'Resolved'))
-				// But we want ONLY completed ones for the report.
-				// The API update I made supports date filtering on resolved_date.
-				// So if I pass start_date/end_date, it will filter.
-				// But I should also ensure I only get completed tickets.
-				// The API logic `if (status) ...` adds a WHERE clause.
-				// If I don't pass status, it returns all assigned tickets (including active ones).
-				// So I should probably filter by status on the client or request specific statuses.
-				// The API doesn't support multiple status values in query param easily without modification or multiple calls.
-				// However, the base query already includes `s.status_name IN ('Closed', 'Resolved')`.
-				// If I add `status=Resolved` it will only show Resolved.
-				// If I add `status=Closed` it will only show Closed.
-				// If I want both, I might need to not pass status and filter client side OR update API to support multiple statuses.
-				// For now, let's assume "Resolved" and "Closed" are what we want.
-				// Let's try not passing status and filtering on client side if needed, OR just fetching a large limit.
-				// Wait, the user requirement is "ticket yang telah selesai".
-				// I'll fetch with a large limit for now to generate report.
-				limit: "1000", // Reasonable limit for a report
-			});
-
-			if (filters.enable_date_filter) {
-				params.append("start_date", filters.start_date);
-				params.append("end_date", filters.end_date);
-			}
-
-			if (filters.department_id) {
-				params.append("department_id", filters.department_id);
-			}
-			if (filters.assigned_to) {
-				params.append("assigned_to", filters.assigned_to);
-			}
-			if (filters.category_id) {
-				params.append("category_id", filters.category_id);
-			}
-			if (filters.search) {
-				params.append("search", filters.search);
-			}
-
-			const response = await fetch(`/api/ticket-assignment?${params}`);
-			const result = await response.json();
-
-			if (result.status === "success") {
-				// Filter client-side to ensure only Closed/Resolved if API returns others
-				// The API base query returns assigned tickets (active) OR completed tickets.
-				// So we must filter for completed statuses.
-				const completed = result.data.filter((t) =>
-					["Closed", "Resolved"].includes(t.current_status),
-				);
-				setTickets(completed);
-			}
-		} catch (error) {
-			console.error("Error fetching report data:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchCompletedTickets();
-	}, [filters]);
 
 	const handlePrint = () => {
 		window.print();

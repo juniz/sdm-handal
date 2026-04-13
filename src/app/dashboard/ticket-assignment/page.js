@@ -7,6 +7,7 @@ import {
 	AlertCircle,
 	CheckCircle,
 	Clock,
+	BarChart3,
 } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import moment from "moment-timezone";
@@ -19,6 +20,7 @@ import {
 	AssignmentFilterAccordion,
 	StatusUpdateModal,
 	CompletedTicketReport,
+	QualityIndicatorReport,
 } from "@/components/ticket-assignment";
 
 import {
@@ -58,7 +60,57 @@ const TicketAssignmentPage = () => {
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [selectedTicketForStatus, setSelectedTicketForStatus] = useState(null);
 	const [isFilterOpen, setIsFilterOpen] = useState(false);
-	const [activeTab, setActiveTab] = useState("active"); // "active" atau "completed"
+	const [activeTab, setActiveTab] = useState("active"); // "active", "completed", atau "quality"
+
+	// Report State (shared between CompletedTicketReport and QualityIndicatorReport)
+	const [completedTickets, setCompletedTickets] = useState([]);
+	const [allReportTickets, setAllReportTickets] = useState([]);
+	const [reportLoading, setReportLoading] = useState(false);
+	const [reportFilters, setReportFilters] = useState({
+		start_date: moment().subtract(1, "month").format("YYYY-MM-DD"),
+		end_date: moment().format("YYYY-MM-DD"),
+		department_id: "",
+		assigned_to: "",
+		category_id: "",
+		search: "",
+		enable_date_filter: true,
+	});
+
+	const fetchCompletedTickets = async () => {
+		setReportLoading(true);
+		try {
+			const params = new URLSearchParams({ limit: "1000" });
+			if (reportFilters.enable_date_filter) {
+				params.append("start_date", reportFilters.start_date);
+				params.append("end_date", reportFilters.end_date);
+			}
+			if (reportFilters.department_id) params.append("department_id", reportFilters.department_id);
+			if (reportFilters.assigned_to) params.append("assigned_to", reportFilters.assigned_to);
+			if (reportFilters.category_id) params.append("category_id", reportFilters.category_id);
+			if (reportFilters.search) params.append("search", reportFilters.search);
+
+			const response = await fetch(`/api/ticket-assignment?${params}`);
+			const result = await response.json();
+
+			if (result.status === "success") {
+				const completed = result.data.filter((t) =>
+					["Closed", "Resolved"].includes(t.current_status),
+				);
+				setCompletedTickets(completed);
+				setAllReportTickets(result.data);
+			}
+		} catch (error) {
+			console.error("Error fetching report data:", error);
+		} finally {
+			setReportLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		if (activeTab === "completed" || activeTab === "quality") {
+			fetchCompletedTickets();
+		}
+	}, [reportFilters, activeTab]);
 
 	// Check if user is from IT department
 	const [isAuthorized, setIsAuthorized] = useState(null);
@@ -251,6 +303,17 @@ const TicketAssignmentPage = () => {
 							<FileText className="w-4 h-4" />
 							Laporan & Ticket Selesai
 						</button>
+						<button
+							onClick={() => setActiveTab("quality")}
+							className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+								activeTab === "quality"
+									? "border-purple-500 text-purple-600"
+									: "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+							}`}
+						>
+							<BarChart3 className="w-4 h-4" />
+							Indikator Mutu
+						</button>
 					</nav>
 				</div>
 
@@ -280,10 +343,20 @@ const TicketAssignmentPage = () => {
 							<Pagination pagination={pagination} onPageChange={fetchTickets} />
 						</>
 					)
-				) : (
+				) : activeTab === "completed" ? (
 					<CompletedTicketReport
 						masterData={masterData}
 						itEmployees={itEmployees}
+						tickets={completedTickets}
+						loading={reportLoading}
+						filters={reportFilters}
+						setFilters={setReportFilters}
+					/>
+				) : (
+					<QualityIndicatorReport
+						tickets={allReportTickets}
+						filters={reportFilters}
+						setFilters={setReportFilters}
 					/>
 				)}
 			</div>

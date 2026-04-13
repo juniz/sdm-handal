@@ -35,13 +35,25 @@ export async function GET(request) {
 
 		// Query untuk mendapatkan status presensi mingguan
 		const weeklyAttendanceQuery = `
-			SELECT 
-				DATE_FORMAT(jam_datang, '%a') as hari,
-				status,
-				keterlambatan
-			FROM rekap_presensi
-			WHERE id = ?
-			AND jam_datang BETWEEN ? AND ?
+			SELECT hari, status, keterlambatan FROM (
+				SELECT 
+					DATE_FORMAT(jam_datang, '%a') as hari,
+					status,
+					keterlambatan,
+					jam_datang
+				FROM rekap_presensi
+				WHERE id = ?
+				AND jam_datang BETWEEN ? AND ?
+				UNION ALL
+				SELECT 
+					DATE_FORMAT(jam_datang, '%a') as hari,
+					status,
+					keterlambatan,
+					jam_datang
+				FROM temporary_presensi
+				WHERE id = ?
+				AND jam_datang BETWEEN ? AND ?
+			) as combined_attendance
 			ORDER BY jam_datang ASC
 		`;
 
@@ -51,9 +63,15 @@ export async function GET(request) {
 				COUNT(*) as total_hari,
 				SUM(CASE WHEN status = 'Tepat Waktu' THEN 1 ELSE 0 END) as tepat_waktu,
 				SUM(CASE WHEN status LIKE 'Terlambat%' THEN 1 ELSE 0 END) as terlambat
-			FROM rekap_presensi
-			WHERE id = ?
-			AND jam_datang BETWEEN ? AND ?
+			FROM (
+				SELECT id, status, jam_datang FROM rekap_presensi
+				WHERE id = ?
+				AND jam_datang BETWEEN ? AND ?
+				UNION ALL
+				SELECT id, status, jam_datang FROM temporary_presensi
+				WHERE id = ?
+				AND jam_datang BETWEEN ? AND ?
+			) as combined_stats
 		`;
 
 		// Query untuk izin/sakit
@@ -70,8 +88,18 @@ export async function GET(request) {
 				idPegawai,
 				startOfWeek + "%",
 				endOfWeek + "%",
+				idPegawai,
+				startOfWeek + "%",
+				endOfWeek + "%",
 			]),
-			rawQuery(statsQuery, [idPegawai, startOfWeek + "%", endOfWeek + "%"]),
+			rawQuery(statsQuery, [
+				idPegawai,
+				startOfWeek + "%",
+				endOfWeek + "%",
+				idPegawai,
+				startOfWeek + "%",
+				endOfWeek + "%",
+			]),
 			rawQuery(leaveQuery, [idPegawai, startOfWeek + "%", endOfWeek + "%"]),
 		]);
 
