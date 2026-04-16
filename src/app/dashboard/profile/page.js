@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
 	User,
 	Mail,
@@ -17,10 +18,13 @@ import {
 	LogOut,
 	Lock,
 	Edit,
+	Printer,
+	Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { removeClientToken } from "@/lib/client-auth";
 import EducationHistorySection from "./EducationHistorySection";
+import { printCVReport } from "@/components/profile/PrintCVReport";
 
 // Komponen untuk menampilkan foto profil dengan error handling
 const ProfileImage = ({ photoUrl, name }) => {
@@ -775,6 +779,19 @@ export default function ProfilePage() {
 	const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 	const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 	const [activeTab, setActiveTab] = useState("pribadi");
+	const [isPrintingCV, setIsPrintingCV] = useState(false);
+
+	const handlePrintCV = async () => {
+		setIsPrintingCV(true);
+		try {
+			await printCVReport();
+		} catch (error) {
+			console.error("Gagal mencetak CV:", error);
+			alert("Gagal mencetak CV: " + error.message);
+		} finally {
+			setIsPrintingCV(false);
+		}
+	};
 
 	const TABS = [
 		{ id: "pribadi", label: "Informasi Pribadi", icon: User },
@@ -917,6 +934,19 @@ export default function ProfilePage() {
 					</div>
 				</div>
 				<div className="flex gap-2">
+					<button
+						onClick={handlePrintCV}
+						disabled={isPrintingCV}
+						className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-70 disabled:cursor-wait"
+						title="Cetak CV (PDF)"
+					>
+						{isPrintingCV ? (
+							<Loader2 className="w-4 h-4 hidden sm:block animate-spin" />
+						) : (
+							<Printer className="w-4 h-4 hidden sm:block" />
+						)}
+						<span className="text-xs">Cetak CV</span>
+					</button>
 					<button
 						onClick={() => setShowEditProfileModal(true)}
 						className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
