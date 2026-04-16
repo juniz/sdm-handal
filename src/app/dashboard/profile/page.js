@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { removeClientToken } from "@/lib/client-auth";
 import EducationHistorySection from "./EducationHistorySection";
+import SeminarHistorySection from "./SeminarHistorySection";
 import { printCVReport } from "@/components/profile/PrintCVReport";
 
 // Komponen untuk menampilkan foto profil dengan error handling
@@ -774,6 +775,7 @@ export default function ProfilePage() {
 	const router = useRouter();
 	const [profile, setProfile] = useState(null);
 	const [educationHistory, setEducationHistory] = useState([]);
+	const [seminarHistory, setSeminarHistory] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [showLogoutModal, setShowLogoutModal] = useState(false);
 	const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -831,8 +833,22 @@ export default function ProfilePage() {
 			}
 		};
 
+		const fetchSeminarHistory = async () => {
+			try {
+				const response = await fetch("/api/profile/seminar");
+				const data = await response.json();
+
+				if (data.status === 200) {
+					setSeminarHistory(data.data);
+				}
+			} catch (error) {
+				console.error("Error fetching seminar history:", error);
+			}
+		};
+
 		fetchProfile();
 		fetchEducationHistory();
+		fetchSeminarHistory();
 	}, []);
 
 	// Handler untuk update profile setelah edit
@@ -1037,7 +1053,10 @@ export default function ProfilePage() {
 						</ProfileSection>
 					)}
 					{activeTab === "pendidikan" && (
-						<EducationHistorySection initialData={educationHistory} />
+						<div className="space-y-8">
+							<EducationHistorySection initialData={educationHistory} />
+							<SeminarHistorySection initialData={seminarHistory} />
+						</div>
 					)}
 				</motion.div>
 			</AnimatePresence>

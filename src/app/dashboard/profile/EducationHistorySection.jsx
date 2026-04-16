@@ -172,10 +172,10 @@ export default function EducationHistorySection({ initialData = [] }) {
 				</div>
 				<button
 					onClick={() => handleOpenModal()}
-					className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[#0093dd] text-white rounded-lg hover:bg-[#007dba] transition-all shadow-sm shadow-[#0093dd]/20 hover:shadow"
+					className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 bg-[#0093dd] text-white rounded-lg hover:bg-[#007dba] transition-all shadow-sm hover:shadow-md text-sm font-medium"
 				>
-					<Plus className="w-4 h-4" strokeWidth={3} />
-					<span className="text-sm font-semibold">Tambah</span>
+					<Plus className="w-5 h-5 sm:w-4 sm:h-4" />
+					<span className="hidden sm:inline">Tambah Data</span>
 				</button>
 			</div>
 
@@ -186,12 +186,7 @@ export default function EducationHistorySection({ initialData = [] }) {
 						<Bookmark className="w-6 h-6 text-gray-400" />
 					</div>
 					<p className="text-gray-500 font-medium">Belum ada riwayat pendidikan yang ditambahkan.</p>
-					<button
-						onClick={() => handleOpenModal()}
-						className="mt-4 sm:hidden inline-flex justify-center items-center gap-2 px-5 py-2 min-w-32 bg-[#0093dd] text-white rounded-lg hover:bg-[#007dba] transition-all font-semibold shadow-sm"
-					>
-						<Plus className="w-4 h-4" /> Tambah Topik
-					</button>
+
 				</div>
 			) : (
 				<div className="space-y-4">
