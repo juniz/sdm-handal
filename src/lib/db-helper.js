@@ -78,6 +78,9 @@ const ALLOWED_TABLES = [
 	"pencapaian_kinerja",
 	"pencapaian_kinerja_pegawai",
 	"threshold_kelompok_jabatan",
+	"it_assets",
+	"it_asset_loans",
+	"it_asset_logs",
 ];
 
 /**

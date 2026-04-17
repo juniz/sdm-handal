@@ -17,6 +17,7 @@ import {
 	Users,
 	UserCog,
 	DollarSign,
+	Server,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -53,6 +54,7 @@ const MENU_CONFIG = [
 			{ icon: User, label: "Profil", href: "/dashboard/profile" },
 			{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
 			{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
+            { icon: Server, label: "Peminjaman Aset IT", href: "/dashboard/pengajuan-aset" },
 		],
 	},
 	{
@@ -92,6 +94,13 @@ const MENU_CONFIG = [
 				icon: UserCog,
 				label: "Manajemen Data Pegawai",
 				href: "/dashboard/pegawai-manajemen",
+				check: (role, department) =>
+					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT,
+			},
+			{
+				icon: Server,
+				label: "Manajemen Aset IT",
+				href: "/dashboard/it-assets",
 				check: (role, department) =>
 					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT,
 			},

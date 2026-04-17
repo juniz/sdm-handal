@@ -10,14 +10,13 @@ import {
 	IdCard,
 	NotebookPen,
 	Ticket,
-	MenuIcon,
 	RefreshCcw,
 	FileText,
-	Coins,
 	Percent,
 	BadgeDollarSign,
 	ChevronRight,
 	Search,
+	Laptop2,
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import { AttendanceStats } from "@/components/AttendanceStats";
@@ -83,6 +82,12 @@ const QuickActions = ({ searchQuery = "" }) => {
 			href: "/dashboard/development",
 			colorClass: "bg-sky-50 text-sky-600 border-sky-100/60 group-hover:border-sky-200 group-hover:bg-sky-100/40 group-hover:shadow-[0_8px_20px_rgba(14,165,233,0.12)]",
 		},
+		{
+			title: "Peminjaman Aset IT",
+			icon: Laptop2,
+			href: "/dashboard/pengajuan-aset",
+			colorClass: "bg-sky-50 text-sky-600 border-sky-100/60 group-hover:border-sky-200 group-hover:bg-sky-100/40 group-hover:shadow-[0_8px_20px_rgba(14,165,233,0.12)]",
+		}
 	];
 
 	const filteredActions = actions.filter((action) =>

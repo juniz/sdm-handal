@@ -29,8 +29,9 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
 	return (
-		<html lang="en">
+		<html lang="id" translate="no">
 			<head>
+				<meta name="google" content="notranslate" />
 				<link rel="manifest" href="/api/manifest" />
 				<link rel="icon" href="/api/favicon" />
 				<link rel="apple-touch-icon" href="/api/apple-touch-icon" />
