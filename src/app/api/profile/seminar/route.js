@@ -16,8 +16,8 @@ export async function GET(request) {
 				jenis,
 				nama_seminar,
 				peranan,
-				mulai,
-				selesai,
+				DATE_FORMAT(mulai, '%Y-%m-%d') as mulai,
+				DATE_FORMAT(selesai, '%Y-%m-%d') as selesai,
 				penyelengara,
 				tempat,
 				berkas

@@ -217,7 +217,7 @@ export default function SeminarHistorySection({ initialData = [] }) {
 							key={`${item.nama_seminar}-${item.mulai}`}
 							className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:border-orange-300 transition-colors group relative"
 						>
-							<div className="absolute top-4 right-4 flex opacity-0 group-hover:opacity-100 transition-opacity gap-2">
+							<div className="absolute top-4 right-4 flex opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-2">
 								<button
 									onClick={() => handleOpenModal(item)}
 									className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"

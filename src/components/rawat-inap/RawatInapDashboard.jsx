@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { motion, AnimatePresence } from "framer-motion";
 import {
 	Card,
 	CardContent,
@@ -24,12 +25,28 @@ import {
 	TrendingUp,
 	TrendingDown,
 	Filter,
+	Clock,
+	Calendar,
+	Search,
+	ArrowUpRight,
+	ArrowDownRight,
+	CheckCircle,
+	Shield,
+	User,
+	ChevronRight,
+	MapPin,
+	FileText,
+	Info,
 } from "lucide-react";
+import { useRealTime } from "@/hooks/useRealTime";
+import moment from "moment";
+import "moment/locale/id";
 
 // Dynamically import ApexCharts to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 export default function RawatInapDashboard() {
+	const { formattedTime, formattedDate } = useRealTime();
 	const [data, setData] = useState({
 		patients: [],
 		hourly_stats: [],
@@ -38,6 +55,7 @@ export default function RawatInapDashboard() {
 	});
 	const [loading, setLoading] = useState(true);
 	const [roomFilter, setRoomFilter] = useState("");
+	const [searchQuery, setSearchQuery] = useState("");
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -71,32 +89,50 @@ export default function RawatInapDashboard() {
 		return ((current - previous) / previous) * 100;
 	};
 
-	const admissionsChange = getPercentageChange(
+	const admissionsChange = useMemo(() => getPercentageChange(
 		data.comparison.admissions_today || 0,
 		data.comparison.admissions_yesterday || 0,
-	);
+	), [data.comparison]);
 
-	const dischargesChange = getPercentageChange(
+	const dischargesChange = useMemo(() => getPercentageChange(
 		data.comparison.discharges_today || 0,
 		data.comparison.discharges_yesterday || 0,
-	);
+	), [data.comparison]);
 
 	// Filtered Patients for Table
-	const filteredPatients = roomFilter
-		? data.patients.filter((p) => p.kd_kamar === roomFilter)
-		: data.patients.filter((p) => p.stts_pulang === "-");
+	const filteredPatients = useMemo(() => {
+		let result = [...data.patients];
+		
+		// Priority: Active patients first if no room filter
+		if (!roomFilter) {
+			result = result.filter((p) => p.stts_pulang === "-");
+		} else {
+			result = result.filter((p) => p.kd_kamar === roomFilter);
+		}
+
+		if (searchQuery) {
+			const query = searchQuery.toLowerCase();
+			result = result.filter(
+				(p) =>
+					p.nm_pasien?.toLowerCase().includes(query) ||
+					p.no_rkm_medis?.toLowerCase().includes(query) ||
+					p.no_rawat?.toLowerCase().includes(query)
+			);
+		}
+
+		return result;
+	}, [data.patients, roomFilter, searchQuery]);
 
 	// Unique Rooms for Filter
-	const uniqueRooms = [
+	const uniqueRooms = useMemo(() => [
 		...new Set(
 			data.patients.filter((p) => p.stts_pulang === "-").map((p) => p.kd_kamar),
 		),
-	].sort();
+	].sort(), [data.patients]);
 
 	// Prepare Chart Data
-	// 1. Daily Trend Chart (Last 30 Days) - Total Active Patients
-	const dailyCategories =
-		data.daily_stats?.map((d) => {
+	const trendChartOptions = useMemo(() => {
+		const dailyCategories = data.daily_stats?.map((d) => {
 			const date = new Date(d.date);
 			return date.toLocaleDateString("id-ID", {
 				day: "2-digit",
@@ -104,460 +140,548 @@ export default function RawatInapDashboard() {
 			});
 		}) || [];
 
-	const dailyActive = data.daily_stats?.map((d) => d.total_active) || [];
-
-	const trendChartOptions = {
-		chart: {
-			type: "line",
-			toolbar: {
-				show: true,
-				tools: {
-					download: true,
-					selection: true,
-					zoom: true,
-					zoomin: true,
-					zoomout: true,
-					pan: true,
-					reset: true,
-				},
-				autoSelected: "zoom",
-			},
-			zoom: {
-				enabled: true,
-				type: "x",
-				autoScaleYaxis: true,
-			},
-		},
-		xaxis: {
-			categories: dailyCategories,
-			title: { text: "Tanggal" },
-			tickAmount: 10, // Limit ticks to avoid clutter
-		},
-		yaxis: {
-			title: { text: "Jumlah Pasien" },
-		},
-		stroke: { curve: "smooth", width: 3 },
-		colors: ["#3b82f6"], // Blue color for single line
-		dataLabels: { enabled: false },
-		title: { text: "Tren Total Pasien Inap (30 Hari Terakhir)", align: "left" },
-		legend: { position: "top" },
-		tooltip: {
-			x: {
-				format: "dd/MM",
-			},
-			y: {
-				formatter: function (val) {
-					return val + " Pasien";
+		return {
+			chart: {
+				type: "area",
+				fontFamily: "inherit",
+				toolbar: { show: false },
+				animations: {
+					enabled: true,
+					easing: "easeinout",
+					speed: 800,
 				},
 			},
-		},
-		markers: {
-			size: 4,
-			hover: {
-				size: 6,
+			fill: {
+				type: "gradient",
+				gradient: {
+					shadeIntensity: 1,
+					opacityFrom: 0.45,
+					opacityTo: 0.05,
+					stops: [20, 100, 100, 100]
+				}
 			},
-		},
-	};
+			xaxis: {
+				categories: dailyCategories,
+				axisBorder: { show: false },
+				axisTicks: { show: false },
+				tickAmount: 8,
+			},
+			yaxis: {
+				labels: {
+					formatter: (val) => Math.floor(val),
+				},
+			},
+			stroke: { curve: "smooth", width: 3 },
+			colors: ["#0093dd"],
+			dataLabels: { enabled: false },
+			grid: {
+				borderColor: "#f1f1f1",
+				strokeDashArray: 4,
+				padding: { left: 20, right: 20 }
+			},
+			tooltip: {
+				theme: "light",
+				y: {
+					formatter: (val) => `${val} Pasien`,
+				},
+			},
+		};
+	}, [data.daily_stats]);
 
-	const trendChartSeries = [{ name: "Total Pasien", data: dailyActive }];
+	const trendChartSeries = useMemo(() => [
+		{ 
+			name: "Total Pasien", 
+			data: data.daily_stats?.map((d) => d.total_active) || [] 
+		}
+	], [data.daily_stats]);
 
-	// 2. Payment Method Distribution (Pie Chart) - based on active patients
-	const paymentDistribution = filteredPatients.reduce((acc, curr) => {
-		const key = curr.penjab_nama || "Lainnya";
-		acc[key] = (acc[key] || 0) + 1;
-		return acc;
-	}, {});
+	// Payment Distribution Data
+	const paymentData = useMemo(() => {
+		const distribution = filteredPatients.reduce((acc, curr) => {
+			const key = curr.penjab_nama || "Lainnya";
+			acc[key] = (acc[key] || 0) + 1;
+			return acc;
+		}, {});
 
-	// Define consistent colors for common payment methods
-	const paymentColorMap = {
-		"BPJS KESEHATAN": "#10b981", // Green
-		UMUM: "#3b82f6", // Blue
-		"ASURANSI LAIN": "#f59e0b", // Amber
-		"POLRI ANGGOTA": "#8b5cf6", // Purple
-		"POLRI KELUARGA": "#ec4899", // Pink
-		WATTAH: "#06b6d4", // Cyan
-		"JASA RAHARJA": "#6366f1", // Indigo
-		Lainnya: "#ef4444", // Red
-	};
+		const labels = Object.keys(distribution);
+		const series = Object.values(distribution);
+		
+		const colorMap = {
+			"BPJS KESEHATAN": "#10b981", 
+			UMUM: "#0093dd",
+			"ASURANSI LAIN": "#f59e0b",
+			"POLRI ANGGOTA": "#8b5cf6",
+			Lainnya: "#94a3b8",
+		};
 
-	const paymentLabels = Object.keys(paymentDistribution);
-	const paymentSeries = Object.values(paymentDistribution);
+		const colors = labels.map((label) => {
+			if (label.includes("BPJS")) return colorMap["BPJS KESEHATAN"];
+			if (label.includes("UMUM") || label.includes("PRIBADI")) return colorMap["UMUM"];
+			return colorMap[label] || colorMap["Lainnya"];
+		});
 
-	// Assign colors based on label, fallback to gray/random if not mapped
-	const paymentColors = paymentLabels.map((label) => {
-		// Check for partial matches or exact matches
-		if (label.includes("BPJS")) return paymentColorMap["BPJS KESEHATAN"];
-		if (label.includes("UMUM") || label.includes("PRIBADI"))
-			return paymentColorMap["UMUM"];
-		if (label.includes("POLRI") && label.includes("ANGGOTA"))
-			return paymentColorMap["POLRI ANGGOTA"];
-		if (label.includes("POLRI") && label.includes("KELUARGA"))
-			return paymentColorMap["POLRI KELUARGA"];
-		if (label.includes("WATTAH")) return paymentColorMap["WATTAH"];
-		if (label.includes("JASA")) return paymentColorMap["JASA RAHARJA"];
-
-		return paymentColorMap[label] || "#94a3b8"; // Default slate gray
-	});
+		return { labels, series, colors };
+	}, [filteredPatients]);
 
 	const paymentChartOptions = {
-		chart: { type: "donut" },
-		labels: paymentLabels,
-		colors: paymentColors,
-		legend: {
-			position: "bottom",
-			formatter: function (seriesName, opts) {
-				return (
-					seriesName +
-					" - (" +
-					opts.w.globals.series[opts.seriesIndex] +
-					") Pasien"
-				);
-			},
+		chart: { type: "donut", fontFamily: "inherit" },
+		labels: paymentData.labels,
+		colors: paymentData.colors,
+		stroke: { width: 0 },
+		plotOptions: {
+			pie: {
+				donut: {
+					size: "75%",
+					labels: {
+						show: true,
+						total: {
+							show: true,
+							label: "Total Pasien",
+							formatter: () => filteredPatients.length
+						}
+					}
+				}
+			}
 		},
-		dataLabels: { enabled: true },
-		title: { text: "Distribusi Cara Bayar (Aktif)", align: "center" },
-		tooltip: {
-			y: {
-				formatter: function (val) {
-					return "(" + val + ") Pasien";
-				},
-			},
-		},
+		legend: { position: "bottom" },
+		dataLabels: { enabled: false },
 	};
-	const paymentChartSeries = paymentSeries;
 
-	// 3. Top Diagnoses (Bar Chart) - based on active patients
-	const diagnosesCount = filteredPatients.reduce((acc, curr) => {
-		const key = curr.diagnosa_awal || "Belum Ada Diagnosa";
-		acc[key] = (acc[key] || 0) + 1;
-		return acc;
-	}, {});
-	const sortedDiagnoses = Object.entries(diagnosesCount)
-		.sort((a, b) => b[1] - a[1])
-		.slice(0, 5);
+	// Top Diagnoses Data
+	const diagnosisData = useMemo(() => {
+		const counts = filteredPatients.reduce((acc, curr) => {
+			const key = curr.diagnosa_awal || "Belum Ada Diagnosa";
+			acc[key] = (acc[key] || 0) + 1;
+			return acc;
+		}, {});
+
+		return Object.entries(counts)
+			.sort((a, b) => b[1] - a[1])
+			.slice(0, 5);
+	}, [filteredPatients]);
 
 	const diagnosisChartOptions = {
-		chart: { type: "bar" },
-		plotOptions: { bar: { borderRadius: 4, horizontal: true } },
-		xaxis: { categories: sortedDiagnoses.map((d) => d[0]) },
-		colors: ["#6366f1"],
-		title: { text: "5 Diagnosa Terbanyak (Aktif)", align: "center" },
+		chart: { type: "bar", fontFamily: "inherit", toolbar: { show: false } },
+		plotOptions: { 
+			bar: { 
+				borderRadius: 8, 
+				horizontal: true,
+				barHeight: "60%",
+				distributed: true
+			} 
+		},
+		grid: { show: false },
+		xaxis: { 
+			categories: diagnosisData.map((d) => d[0].substring(0, 20) + (d[0].length > 20 ? "..." : "")),
+			labels: { show: false },
+			axisBorder: { show: false },
+			axisTicks: { show: false }
+		},
+		colors: ["#6366f1", "#0093dd", "#10b981", "#f59e0b", "#ec4899"],
+		legend: { show: false },
+		dataLabels: {
+			enabled: true,
+			textAnchor: "start",
+			style: { colors: ["#fff"] },
+			formatter: (val, opt) => `${opt.w.globals.labels[opt.dataPointIndex]}: ${val}`,
+			offsetX: 0,
+		},
 	};
 	const diagnosisChartSeries = [
-		{ name: "Pasien", data: sortedDiagnoses.map((d) => d[1]) },
+		{ name: "Pasien", data: diagnosisData.map((d) => d[1]) },
 	];
 
 	if (loading) {
 		return (
-			<div className="p-8 text-center text-gray-500">
-				Memuat data dashboard...
+			<div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+				<div className="text-center space-y-4">
+					<div className="w-16 h-16 border-4 border-[#0093dd] border-t-transparent rounded-full animate-spin mx-auto"></div>
+					<p className="text-gray-500 font-bold animate-pulse uppercase tracking-widest text-xs">Menyinkronkan Data Command Center...</p>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight text-gray-900">
-						Dashboard Rawat Inap
-					</h1>
-					<p className="text-gray-500">
-						Monitoring real-time hari ini:{" "}
-						{new Date().toLocaleDateString("id-ID", {
-							weekday: "long",
-							year: "numeric",
-							month: "long",
-							day: "numeric",
-						})}
-					</p>
+		<div className="min-h-screen bg-[#f8fafc] pb-12 font-sans selection:bg-blue-100">
+			{/* Premium Glassmorphic Header */}
+			<div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-100 shadow-sm">
+				<div className="max-w-[1600px] mx-auto px-6 py-4">
+					<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+						<div className="flex items-center gap-4">
+							<div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#0093dd] to-[#00b4ff] flex items-center justify-center shadow-lg shadow-blue-200">
+								<Activity className="w-6 h-6 text-white" />
+							</div>
+							<div>
+								<h1 className="text-2xl font-black text-gray-900 tracking-tight leading-none">Command Center Rawat Inap</h1>
+								<div className="flex items-center gap-2 mt-1.5">
+									<div className="flex items-center gap-1.5 px-2 py-0.5 bg-green-50 rounded-full border border-green-100 overflow-hidden">
+										<div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+										<span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Sistem Live</span>
+									</div>
+									<span className="text-xs text-gray-400 font-medium">Diperbarui: {data.last_updated ? moment(data.last_updated).format("HH:mm:ss") : "-"}</span>
+								</div>
+							</div>
+						</div>
+
+						<div className="flex items-center gap-6">
+							<div className="hidden lg:flex items-center gap-4 py-2 px-4 bg-gray-50 rounded-2xl border border-gray-100">
+								<div className="flex flex-col items-end">
+									<span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Waktu Lokal</span>
+									<span className="text-sm font-bold text-gray-700 leading-none">{formattedTime}</span>
+								</div>
+								<div className="w-px h-8 bg-gray-200"></div>
+								<div className="flex flex-col">
+									<span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Tanggal</span>
+									<span className="text-sm font-bold text-gray-700 leading-none">{formattedDate}</span>
+								</div>
+							</div>
+
+							<div className="relative w-full md:w-64 group">
+								<Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#0093dd] transition-colors" />
+								<input 
+									type="text"
+									placeholder="Cari pasien atau no. RM..."
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
+									className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-medium focus:bg-white focus:ring-4 focus:ring-blue-50 focus:border-[#0093dd] transition-all outline-none"
+								/>
+							</div>
+						</div>
+					</div>
 				</div>
-				<div className="text-xs text-gray-400">
-					Diperbarui:{" "}
-					{data.last_updated
-						? new Date(data.last_updated).toLocaleTimeString()
-						: "-"}
+			</div>
+
+			<div className="max-w-[1600px] mx-auto px-6 py-8 space-y-8">
+				{/* KPI Cards Section */}
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+					<KPICard 
+						title="Total Pasien" 
+						value={data.comparison?.total_active || 0}
+						subValue="Pasien aktif saat ini"
+						icon={<Users className="w-6 h-6" />}
+						color="blue"
+						delay={0}
+					/>
+					<KPICard 
+						title="Masuk Hari Ini" 
+						value={data.comparison?.admissions_today || 0}
+						change={admissionsChange}
+						icon={<Activity className="w-6 h-6" />}
+						color="green"
+						delay={0.1}
+					/>
+					<KPICard 
+						title="Pulang Hari Ini" 
+						value={data.comparison?.discharges_today || 0}
+						change={dischargesChange}
+						icon={<CalendarCheck className="w-6 h-6" />}
+						color="orange"
+						delay={0.2}
+					/>
+					<KPICard 
+						title="Estimasi Pendapatan" 
+						value={`Rp ${(data.patients.reduce((acc, curr) => acc + (curr.ttl_biaya || 0), 0) / 1000000).toFixed(1)}M`}
+						subValue="Akumulasi tagihan bulan ini"
+						icon={<TrendingUp className="w-6 h-6" />}
+						color="purple"
+						delay={0.3}
+					/>
 				</div>
-			</div>
 
-			{/* KPI Cards */}
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Total Pasien Dirawat
-						</CardTitle>
-						<Users className="h-4 w-4 text-blue-600" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">
-							{data.comparison?.total_active || 0}
+				{/* Visualizations Grid */}
+				<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+					{/* Main Trend Chart */}
+					<motion.div 
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.4 }}
+						className="lg:col-span-8 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group"
+					>
+						<div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -mr-32 -mt-32 opacity-40 group-hover:scale-110 transition-transform duration-700"></div>
+						<div className="relative">
+							<div className="flex items-center justify-between mb-8">
+								<div>
+									<h3 className="text-xl font-black text-gray-900 tracking-tight">Tren Okupansi Pasien</h3>
+									<p className="text-xs text-gray-500 font-medium">Monitoring pergerakan harian dalam 30 hari terakhir</p>
+								</div>
+								<div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100">
+									<div className="w-2 h-2 bg-[#0093dd] rounded-full"></div>
+									<span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Active Patients</span>
+								</div>
+							</div>
+							<Chart
+								options={trendChartOptions}
+								series={trendChartSeries}
+								type="area"
+								height={320}
+							/>
 						</div>
-						<p className="text-xs text-muted-foreground">
-							Pasien aktif saat ini
-						</p>
-					</CardContent>
-				</Card>
+					</motion.div>
 
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Masuk Hari Ini
-						</CardTitle>
-						<Activity className="h-4 w-4 text-green-600" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">
-							{data.comparison?.admissions_today || 0}
+					{/* Distribution Chart */}
+					<motion.div 
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.5 }}
+						className="lg:col-span-4 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm"
+					>
+						<h3 className="text-xl font-black text-gray-900 tracking-tight mb-2 text-center">Analisis Penjamin</h3>
+						<p className="text-xs text-center text-gray-500 font-medium mb-8">Distribusi metode pembayaran pasien</p>
+						<div className="flex flex-col items-center">
+							<Chart
+								options={paymentChartOptions}
+								series={paymentData.series}
+								type="donut"
+								width="100%"
+								height={320}
+							/>
 						</div>
-						<div className="flex items-center text-xs mt-1">
-							{admissionsChange >= 0 ? (
-								<TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-							) : (
-								<TrendingDown className="h-3 w-3 text-red-500 mr-1" />
-							)}
-							<span
-								className={
-									admissionsChange >= 0 ? "text-green-500" : "text-red-500"
-								}
-							>
-								{Math.abs(admissionsChange).toFixed(1)}%
-							</span>
-							<span className="text-muted-foreground ml-1">vs kemarin</span>
+					</motion.div>
+
+					{/* Top Diagnosis / Table Info */}
+					<motion.div 
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.6 }}
+						className="lg:col-span-5 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm"
+					>
+						<div className="flex items-center gap-3 mb-8">
+							<div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+								<Shield className="w-5 h-5 text-indigo-600" />
+							</div>
+							<h3 className="text-xl font-black text-gray-900 tracking-tight">Diagnosis Utama</h3>
 						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Pulang Hari Ini
-						</CardTitle>
-						<CalendarCheck className="h-4 w-4 text-orange-600" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">
-							{data.comparison?.discharges_today || 0}
-						</div>
-						<div className="flex items-center text-xs mt-1">
-							{dischargesChange >= 0 ? (
-								<TrendingUp className="h-3 w-3 text-green-500 mr-1" />
-							) : (
-								<TrendingDown className="h-3 w-3 text-red-500 mr-1" />
-							)}
-							<span
-								className={
-									dischargesChange >= 0 ? "text-green-500" : "text-red-500"
-								}
-							>
-								{Math.abs(dischargesChange).toFixed(1)}%
-							</span>
-							<span className="text-muted-foreground ml-1">vs kemarin</span>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">
-							Estimasi Pendapatan
-						</CardTitle>
-						<TrendingUp className="h-4 w-4 text-purple-600" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">
-							Rp{" "}
-							{(
-								data.patients.reduce(
-									(acc, curr) => acc + (curr.ttl_biaya || 0),
-									0,
-								) / 1000000
-							).toFixed(1)}
-							M
-						</div>
-						<p className="text-xs text-muted-foreground">
-							Total tagihan (bulan ini)
-						</p>
-					</CardContent>
-				</Card>
-			</div>
-
-			{/* Charts Section */}
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-				<Card className="col-span-4">
-					<CardHeader>
-						<CardTitle>Tren Pasien (30 Hari Terakhir)</CardTitle>
-						<CardDescription>
-							Grafik jumlah total pasien rawat inap per hari. Gunakan fitur zoom
-							untuk melihat detail periode tertentu.
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="pl-2">
-						<Chart
-							options={trendChartOptions}
-							series={trendChartSeries}
-							type="line"
-							height={350}
-						/>
-					</CardContent>
-				</Card>
-
-				<Card className="col-span-3">
-					<CardHeader>
-						<CardTitle>Komposisi Penjamin</CardTitle>
-						<CardDescription>
-							Persentase pasien aktif berdasarkan cara bayar.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Chart
-							options={paymentChartOptions}
-							series={paymentChartSeries}
-							type="donut"
-							height={300}
-						/>
-					</CardContent>
-				</Card>
-			</div>
-
-			<div className="grid gap-4 md:grid-cols-2">
-				<Card>
-					<CardHeader>
-						<CardTitle>Diagnosa Terbanyak</CardTitle>
-						<CardDescription>
-							Top 5 penyakit pasien aktif saat ini.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
 						<Chart
 							options={diagnosisChartOptions}
 							series={diagnosisChartSeries}
 							type="bar"
 							height={300}
 						/>
-					</CardContent>
-				</Card>
+					</motion.div>
 
-				{/* Recent Patients Table / Room Detail */}
-				<Card className="md:col-span-1">
-					<CardHeader>
-						<div className="flex items-center justify-between">
-							<div>
-								<CardTitle>Detail Pasien Per Ruangan</CardTitle>
-								<CardDescription>
-									Filter berdasarkan kode kamar/bangsal.
-								</CardDescription>
+					{/* Room Intelligence Tracker */}
+					<motion.div 
+						initial={{ opacity: 0, y: 20 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.7 }}
+						className="lg:col-span-7 bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm"
+					>
+						<div className="flex items-center justify-between mb-8">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+									<MapPin className="w-5 h-5 text-orange-600" />
+								</div>
+								<h3 className="text-xl font-black text-gray-900 tracking-tight">Okupansi Per Bangsal</h3>
+							</div>
+							<div className="relative group">
+								<Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+								<select
+									className="pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-100 rounded-xl text-xs font-bold uppercase tracking-widest text-gray-600 outline-none focus:ring-2 focus:ring-blue-100 transition-all appearance-none cursor-pointer"
+									value={roomFilter}
+									onChange={(e) => setRoomFilter(e.target.value)}
+								>
+									<option value="">Semua Ruangan</option>
+									{uniqueRooms.map((room) => (
+										<option key={room} value={room}>{room}</option>
+									))}
+								</select>
 							</div>
 						</div>
-						<div className="mt-2">
-							<select
-								className="w-full p-2 border rounded-md text-sm"
-								value={roomFilter}
-								onChange={(e) => setRoomFilter(e.target.value)}
-							>
-								<option value="">Semua Ruangan</option>
-								{uniqueRooms.map((room) => (
-									<option key={room} value={room}>
-										{room}
-									</option>
-								))}
-							</select>
-						</div>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-4 max-h-[300px] overflow-y-auto">
-							{filteredPatients.length > 0 ? (
-								filteredPatients.slice(0, 10).map((patient, i) => (
-									<div
-										key={i}
-										className="flex items-center justify-between border-b pb-2 last:border-0"
-									>
-										<div className="flex items-center gap-4">
-											<div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
-												<UserIcon className="h-5 w-5 text-blue-600" />
-											</div>
-											<div className="space-y-1">
-												<p className="text-sm font-medium leading-none">
-													{patient.nm_pasien}
-												</p>
-												<p className="text-xs text-muted-foreground">
-													{patient.no_rkm_medis} • {patient.kd_kamar}
-												</p>
-											</div>
-										</div>
-										<div className="text-sm font-medium text-gray-500">
-											{patient.penjab_nama}
-										</div>
-									</div>
-								))
-							) : (
-								<div className="text-sm text-gray-500 py-4 text-center">
-									Tidak ada pasien ditemukan.
-								</div>
-							)}
-						</div>
-					</CardContent>
-				</Card>
-			</div>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Daftar Lengkap Pasien Rawat Inap</CardTitle>
-					<CardDescription>
-						Total {filteredPatients.length} pasien ditampilkan.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>No. Rawat</TableHead>
-								<TableHead>No. RM</TableHead>
-								<TableHead>Nama Pasien</TableHead>
-								<TableHead>Kamar</TableHead>
-								<TableHead>Tgl Masuk</TableHead>
-								<TableHead>Penjamin</TableHead>
-								<TableHead>Diagnosa Awal</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{filteredPatients.slice(0, 20).map((patient) => (
-								<TableRow key={patient.no_rawat}>
-									<TableCell className="font-medium">
-										{patient.no_rawat}
-									</TableCell>
-									<TableCell>{patient.no_rkm_medis}</TableCell>
-									<TableCell>{patient.nm_pasien}</TableCell>
-									<TableCell>{patient.kd_kamar}</TableCell>
-									<TableCell>{patient.tgl_masuk}</TableCell>
-									<TableCell>{patient.penjab_nama}</TableCell>
-									<TableCell>{patient.diagnosa_awal}</TableCell>
+						<div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-100">
+							<AnimatePresence mode="popLayout">
+								{filteredPatients.length > 0 ? (
+									filteredPatients.slice(0, 15).map((patient, i) => (
+										<motion.div
+											layout
+											initial={{ opacity: 0, x: -10 }}
+											animate={{ opacity: 1, x: 0 }}
+											key={patient.no_rawat}
+											className="group flex items-center justify-between p-4 bg-gray-50/50 hover:bg-white rounded-2xl border border-transparent hover:border-gray-100 hover:shadow-xl hover:shadow-gray-200/40 transition-all duration-300"
+										>
+											<div className="flex items-center gap-4">
+												<div className="relative">
+													<div className="w-11 h-11 rounded-1.5xl bg-white flex items-center justify-center shadow-sm group-hover:bg-blue-50 group-hover:text-[#0093dd] transition-colors">
+														<User className="w-5 h-5" />
+													</div>
+													<div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 border-2 border-white rounded-full ${patient.stts_pulang === "-" ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+												</div>
+												<div>
+													<p className="text-sm font-black text-gray-900 leading-none group-hover:text-[#0093dd] transition-colors">{patient.nm_pasien}</p>
+													<div className="flex items-center gap-2 mt-1.5">
+														<span className="text-[10px] font-bold text-gray-400 tracking-wider">RM: {patient.no_rkm_medis}</span>
+														<span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+														<span className="text-[10px] font-black text-[#0093dd] uppercase tracking-widest">{patient.kd_kamar}</span>
+													</div>
+												</div>
+											</div>
+											<div className="flex flex-col items-end gap-1.5">
+												<span className="px-2.5 py-1 rounded-lg bg-white text-[10px] font-black text-gray-600 uppercase tracking-widest border border-gray-100 shadow-sm group-hover:bg-[#0093dd] group-hover:text-white transition-all">
+													{patient.penjab_nama}
+												</span>
+												<div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+													<Clock className="w-3 h-3" />
+													{patient.tgl_masuk}
+												</div>
+											</div>
+										</motion.div>
+									))
+								) : (
+									<div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+										<Search className="w-12 h-12 mb-4 opacity-20" />
+										<p className="text-sm font-bold uppercase tracking-widest opacity-50">Data Pasien Tidak Ditemukan</p>
+									</div>
+								)}
+							</AnimatePresence>
+						</div>
+					</motion.div>
+				</div>
+
+				{/* Complete Surveillance Table Area */}
+				<motion.div 
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.8 }}
+					className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden"
+				>
+					<div className="p-8 border-b border-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+						<div className="flex items-center gap-4">
+							<div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center">
+								<FileText className="w-6 h-6 text-[#0093dd]" />
+							</div>
+							<div>
+								<h3 className="text-xl font-black text-gray-900 tracking-tight">Vigilans Pasien Rawat Inap</h3>
+								<p className="text-xs font-medium text-gray-400 mt-0.5 uppercase tracking-widest">Surveillance data real-time: {filteredPatients.length} Pasien</p>
+							</div>
+						</div>
+						<div className="flex items-center gap-3">
+							<div className="px-4 py-2 bg-gray-50 rounded-xl border border-gray-100 text-xs font-black uppercase tracking-widest text-gray-500">
+								Urutan: Masuk Terlama
+							</div>
+							<div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-100 cursor-pointer transition-colors">
+								<TrendingUp className="w-5 h-5" />
+							</div>
+						</div>
+					</div>
+					
+					<div className="overflow-x-auto">
+						<Table>
+							<TableHeader className="bg-gray-50/50">
+								<TableRow className="hover:bg-transparent border-0">
+									<TableHead className="py-5 px-8 text-[10px] font-black uppercase text-gray-400 tracking-widest">Profil Pasien</TableHead>
+									<TableHead className="py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Detail Rawat</TableHead>
+									<TableHead className="py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Bangsal & Kamar</TableHead>
+									<TableHead className="py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Penjamin</TableHead>
+									<TableHead className="py-5 px-8 text-[10px] font-black uppercase text-gray-400 tracking-widest text-right">Aksi</TableHead>
 								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
+							</TableHeader>
+							<TableBody>
+								{filteredPatients.slice(0, 50).map((patient) => (
+									<TableRow key={patient.no_rawat} className="group border-gray-50 hover:bg-gray-50/70 transition-colors">
+										<TableCell className="py-5 px-8">
+											<div className="flex items-center gap-4">
+												<div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 font-bold text-xs ring-4 ring-transparent group-hover:ring-blue-100 group-hover:text-[#0093dd] group-hover:bg-white transition-all">
+													{patient.nm_pasien.charAt(0)}
+												</div>
+												<div>
+													<div className="font-bold text-gray-900 transition-colors group-hover:text-[#0093dd]">{patient.nm_pasien}</div>
+													<div className="text-[10px] font-bold text-gray-400 mt-0.5">RM: {patient.no_rkm_medis}</div>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-5">
+											<div className="space-y-1">
+												<div className="text-[10px] font-black text-[#0093dd] uppercase tracking-tighter">{patient.no_rawat}</div>
+												<div className="flex items-center gap-2">
+													<Calendar className="w-3 h-3 text-gray-300" />
+													<span className="text-xs font-bold text-gray-600 tracking-tight">{patient.tgl_masuk}</span>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-5">
+											<div className="flex items-center gap-2.5">
+												<div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+													<MapPin className="w-4 h-4 text-orange-600" />
+												</div>
+												<div className="font-black text-xs text-gray-700 uppercase tracking-widest">{patient.kd_kamar}</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-5 text-center">
+											<span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+												patient.penjab_nama.includes("BPJS") ? "bg-green-100 text-green-700" :
+												patient.penjab_nama.includes("UMUM") ? "bg-blue-100 text-[#0093dd]" : "bg-gray-100 text-gray-600"
+											}`}>
+												{patient.penjab_nama}
+											</span>
+										</TableCell>
+										<TableCell className="py-5 px-8 text-right">
+											<button className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:bg-[#0093dd] hover:text-white transition-all shadow-sm">
+												<ChevronRight className="w-4 h-4" />
+											</button>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+					{filteredPatients.length > 50 && (
+						<div className="p-6 bg-gray-50/50 flex items-center justify-center border-t border-gray-50">
+							<button className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-[#0093dd] transition-colors flex items-center gap-2">
+								<Activity className="w-3 h-3" />
+								Scroll Untuk Memuat Lebih Banyak
+							</button>
+						</div>
+					)}
+				</motion.div>
+			</div>
 		</div>
 	);
 }
 
-function UserIcon({ className }) {
+// Internal Premium Components
+function KPICard({ title, value, subValue, change, icon, color, delay }) {
+	const colors = {
+		blue: "from-blue-500 to-blue-600 shadow-blue-100 text-blue-600 bg-blue-50 border-blue-100 hover:border-blue-300",
+		green: "from-emerald-500 to-emerald-600 shadow-emerald-100 text-emerald-600 bg-emerald-50 border-emerald-100 hover:border-emerald-300",
+		orange: "from-orange-500 to-orange-600 shadow-orange-100 text-orange-600 bg-orange-50 border-orange-100 hover:border-orange-300",
+		purple: "from-purple-500 to-purple-600 shadow-purple-100 text-purple-600 bg-purple-50 border-purple-100 hover:border-purple-300",
+	};
+
 	return (
-		<svg
-			className={className}
-			fill="none"
-			height="24"
-			stroke="currentColor"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth="2"
-			viewBox="0 0 24 24"
-			width="24"
-			xmlns="http://www.w3.org/2000/svg"
+		<motion.div
+			initial={{ opacity: 0, scale: 0.95 }}
+			animate={{ opacity: 1, scale: 1 }}
+			transition={{ delay, duration: 0.4 }}
+			whileHover={{ y: -4 }}
+			className={`relative overflow-hidden bg-white p-6 rounded-[2rem] border transition-all duration-300 group ${colors[color].split(' ').slice(4).join(' ')}`}
 		>
-			<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-			<circle cx="12" cy="7" r="4" />
-		</svg>
+			<div className="flex items-start justify-between">
+				<div>
+					<p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-inherit transition-colors mb-1">{title}</p>
+					<h4 className="text-3xl font-black text-gray-900 tracking-tighter leading-none mb-3">{value}</h4>
+					
+					{change !== undefined ? (
+						<div className="flex items-center gap-2">
+							<div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-black ${change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+								{change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+								{Math.abs(change).toFixed(1)}%
+							</div>
+							<span className="text-[10px] font-bold text-gray-400">vs kemarin</span>
+						</div>
+					) : (
+						<p className="text-[10px] font-bold text-gray-400">{subValue}</p>
+					)}
+				</div>
+				<div className={`w-12 h-12 rounded-2xl flex items-center justify-center ring-4 ring-transparent transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 ${colors[color].split(' ').slice(2, 4).join(' ')} ring-white shadow-xl`}>
+					<div className="text-white">
+						{icon}
+					</div>
+				</div>
+			</div>
+			
+			{/* Decorative Elements */}
+			<div className="absolute -bottom-6 -left-6 w-24 h-24 bg-gray-50 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+		</motion.div>
 	);
 }
