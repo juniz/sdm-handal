@@ -162,7 +162,7 @@ export default function MasterITAssets() {
         // between closing DropdownMenu and opening Dialog
         setTimeout(() => {
             setIsAddOpen(true);
-        }, 50);
+        }, 150);
     };
 
     const handleSave = async (e) => {
@@ -196,7 +196,7 @@ export default function MasterITAssets() {
 
     const confirmDelete = (asset) => {
         setAssetToDelete(asset);
-        setTimeout(() => setIsDeleteOpen(true), 50);
+        setTimeout(() => setIsDeleteOpen(true), 150);
     };
 
     const handleDelete = async () => {
@@ -405,18 +405,18 @@ export default function MasterITAssets() {
                                         <TableCell><StatusBadge status={asset.status} /></TableCell>
                                         <TableCell><ConditionBadge kondisi={asset.kondisi} /></TableCell>
                                         <TableCell className="text-right px-6">
-                                            <DropdownMenu>
+                                            <DropdownMenu modal={false}>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200">
                                                         <MoreHorizontal className="h-4 w-4 text-slate-500" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-xl border-slate-200">
-                                                    <DropdownMenuItem className="flex items-center gap-2 py-2.5 cursor-pointer text-slate-600 font-medium" onClick={() => handleOpenEdit(asset)}>
+                                                <DropdownMenuContent align="end" sideOffset={8} className="w-48 rounded-xl shadow-xl border-slate-200">
+                                                    <DropdownMenuItem className="flex items-center gap-2 py-2.5 cursor-pointer text-slate-600 font-medium" onSelect={() => handleOpenEdit(asset)}>
                                                         <Edit size={16} className="text-blue-500" /> Edit Detail Aset
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator className="bg-slate-100" />
-                                                    <DropdownMenuItem className="flex items-center gap-2 py-2.5 cursor-pointer text-rose-600 font-bold" onClick={() => confirmDelete(asset)}>
+                                                    <DropdownMenuItem className="flex items-center gap-2 py-2.5 cursor-pointer text-rose-600 font-bold" onSelect={() => confirmDelete(asset)}>
                                                         <Trash2 size={16} className="text-rose-500" /> Hapus Aset
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -460,18 +460,18 @@ export default function MasterITAssets() {
                                         <h3 className="font-bold text-slate-900 leading-tight">{asset.nama}</h3>
                                         <p className="text-xs text-slate-500">{asset.nama_departemen || 'IT Inventory'}</p>
                                     </div>
-                                    <DropdownMenu>
+                                    <DropdownMenu modal={false}>
                                         <DropdownMenuTrigger asChild>
                                             <Button size="icon" variant="ghost" className="h-8 w-8 -mr-2">
                                                 <MoreHorizontal className="h-4 w-4 text-slate-400" />
                                             </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-48 rounded-xl z-[60]">
-                                            <DropdownMenuItem className="flex items-center gap-2 py-3" onClick={() => handleOpenEdit(asset)}>
+                                        <DropdownMenuContent align="end" sideOffset={8} className="w-48 rounded-xl z-[60]">
+                                            <DropdownMenuItem className="flex items-center gap-2 py-3" onSelect={() => handleOpenEdit(asset)}>
                                                 <Edit size={16} /> Edit Detail
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem className="flex items-center gap-2 py-3 text-rose-600 font-bold" onClick={() => confirmDelete(asset)}>
+                                            <DropdownMenuItem className="flex items-center gap-2 py-3 text-rose-600 font-bold" onSelect={() => confirmDelete(asset)}>
                                                 <Trash2 size={16} /> Hapus Aset
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -493,10 +493,10 @@ export default function MasterITAssets() {
                 <DialogContent 
                     onInteractOutside={(e) => e.preventDefault()}
                     onEscapeKeyDown={(e) => e.preventDefault()}
-                    className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl rounded-3xl"
+                    className="sm:max-w-[550px] p-0 overflow-y-auto max-h-[95vh] border-none shadow-2xl rounded-3xl"
                 >
                     <form onSubmit={handleSave}>
-                        <div className="bg-[#0093dd] p-8 text-white relative">
+                        <div className="bg-[#0093dd] p-8 text-white relative hidden md:block">
                             <DialogHeader>
                                 <DialogTitle className="text-2xl font-bold">{editingAsset ? "Edit Detail Aset" : "Registrasi Aset Baru"}</DialogTitle>
                                 <DialogDescription className="text-blue-100/80 font-medium">
@@ -508,7 +508,7 @@ export default function MasterITAssets() {
                             </div>
                         </div>
 
-                        <div className="p-8 space-y-6 bg-white">
+                        <div className="p-4 md:p-8 space-y-4 md:space-y-6 bg-white">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nama Barang*</label>
@@ -592,7 +592,7 @@ export default function MasterITAssets() {
                             </div>
                         </div>
 
-                        <div className="px-8 pb-8 pt-2 bg-white flex justify-end gap-3">
+                        <div className="px-4 md:px-8 pb-6 md:pb-8 pt-2 bg-white flex justify-end gap-3">
                             <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)} className="rounded-xl h-11 px-6">Batal</Button>
                             <Button type="submit" className="bg-[#0093dd] hover:bg-[#007bbd] text-white rounded-xl h-11 px-8 shadow-lg shadow-blue-200/50">
                                 {editingAsset ? "Perbarui Data" : "Simpan Aset"}
