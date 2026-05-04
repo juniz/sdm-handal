@@ -220,31 +220,55 @@ export default function MasterITAssets() {
     const startScanner = () => {
         setIsScannerOpen(true);
         setTimeout(() => {
-            if (window.Html5QrcodeScanner) {
-                const scanner = new window.Html5QrcodeScanner("reader", { 
-                    fps: 10, 
-                    qrbox: { width: 250, height: 150 },
-                    aspectRatio: 1.0
-                });
-                
-                scanner.render((decodedText) => {
-                    setFormData(prev => ({ ...prev, serial_id: decodedText }));
-                    toast.success("Barcode terdeteksi!");
-                    scanner.clear();
-                    setIsScannerOpen(false);
-                }, (error) => {
-                    // console.warn(error);
-                });
-                scannerRef.current = scanner;
+            try {
+                const Html5Qrcode = window.Html5Qrcode;
+                if (Html5Qrcode) {
+                    const html5QrCode = new Html5Qrcode("reader");
+                    scannerRef.current = html5QrCode;
+
+                    const config = { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 },
+                        aspectRatio: 1.0
+                    };
+
+                    html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config, 
+                        (decodedText) => {
+                            setFormData(prev => ({ ...prev, serial_id: decodedText }));
+                            toast.success("Barcode terdeteksi!");
+                            stopScanner();
+                        },
+                        (errorMessage) => {
+                            // parse error, ignore
+                        }
+                    ).catch((err) => {
+                        console.error("Scanner start error:", err);
+                        toast.error("Gagal mengakses kamera. Pastikan izin kamera diberikan.");
+                    });
+                } else {
+                    toast.error("Library scanner belum siap. Silakan coba lagi.");
+                }
+            } catch (err) {
+                console.error("Scanner initialization error:", err);
+                toast.error("Terjadi kesalahan pada scanner.");
             }
-        }, 500);
+        }, 800);
     };
 
     const stopScanner = () => {
-        if (scannerRef.current) {
-            scannerRef.current.clear();
+        if (scannerRef.current && scannerRef.current.isScanning) {
+            scannerRef.current.stop().then(() => {
+                scannerRef.current.clear();
+                setIsScannerOpen(false);
+            }).catch(err => {
+                console.error("Scanner stop error:", err);
+                setIsScannerOpen(false);
+            });
+        } else {
+            setIsScannerOpen(false);
         }
-        setIsScannerOpen(false);
     };
 
     // Failsafe to restore pointer events on close
@@ -285,7 +309,7 @@ export default function MasterITAssets() {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 space-y-6">
-            <Script src="https://unpkg.com/html5-qrcode" strategy="afterInteractive" />
+            <Script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" strategy="afterInteractive" />
             
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -603,7 +627,7 @@ export default function MasterITAssets() {
             </Dialog>
 
             {/* Modal Scanner */}
-            <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+            <Dialog open={isScannerOpen} onOpenChange={(open) => !open && stopScanner()}>
                 <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-3xl border-none">
                     <div className="bg-slate-900 p-6 text-white flex justify-between items-center">
                         <div className="space-y-1">
