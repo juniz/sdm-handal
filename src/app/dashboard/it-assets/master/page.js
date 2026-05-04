@@ -65,6 +65,7 @@ export default function MasterITAssets() {
     const [assetToDelete, setAssetToDelete] = useState(null);
     const [editingAsset, setEditingAsset] = useState(null);
     const [user, setUser] = useState(null);
+    const [libraryReady, setLibraryReady] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -222,7 +223,7 @@ export default function MasterITAssets() {
         setTimeout(() => {
             try {
                 const Html5Qrcode = window.Html5Qrcode;
-                if (Html5Qrcode) {
+                if (Html5Qrcode || libraryReady) {
                     const html5QrCode = new Html5Qrcode("reader");
                     scannerRef.current = html5QrCode;
 
@@ -248,7 +249,7 @@ export default function MasterITAssets() {
                         toast.error("Gagal mengakses kamera. Pastikan izin kamera diberikan.");
                     });
                 } else {
-                    toast.error("Library scanner belum siap. Silakan coba lagi.");
+                    toast.error("Sistem pemindai sedang diunduh, mohon tunggu sebentar...");
                 }
             } catch (err) {
                 console.error("Scanner initialization error:", err);
@@ -309,7 +310,11 @@ export default function MasterITAssets() {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] p-4 md:p-8 space-y-6">
-            <Script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" strategy="afterInteractive" />
+            <Script 
+                src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
+                strategy="afterInteractive" 
+                onLoad={() => setLibraryReady(true)}
+            />
             
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
