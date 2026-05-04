@@ -413,60 +413,62 @@ function RemunerasiTable({ type }) {
 export default function IndexRemunerasiSection() {
 	return (
 		<Card>
-			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<Briefcase className="w-5 h-5" />
+			<CardHeader className="space-y-2 px-4 sm:px-6">
+				<CardTitle className="flex items-center gap-2 text-xl font-bold">
+					<Briefcase className="w-5 h-5 text-[#0093dd]" />
 					Index Remunerasi
 				</CardTitle>
-				<p className="text-sm text-gray-500 mt-1">
-					Kelola data index remunerasi: jenis jabatan, kelompok jabatan, resiko
-					kerja, emergency index, pendidikan, dan evaluasi kinerja
+				<p className="text-xs sm:text-sm text-slate-500 max-w-3xl leading-relaxed">
+					Kelola konfigurasi index remunerasi untuk berbagai kategori jabatan, resiko kerja, pendidikan, dan penilaian kinerja.
 				</p>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="px-3 sm:px-6">
 				<Tabs defaultValue="jnj" className="w-full">
-					<div className="w-full overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-						<TabsList className="inline-flex h-auto w-max min-w-full justify-start sm:w-full sm:grid sm:grid-cols-3 lg:grid-cols-7 p-1">
-							<TabsTrigger value="jnj" className="whitespace-nowrap px-4 py-2">
-								Jenis Jabatan
+					<div className="pgw-tab-list-container mb-6">
+						<TabsList className="pgw-tab-list border-b border-slate-100 pb-0 gap-1 sm:gap-2">
+							<TabsTrigger value="jnj" className="pgw-subtab-trigger">
+								Jabatan
 							</TabsTrigger>
-							<TabsTrigger
-								value="kelompok"
-								className="whitespace-nowrap px-4 py-2"
-							>
-								Kelompok Jabatan
+							<TabsTrigger value="kelompok" className="pgw-subtab-trigger">
+								Kelompok
 							</TabsTrigger>
-							<TabsTrigger
-								value="resiko"
-								className="whitespace-nowrap px-4 py-2"
-							>
-								Resiko Kerja
+							<TabsTrigger value="resiko" className="pgw-subtab-trigger">
+								Resiko
 							</TabsTrigger>
-							<TabsTrigger
-								value="emergency"
-								className="whitespace-nowrap px-4 py-2"
-							>
-								Emergency Index
+							<TabsTrigger value="emergency" className="pgw-subtab-trigger">
+								Emergency
 							</TabsTrigger>
-							<TabsTrigger
-								value="pendidikan"
-								className="whitespace-nowrap px-4 py-2"
-							>
+							<TabsTrigger value="pendidikan" className="pgw-subtab-trigger">
 								Pendidikan
 							</TabsTrigger>
-							<TabsTrigger
-								value="evaluasi"
-								className="whitespace-nowrap px-4 py-2"
-							>
-								Evaluasi Kinerja
+							<TabsTrigger value="evaluasi" className="pgw-subtab-trigger">
+								Evaluasi
 							</TabsTrigger>
-							<TabsTrigger
-								value="pencapaian"
-								className="whitespace-nowrap px-4 py-2"
-							>
-								Pencapaian Kinerja
+							<TabsTrigger value="pencapaian" className="pgw-subtab-trigger">
+								Capaian
 							</TabsTrigger>
 						</TabsList>
+
+						<style jsx>{`
+							.pgw-subtab-trigger {
+								font-size: 13px;
+								font-weight: 500;
+								padding: 8px 16px;
+								border-radius: 8px 8px 0 0;
+								border-bottom: 2px solid transparent;
+								background: transparent;
+								color: #64748b;
+								transition: all 0.2s ease;
+								white-space: nowrap;
+							}
+							.pgw-subtab-trigger[data-state="active"] {
+								color: #0093dd;
+								background: #f0f9ff;
+								border-bottom-color: #0093dd;
+								font-weight: 600;
+							}
+							.pgw-tab-list::-webkit-scrollbar { display: none; }
+						`}</style>
 					</div>
 					<TabsContent value="jnj" className="mt-4">
 						<RemunerasiTable type="jnj" />

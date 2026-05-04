@@ -275,27 +275,31 @@ export default function EvaluasiPegawaiSection() {
 
 	return (
 		<Card>
-			<CardHeader>
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+			<CardHeader className="space-y-4 px-4 sm:px-6">
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 					<div>
-						<CardTitle className="flex items-center gap-2">
-							<BarChart3 className="w-5 h-5" />
-							Evaluasi Kinerja Pegawai
+						<CardTitle className="flex items-center gap-2 text-xl font-bold">
+							<BarChart3 className="w-5 h-5 text-amber-500" />
+							Evaluasi Kinerja
 						</CardTitle>
-						<p className="text-sm text-gray-500 mt-1">
-							Kelola penilaian kinerja pegawai per periode
+						<p className="text-xs sm:text-sm text-slate-500 mt-1">
+							Periode: <span className="font-semibold text-[#0093dd]">{MONTHS[parseInt(month) - 1]} {year}</span>
 						</p>
 					</div>
-					<Button onClick={() => handleOpenForm()}>
+					<Button 
+						onClick={() => handleOpenForm()}
+						className="bg-[#0093dd] hover:bg-[#007bbd] text-white shadow-sm h-10"
+						size="sm"
+					>
 						<Plus className="w-4 h-4 mr-2" />
 						Input Evaluasi
 					</Button>
 				</div>
 
-				<div className="flex flex-col sm:flex-row gap-3 pt-4">
-					<div className="flex gap-2">
+				<div className="flex flex-col lg:flex-row gap-3">
+					<div className="flex gap-2 w-full lg:w-auto">
 						<Select value={month} onValueChange={setMonth}>
-							<SelectTrigger className="w-[140px]">
+							<SelectTrigger className="flex-1 lg:w-[140px] h-10 bg-slate-50/50 border-slate-200">
 								<SelectValue placeholder="Bulan" />
 							</SelectTrigger>
 							<SelectContent>
@@ -307,7 +311,7 @@ export default function EvaluasiPegawaiSection() {
 							</SelectContent>
 						</Select>
 						<Select value={year} onValueChange={setYear}>
-							<SelectTrigger className="w-[100px]">
+							<SelectTrigger className="w-[100px] h-10 bg-slate-50/50 border-slate-200">
 								<SelectValue placeholder="Tahun" />
 							</SelectTrigger>
 							<SelectContent>
@@ -323,89 +327,140 @@ export default function EvaluasiPegawaiSection() {
 						</Select>
 					</div>
 					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
 						<Input
-							placeholder="Cari nama pegawai atau jenis evaluasi..."
+							placeholder="Cari nama pegawai..."
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							className="pl-9"
+							className="pl-9 h-10 bg-slate-50/50 border-slate-200 focus:bg-white transition-all"
 						/>
 					</div>
 				</div>
 			</CardHeader>
-			<CardContent>
+			<CardContent className="p-0 sm:p-6">
 				{loading ? (
-					<div className="flex justify-center py-12">
-						<Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+					<div className="flex flex-col items-center justify-center py-12 gap-3">
+						<Loader2 className="w-8 h-8 animate-spin text-[#0093dd]" />
+						<span className="text-sm text-slate-500">Memuat data...</span>
 					</div>
 				) : filteredData.length === 0 ? (
-					<div className="text-center py-12 text-gray-500">
-						<FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-						<p>Tidak ada data evaluasi untuk periode ini</p>
+					<div className="text-center py-12 px-4">
+						<div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+							<FileText className="w-8 h-8 text-slate-300" />
+						</div>
+						<p className="text-slate-500 font-medium">Tidak ada data evaluasi</p>
+						<p className="text-xs text-slate-400 mt-1">Silakan pilih periode lain atau input data baru.</p>
 					</div>
 				) : (
-					<div className="rounded-md border overflow-x-auto">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead className="hidden md:table-cell">NIK</TableHead>
-									<TableHead>Nama Pegawai</TableHead>
-									<TableHead>Jenis Evaluasi</TableHead>
-									<TableHead className="text-center hidden sm:table-cell">
-										Indek
-									</TableHead>
-									<TableHead className="hidden lg:table-cell">
-										Keterangan
-									</TableHead>
-									<TableHead className="text-right">Aksi</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{filteredData.map((item, idx) => (
-									<TableRow key={`${item.id}-${item.kode_evaluasi}`}>
-										<TableCell className="font-mono text-sm hidden md:table-cell">
-											{item.nik}
-										</TableCell>
-										<TableCell className="font-medium">
-											{item.nama_pegawai}
-											<div className="sm:hidden mt-1 text-xs text-gray-500">
-												Indek: {item.indek}
-											</div>
-										</TableCell>
-										<TableCell>{item.nama_evaluasi}</TableCell>
-										<TableCell className="text-center hidden sm:table-cell">
-											{item.indek}
-										</TableCell>
-										<TableCell className="hidden lg:table-cell">
-											{item.keterangan || "-"}
-										</TableCell>
-										<TableCell className="text-right">
-											<div className="flex justify-end gap-2">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => handleOpenForm(item)}
-												>
-													<Pencil className="w-4 h-4" />
-												</Button>
-												<Button
-													variant="ghost"
-													size="sm"
-													className="text-red-600 hover:text-red-700 hover:bg-red-50"
-													onClick={() => {
-														setSelected(item);
-														setShowDelete(true);
-													}}
-												>
-													<Trash2 className="w-4 h-4" />
-												</Button>
-											</div>
-										</TableCell>
+					<>
+						{/* Desktop View */}
+						<div className="hidden md:block overflow-x-auto">
+							<Table>
+								<TableHeader className="bg-slate-50/50">
+									<TableRow>
+										<TableHead className="w-[100px]">NIK</TableHead>
+										<TableHead>Nama Pegawai</TableHead>
+										<TableHead>Jenis Evaluasi</TableHead>
+										<TableHead className="text-center w-[80px]">Indek</TableHead>
+										<TableHead className="hidden lg:table-cell">Keterangan</TableHead>
+										<TableHead className="text-right w-[100px]">Aksi</TableHead>
 									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
+								</TableHeader>
+								<TableBody>
+									{filteredData.map((item) => (
+										<TableRow key={`${item.id}-${item.kode_evaluasi}`} className="hover:bg-slate-50/50">
+											<TableCell className="font-mono text-xs text-slate-500">
+												{item.nik}
+											</TableCell>
+											<TableCell className="font-medium text-slate-900">
+												{item.nama_pegawai}
+											</TableCell>
+											<TableCell>
+												<span className="text-sm font-medium text-[#0093dd] bg-blue-50 px-2 py-1 rounded-md">
+													{item.nama_evaluasi}
+												</span>
+											</TableCell>
+											<TableCell className="text-center font-bold text-slate-700">
+												{item.indek}
+											</TableCell>
+											<TableCell className="hidden lg:table-cell text-sm text-slate-500 truncate max-w-[200px]">
+												{item.keterangan || "-"}
+											</TableCell>
+											<TableCell className="text-right">
+												<div className="flex justify-end gap-1">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 text-slate-400 hover:text-[#0093dd]"
+														onClick={() => handleOpenForm(item)}
+													>
+														<Pencil size={14} />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 text-slate-400 hover:text-red-500"
+														onClick={() => {
+															setSelected(item);
+															setShowDelete(true);
+														}}
+													>
+														<Trash2 size={14} />
+													</Button>
+												</div>
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						</div>
+
+						{/* Mobile View */}
+						<div className="md:hidden divide-y divide-slate-100 border-t border-slate-100">
+							{filteredData.map((item) => (
+								<div key={`${item.id}-${item.kode_evaluasi}`} className="p-4 space-y-3 active:bg-slate-50 transition-colors">
+									<div className="flex justify-between items-start">
+										<div className="space-y-1">
+											<div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">{item.nik}</div>
+											<h4 className="font-bold text-slate-900">{item.nama_pegawai}</h4>
+										</div>
+										<div className="bg-amber-50 text-amber-700 text-xs font-bold px-2 py-1 rounded-lg border border-amber-100">
+											Indek: {item.indek}
+										</div>
+									</div>
+									<div className="bg-blue-50/50 border border-blue-100 rounded-lg p-2 flex items-center justify-between">
+										<span className="text-xs font-semibold text-[#0093dd]">{item.nama_evaluasi}</span>
+										<div className="flex gap-1">
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-[#0093dd]"
+												onClick={() => handleOpenForm(item)}
+											>
+												<Pencil size={14} />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-red-400"
+												onClick={() => {
+													setSelected(item);
+													setShowDelete(true);
+												}}
+											>
+												<Trash2 size={14} />
+											</Button>
+										</div>
+									</div>
+									{item.keterangan && (
+										<p className="text-[11px] text-slate-500 italic px-1">
+											"{item.keterangan}"
+										</p>
+									)}
+								</div>
+							))}
+						</div>
+					</>
 				)}
 			</CardContent>
 

@@ -240,42 +240,38 @@ export default function PegawaiDataSection() {
 
 	return (
 		<Card>
-			<CardHeader>
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-					<div>
-						<CardTitle className="flex items-center gap-2">
-							<Users className="w-5 h-5" />
-							Data Pegawai
-						</CardTitle>
-						{/* <p className="text-sm text-gray-500 mt-1">
-							Kelola data pegawai dan informasi kepegawaian. Total Index
-							Remunerasi Aktif:{" "}
-							<span className="font-semibold">{totalAggregate}</span>
-						</p> */}
-					</div>
-					<div className="flex gap-2">
+			<CardHeader className="space-y-4 px-4 sm:px-6">
+				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+					<CardTitle className="flex items-center gap-2 text-xl font-bold">
+						<Users className="w-5 h-5 text-[#0093dd]" />
+						Data Pegawai
+					</CardTitle>
+					<div className="flex items-center gap-2">
 						<Button
 							variant="outline"
 							onClick={() => setShowRumusDialog(true)}
-							className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+							className="flex-1 sm:flex-none h-10 bg-blue-50/50 hover:bg-blue-50 text-[#0093dd] border-blue-100"
+							size="sm"
 						>
 							<Info className="w-4 h-4 mr-2" />
-							Rumus Remunerasi
+							<span className="xs:inline">Rumus</span>
 						</Button>
 						<Button
 							onClick={() => {
 								setSelectedPegawai(null);
 								setShowForm(true);
 							}}
+							className="flex-1 sm:flex-none h-10 bg-[#0093dd] hover:bg-[#007bbd] text-white shadow-sm"
+							size="sm"
 						>
 							<Plus className="w-4 h-4 mr-2" />
-							Tambah Pegawai
+							Tambah
 						</Button>
 					</div>
 				</div>
-				<div className="flex flex-col sm:flex-row gap-3 pt-2">
+				<div className="flex flex-col lg:flex-row gap-3">
 					<div className="relative flex-1">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
 						<Input
 							placeholder="Cari nama atau NIK..."
 							value={search}
@@ -283,47 +279,49 @@ export default function PegawaiDataSection() {
 								setSearch(e.target.value);
 								setPage(1);
 							}}
-							className="pl-9"
+							className="pl-9 h-10 bg-slate-50/50 border-slate-200 focus:bg-white transition-all"
 						/>
 					</div>
-					<Select
-						value={departemen}
-						onValueChange={(v) => {
-							setDepartemen(v);
-							setPage(1);
-						}}
-					>
-						<SelectTrigger className="w-full sm:w-[180px]">
-							<SelectValue placeholder="Filter Departemen" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Semua</SelectItem>
-							{refs.departemen.map((d) => (
-								<SelectItem key={d.dep_id} value={d.dep_id}>
-									{d.nama}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<Select
-						value={sttsAktif}
-						onValueChange={(v) => {
-							setSttsAktif(v);
-							setPage(1);
-						}}
-					>
-						<SelectTrigger className="w-full sm:w-[150px]">
-							<SelectValue placeholder="Status Aktif" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">Semua</SelectItem>
-							<SelectItem value="AKTIF">Aktif</SelectItem>
-							<SelectItem value="CUTI">Cuti</SelectItem>
-							<SelectItem value="KELUAR">Keluar</SelectItem>
-							<SelectItem value="TENAGA LUAR">Tenaga Luar</SelectItem>
-							<SelectItem value="MITRA">Mitra</SelectItem>
-						</SelectContent>
-					</Select>
+					<div className="flex flex-col sm:flex-row gap-3">
+						<Select
+							value={departemen}
+							onValueChange={(v) => {
+								setDepartemen(v);
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="w-full sm:w-[180px] h-10 bg-slate-50/50 border-slate-200">
+								<SelectValue placeholder="Departemen" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Semua Departemen</SelectItem>
+								{refs.departemen.map((d) => (
+									<SelectItem key={d.dep_id} value={d.dep_id}>
+										{d.nama}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<Select
+							value={sttsAktif}
+							onValueChange={(v) => {
+								setSttsAktif(v);
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="w-full sm:w-[150px] h-10 bg-slate-50/50 border-slate-200">
+								<SelectValue placeholder="Status" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Semua Status</SelectItem>
+								<SelectItem value="AKTIF">Aktif</SelectItem>
+								<SelectItem value="CUTI">Cuti</SelectItem>
+								<SelectItem value="KELUAR">Keluar</SelectItem>
+								<SelectItem value="TENAGA LUAR">Tenaga Luar</SelectItem>
+								<SelectItem value="MITRA">Mitra</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
 				</div>
 			</CardHeader>
 			<CardContent>
@@ -510,57 +508,53 @@ export default function PegawaiDataSection() {
 										</div>
 									</div>
 
-									<div className="flex justify-end items-center gap-2">
+									<div className="flex flex-wrap items-center gap-2 pt-1">
 										<Button
 											variant="outline"
 											size="sm"
-											className="h-8 text-xs"
+											className="flex-1 h-9 text-xs border-slate-200 hover:bg-slate-50"
 											onClick={() => handleEdit(p)}
 										>
-											<Pencil className="w-3.5 h-3.5 mr-1.5" />
+											<Pencil className="w-3.5 h-3.5 mr-1.5 text-[#0093dd]" />
 											Edit
 										</Button>
 										<Button
 											variant="outline"
 											size="sm"
-											className="h-8 text-xs"
+											className="flex-1 h-9 text-xs border-slate-200 hover:bg-slate-50"
 											onClick={() => handleEvaluasiClick(p)}
 										>
-											<BarChart3 className="w-3.5 h-3.5 mr-1.5" />
+											<BarChart3 className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
 											Evaluasi
 										</Button>
 										<Button
 											variant="outline"
 											size="sm"
-											className="h-8 text-xs"
+											className="flex-1 h-9 text-xs border-slate-200 hover:bg-slate-50"
 											onClick={() => handlePencapaianClick(p)}
 										>
-											<Zap className="w-3.5 h-3.5 mr-1.5" />
-											Pencapaian
+											<Zap className="w-3.5 h-3.5 mr-1.5 text-emerald-500" />
+											Capaian
 										</Button>
-										{process.env.NEXT_PUBLIC_DEBUG_MODE === "true" && (
-											<Button
-												variant="outline"
-												size="sm"
-												className="h-8 text-xs"
-												onClick={() => handleDebugClick(p)}
-											>
-												<Bug className="w-3.5 h-3.5 mr-1.5" />
-												Debug
-											</Button>
-										)}
 										<DropdownMenu>
 											<DropdownMenuTrigger asChild>
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-8 w-8 p-0"
+													className="h-9 w-9 p-0 hover:bg-slate-100 border border-transparent"
 												>
-													<span className="sr-only">More options</span>
-													<MoreHorizontal className="h-4 w-4" />
+													<MoreHorizontal className="h-4 w-4 text-slate-400" />
 												</Button>
 											</DropdownMenuTrigger>
-											<DropdownMenuContent align="end">
+											<DropdownMenuContent align="end" className="w-48">
+												<DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider">Lainnya</DropdownMenuLabel>
+												{process.env.NEXT_PUBLIC_DEBUG_MODE === "true" && (
+													<DropdownMenuItem onClick={() => handleDebugClick(p)}>
+														<Bug className="mr-2 h-4 w-4" />
+														Debug Persentase
+													</DropdownMenuItem>
+												)}
+												<DropdownMenuSeparator />
 												<DropdownMenuItem
 													onClick={() => handleDeleteClick(p)}
 													className="text-red-600 focus:text-red-600 focus:bg-red-50"
