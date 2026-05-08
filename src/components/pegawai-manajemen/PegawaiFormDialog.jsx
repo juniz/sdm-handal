@@ -20,8 +20,22 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+} from "@/components/ui/command";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getClientToken } from "@/lib/client-auth";
 
@@ -76,6 +90,67 @@ const defaultForm = {
 	dankes: 0,
 	photo: "",
 	no_ktp: "",
+};
+
+const SearchableSelect = ({ value, onChange, options, placeholder }) => {
+	const [open, setOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	
+	const selectedOption = options.find((o) => String(o.value) === String(value));
+
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>
+				<Button
+					variant="outline"
+					role="combobox"
+					aria-expanded={open}
+					className={cn(
+						"w-full justify-between font-normal bg-white",
+						!value && "text-muted-foreground"
+					)}
+				>
+					{selectedOption ? selectedOption.label : placeholder || "Pilih..."}
+					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+				<Command shouldFilter={false}>
+					<CommandInput 
+						placeholder="Cari..." 
+						value={searchQuery}
+						onValueChange={setSearchQuery}
+					/>
+					<CommandList>
+						<CommandEmpty>Tidak ditemukan.</CommandEmpty>
+						<CommandGroup>
+							{options
+								.filter(o => !searchQuery || String(o.label).toLowerCase().includes(searchQuery.toLowerCase()) || String(o.value).toLowerCase().includes(searchQuery.toLowerCase()))
+								.map((option) => (
+								<CommandItem
+									key={option.value}
+									value={String(option.value)}
+									onSelect={(currentValue) => {
+										onChange(currentValue === String(value) ? "" : currentValue);
+										setOpen(false);
+										setSearchQuery("");
+									}}
+								>
+									<Check
+										className={cn(
+											"mr-2 h-4 w-4",
+											String(value) === String(option.value) ? "opacity-100" : "opacity-0"
+										)}
+									/>
+									{option.label}
+								</CommandItem>
+							))}
+						</CommandGroup>
+					</CommandList>
+				</Command>
+			</PopoverContent>
+		</Popover>
+	);
 };
 
 export default function PegawaiFormDialog({
@@ -335,39 +410,21 @@ export default function PegawaiFormDialog({
 								</div>
 								<div className="min-w-0">
 									<Label>Departemen *</Label>
-									<Select
+									<SearchableSelect
 										value={form.departemen}
-										onValueChange={(v) => handleChange("departemen", v)}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Pilih" />
-										</SelectTrigger>
-										<SelectContent>
-											{(departemenList || []).map((d) => (
-												<SelectItem key={d.dep_id} value={d.dep_id}>
-													{d.nama}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										onChange={(v) => handleChange("departemen", v)}
+										options={(departemenList || []).map(d => ({ value: d.dep_id, label: d.nama }))}
+										placeholder="Pilih Departemen"
+									/>
 								</div>
 								<div className="min-w-0">
 									<Label>Bidang</Label>
-									<Select
+									<SearchableSelect
 										value={form.bidang}
-										onValueChange={(v) => handleChange("bidang", v)}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Pilih" />
-										</SelectTrigger>
-										<SelectContent>
-											{(bidangList || []).map((b) => (
-												<SelectItem key={b.nama} value={b.nama}>
-													{b.nama}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										onChange={(v) => handleChange("bidang", v)}
+										options={(bidangList || []).map(b => ({ value: b.nama, label: b.nama }))}
+										placeholder="Pilih Bidang"
+									/>
 								</div>
 							</div>
 						</TabsContent>
@@ -381,99 +438,48 @@ export default function PegawaiFormDialog({
 								<div className="flex flex-col gap-5">
 									<div className="min-w-0">
 										<Label>Jenjang Jabatan</Label>
-										<Select
+										<SearchableSelect
 											value={form.jnj_jabatan}
-											onValueChange={(v) => handleChange("jnj_jabatan", v)}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih" />
-											</SelectTrigger>
-											<SelectContent>
-												{(jnjJabatanList || []).map((j) => (
-													<SelectItem key={j.kode} value={j.kode}>
-														{j.nama}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onChange={(v) => handleChange("jnj_jabatan", v)}
+											options={(jnjJabatanList || []).map(j => ({ value: j.kode, label: j.nama }))}
+											placeholder="Pilih Jenjang Jabatan"
+										/>
 									</div>
 									<div className="min-w-0">
 										<Label>Kelompok Jabatan</Label>
-										<Select
+										<SearchableSelect
 											value={form.kode_kelompok}
-											onValueChange={(v) => handleChange("kode_kelompok", v)}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih" />
-											</SelectTrigger>
-											<SelectContent>
-												{(kelompokJabatanList || []).map((k) => (
-													<SelectItem
-														key={k.kode_kelompok}
-														value={k.kode_kelompok}
-													>
-														{k.nama_kelompok || k.kode_kelompok}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onChange={(v) => handleChange("kode_kelompok", v)}
+											options={(kelompokJabatanList || []).map(k => ({ value: k.kode_kelompok, label: k.nama_kelompok || k.kode_kelompok }))}
+											placeholder="Pilih Kelompok Jabatan"
+										/>
 									</div>
 									<div className="min-w-0">
 										<Label>Resiko Kerja</Label>
-										<Select
+										<SearchableSelect
 											value={form.kode_resiko}
-											onValueChange={(v) => handleChange("kode_resiko", v)}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih" />
-											</SelectTrigger>
-											<SelectContent>
-												{(resikoKerjaList || []).map((r) => (
-													<SelectItem key={r.kode_resiko} value={r.kode_resiko}>
-														{r.nama_resiko || r.kode_resiko}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onChange={(v) => handleChange("kode_resiko", v)}
+											options={(resikoKerjaList || []).map(r => ({ value: r.kode_resiko, label: r.nama_resiko || r.kode_resiko }))}
+											placeholder="Pilih Resiko Kerja"
+										/>
 									</div>
 									<div className="min-w-0">
 										<Label>Emergency Index</Label>
-										<Select
+										<SearchableSelect
 											value={form.kode_emergency}
-											onValueChange={(v) => handleChange("kode_emergency", v)}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih" />
-											</SelectTrigger>
-											<SelectContent>
-												{(emergencyIndexList || []).map((e) => (
-													<SelectItem
-														key={e.kode_emergency}
-														value={e.kode_emergency}
-													>
-														{e.nama_emergency || e.kode_emergency}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onChange={(v) => handleChange("kode_emergency", v)}
+											options={(emergencyIndexList || []).map(e => ({ value: e.kode_emergency, label: e.nama_emergency || e.kode_emergency }))}
+											placeholder="Pilih Emergency Index"
+										/>
 									</div>
 									<div className="min-w-0">
 										<Label>Pendidikan</Label>
-										<Select
+										<SearchableSelect
 											value={form.pendidikan}
-											onValueChange={(v) => handleChange("pendidikan", v)}
-										>
-											<SelectTrigger className="w-full">
-												<SelectValue placeholder="Pilih" />
-											</SelectTrigger>
-											<SelectContent>
-												{(pendidikanList || []).map((p) => (
-													<SelectItem key={p.tingkat} value={p.tingkat}>
-														{p.tingkat}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
+											onChange={(v) => handleChange("pendidikan", v)}
+											options={(pendidikanList || []).map(p => ({ value: p.tingkat, label: p.tingkat }))}
+											placeholder="Pilih Pendidikan"
+										/>
 									</div>
 								</div>
 							</div>
@@ -621,39 +627,21 @@ export default function PegawaiFormDialog({
 								</div>
 								<div className="min-w-0">
 									<Label>Index Instansi</Label>
-									<Select
+									<SearchableSelect
 										value={form.indexins}
-										onValueChange={(v) => handleChange("indexins", v)}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Pilih" />
-										</SelectTrigger>
-										<SelectContent>
-											{(departemenList || []).map((d) => (
-												<SelectItem key={d.dep_id} value={d.dep_id}>
-													{d.nama}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										onChange={(v) => handleChange("indexins", v)}
+										options={(departemenList || []).map(d => ({ value: d.dep_id, label: d.nama }))}
+										placeholder="Pilih Index Instansi"
+									/>
 								</div>
 								<div className="min-w-0">
 									<Label>Bank</Label>
-									<Select
+									<SearchableSelect
 										value={form.bpd}
-										onValueChange={(v) => handleChange("bpd", v)}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue placeholder="Pilih" />
-										</SelectTrigger>
-										<SelectContent>
-											{(bankList || []).map((b) => (
-												<SelectItem key={b.namabank} value={b.namabank}>
-													{b.namabank}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
+										onChange={(v) => handleChange("bpd", v)}
+										options={(bankList || []).map(b => ({ value: b.namabank, label: b.namabank }))}
+										placeholder="Pilih Bank"
+									/>
 								</div>
 								<div className="min-w-0">
 									<Label>No. Rekening</Label>
