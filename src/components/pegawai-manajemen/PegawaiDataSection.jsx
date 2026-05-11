@@ -183,37 +183,6 @@ export default function PegawaiDataSection() {
 		}
 	};
 
-	const handleDelete = async () => {
-		if (!selectedPegawai) return;
-		try {
-			const token = getClientToken();
-			const headers = {};
-			if (token) headers["Authorization"] = `Bearer ${token}`;
-			const res = await fetch(
-				`/api/pegawai-manajemen?id=${selectedPegawai.id}`,
-				{ method: "DELETE", headers },
-			);
-			const result = await res.json();
-			if (res.ok) {
-				toast.success(result.message);
-				setShowDelete(false);
-				setSelectedPegawai(null);
-				fetchPegawai();
-			} else {
-				toast.error(result.message || "Gagal menghapus");
-			}
-		} catch (err) {
-			toast.error("Terjadi kesalahan");
-		}
-	};
-
-	const handleDeleteClick = (p) => {
-		// Use setTimeout to prevent conflict with DropdownMenu focus management
-		setTimeout(() => {
-			setSelectedPegawai(p);
-			setShowDelete(true);
-		}, 100);
-	};
 
 	const handleEvaluasiClick = (p) => {
 		// Use setTimeout to prevent conflict with DropdownMenu focus management
@@ -432,14 +401,6 @@ export default function PegawaiDataSection() {
 																Debug Persentase
 															</DropdownMenuItem>
 														)}
-														<DropdownMenuSeparator />
-														<DropdownMenuItem
-															onClick={() => handleDeleteClick(p)}
-															className="text-red-600 focus:text-red-600 focus:bg-red-50"
-														>
-															<Trash2 className="mr-2 h-4 w-4" />
-															Hapus Pegawai
-														</DropdownMenuItem>
 													</DropdownMenuContent>
 												</DropdownMenu>
 											</TableCell>
@@ -554,14 +515,6 @@ export default function PegawaiDataSection() {
 														Debug Persentase
 													</DropdownMenuItem>
 												)}
-												<DropdownMenuSeparator />
-												<DropdownMenuItem
-													onClick={() => handleDeleteClick(p)}
-													className="text-red-600 focus:text-red-600 focus:bg-red-50"
-												>
-													<Trash2 className="mr-2 h-4 w-4" />
-													Hapus Pegawai
-												</DropdownMenuItem>
 											</DropdownMenuContent>
 										</DropdownMenu>
 									</div>
@@ -638,26 +591,6 @@ export default function PegawaiDataSection() {
 				}}
 			/>
 
-			<Dialog open={showDelete} onOpenChange={setShowDelete}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Hapus Pegawai</DialogTitle>
-						<DialogDescription>
-							Apakah Anda yakin ingin menghapus pegawai{" "}
-							<strong>{selectedPegawai?.nama}</strong> (NIK:{" "}
-							{selectedPegawai?.nik})? Tindakan ini tidak dapat dibatalkan.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setShowDelete(false)}>
-							Batal
-						</Button>
-						<Button type="button" variant="destructive" onClick={handleDelete}>
-							Hapus
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 
 			<RumusRemunerasiDialog
 				open={showRumusDialog}
