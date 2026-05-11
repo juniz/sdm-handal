@@ -174,6 +174,21 @@ export default function PegawaiFormDialog({
 	const isEdit = !!pegawai?.id;
 
 	useEffect(() => {
+		const fetchNextNik = async () => {
+			try {
+				const token = getClientToken();
+				const headers = {};
+				if (token) headers["Authorization"] = `Bearer ${token}`;
+				const res = await fetch("/api/pegawai-manajemen/next-nik", { headers });
+				const result = await res.json();
+				if (res.ok && result.data?.nextNik) {
+					setForm((prev) => ({ ...prev, nik: result.data.nextNik }));
+				}
+			} catch (err) {
+				console.error("Failed to fetch next NIK:", err);
+			}
+		};
+
 		if (pegawai) {
 			setForm({
 				...defaultForm,
@@ -193,6 +208,9 @@ export default function PegawaiFormDialog({
 			});
 		} else {
 			setForm({ ...defaultForm });
+			if (open) {
+				fetchNextNik();
+			}
 		}
 	}, [pegawai, open]);
 
