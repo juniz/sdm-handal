@@ -192,15 +192,23 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 
 	const handleChange = (e) => {
 		const { name, value } = e.target;
+		const updatedValue = name === "alamat" ? value.replace(/[\r\n]+/g, " ") : value;
 		setFormData((prev) => ({
 			...prev,
-			[name]: value,
+			[name]: updatedValue,
 		}));
 	};
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError("");
+
+		// Validasi alamat tidak boleh mengandung baris baru / new line
+		if (formData.alamat && /[\r\n]/.test(formData.alamat)) {
+			setError("Alamat tidak boleh mengandung baris baru (new line)");
+			return;
+		}
+
 		setLoading(true);
 
 		try {
@@ -327,8 +335,13 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 										name="alamat"
 										value={formData.alamat}
 										onChange={handleChange}
+										onKeyDown={(e) => {
+											if (e.key === "Enter") {
+												e.preventDefault();
+											}
+										}}
 										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan alamat lengkap"
+										placeholder="Masukkan alamat lengkap (tanpa baris baru)"
 										rows="3"
 									/>
 								</div>
