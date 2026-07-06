@@ -29,6 +29,12 @@ export default function AdminRekapBulananPage() {
 	const [successMsg, setSuccessMsg] = useState("");
 	const [actionLoadingId, setActionLoadingId] = useState(null);
 
+	// Pagination states
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(10);
+	const [meta, setMeta] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 0 });
+	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaFinal: 0, avgMonthlyScore: 0 });
+
 	// Load departments
 	useEffect(() => {
 		const loadDepts = async () => {
@@ -51,10 +57,12 @@ export default function AdminRekapBulananPage() {
 		setErrorMsg("");
 		setSuccessMsg("");
 		try {
-			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}`);
+			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&page=${page}&limit=${limit}`);
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Gagal memuat rekap bulanan");
 			setRekapList(data.data || []);
+			if (data.meta) setMeta(data.meta);
+			if (data.summary) setSummary(data.summary);
 		} catch (err) {
 			setErrorMsg(err.message);
 		} finally {
@@ -64,7 +72,7 @@ export default function AdminRekapBulananPage() {
 
 	useEffect(() => {
 		loadRekap();
-	}, [currentMonth, currentYear, selectedDept]);
+	}, [currentMonth, currentYear, selectedDept, page, limit]);
 
 	const handleLockAction = async (id, actionType) => {
 		setActionLoadingId(id);
@@ -117,13 +125,11 @@ export default function AdminRekapBulananPage() {
 		window.print();
 	};
 
-	// Aggregate metrics
-	const totalJasaDasar = rekapList.reduce((sum, row) => sum + Number(row.nominal_jasa_dasar), 0);
-	const totalPengurang = rekapList.reduce((sum, row) => sum + Number(row.pengurang_jasa), 0);
-	const totalJasaFinal = rekapList.reduce((sum, row) => sum + Number(row.nominal_jasa_final), 0);
-	const avgMonthlyScore = rekapList.length > 0
-		? Math.round(rekapList.reduce((sum, row) => sum + Number(row.rata_skor_total), 0) / rekapList.length)
-		: 0;
+	// Aggregate metrics from summary payload
+	const totalJasaDasar = summary.totalJasaDasar;
+	const totalPengurang = summary.totalPengurang;
+	const totalJasaFinal = summary.totalJasaFinal;
+	const avgMonthlyScore = summary.avgMonthlyScore;
 
 	return (
 		<div className="w-full p-4 md:p-6 space-y-5 font-noto-sans">
@@ -171,7 +177,10 @@ export default function AdminRekapBulananPage() {
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Tahun</label>
 					<select 
 						value={currentYear}
-						onChange={(e) => setCurrentYear(e.target.value)}
+						onChange={(e) => {
+							setCurrentYear(e.target.value);
+							setPage(1);
+						}}
 						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
 					>
 						<option value="2026">2026</option>
@@ -184,7 +193,10 @@ export default function AdminRekapBulananPage() {
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Bulan</label>
 					<select 
 						value={currentMonth}
-						onChange={(e) => setCurrentMonth(e.target.value)}
+						onChange={(e) => {
+							setCurrentMonth(e.target.value);
+							setPage(1);
+						}}
 						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
 					>
 						{moment.months().map((m, idx) => (
@@ -197,7 +209,10 @@ export default function AdminRekapBulananPage() {
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Departemen</label>
 					<select 
 						value={selectedDept}
-						onChange={(e) => setSelectedDept(e.target.value)}
+						onChange={(e) => {
+							setSelectedDept(e.target.value);
+							setPage(1);
+						}}
 						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
 					>
 						<option value="ALL">Semua Departemen</option>
@@ -355,6 +370,75 @@ export default function AdminRekapBulananPage() {
 									)}
 								</tbody>
 							</table>
+						</div>
+
+						{/* Pagination Controls */}
+						<div className="bg-white border-t border-slate-100 px-5 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
+							<div className="text-xs text-slate-500 font-medium">
+								Menampilkan <span className="font-semibold text-slate-700">{meta.totalItems > 0 ? (page - 1) * limit + 1 : 0}</span> sampai{" "}
+								<span className="font-semibold text-slate-700">{Math.min(page * limit, meta.totalItems)}</span> dari{" "}
+								<span className="font-semibold text-slate-700">{meta.totalItems}</span> data
+							</div>
+							
+							<div className="flex items-center gap-4">
+								{/* Limit Selector */}
+								<div className="flex items-center gap-2">
+									<span className="text-xs text-slate-500 font-medium">Baris:</span>
+									<select
+										value={limit}
+										onChange={(e) => {
+											setLimit(Number(e.target.value));
+											setPage(1);
+										}}
+										className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 cursor-pointer focus:outline-none focus:border-primary-600 focus:bg-white"
+									>
+										<option value={10}>10</option>
+										<option value={25}>25</option>
+										<option value={50}>50</option>
+										<option value={100}>100</option>
+									</select>
+								</div>
+
+								{/* Page Buttons */}
+								<div className="flex items-center gap-1.5">
+									<button
+										onClick={() => setPage((p) => Math.max(1, p - 1))}
+										disabled={page === 1}
+										className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-[11px] font-bold"
+									>
+										Sebelumnya
+									</button>
+									
+									{Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+										.filter(p => p === 1 || p === meta.totalPages || Math.abs(p - page) <= 1)
+										.map((p, idx, arr) => {
+											const prev = arr[idx - 1];
+											return (
+												<div key={p} className="flex items-center gap-1.5">
+													{prev && p - prev > 1 && <span className="text-slate-400 text-xs px-1">...</span>}
+													<button
+														onClick={() => setPage(p)}
+														className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 ${
+															page === p
+																? "bg-primary-600 text-white shadow-sm"
+																: "hover:bg-slate-50 text-slate-600 border border-slate-200"
+														}`}
+													>
+														{p}
+													</button>
+												</div>
+											);
+										})}
+
+									<button
+										onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+										disabled={page === meta.totalPages || meta.totalPages === 0}
+										className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-[11px] font-bold"
+									>
+										Berikutnya
+									</button>
+								</div>
+							</div>
 						</div>
 					</div>
 				</>
