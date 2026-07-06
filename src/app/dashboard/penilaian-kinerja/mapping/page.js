@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import moment from "moment";
 import { 
 	Plus, 
@@ -245,6 +246,18 @@ export default function SupervisorMappingPage() {
 		(item.kode_unit || "").toLowerCase().includes(searchQuery.toLowerCase())
 	);
 
+	// Formatted options for searchable select
+	const employeeOptions = employees.map((emp) => ({
+		value: emp.id,
+		label: emp.label || emp.nama,
+		sublabel: `NIK: ${emp.value} — ${emp.nama_departemen || ""}`
+	}));
+
+	const unitOptions = tipeUnit === "departemen"
+		? departments.map(d => ({ value: d.dep_id, label: d.nama }))
+		: bidangList.map(b => ({ value: b.nama, label: b.nama }));
+
+
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
 			<div className="bg-gradient-to-r from-primary-900 to-primary-800 border border-primary-800/20 rounded-2xl p-6 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
@@ -432,26 +445,19 @@ export default function SupervisorMappingPage() {
 								{tipeRelasi === "personal" && (
 									<div className="space-y-1.5">
 										<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Pilih Pegawai dinilai</label>
-										<select 
+										<SearchableSelect 
+											options={employeeOptions}
 											value={pegawaiId}
-											onChange={(e) => setPegawaiId(e.target.value)}
+											onChange={setPegawaiId}
 											disabled={modalMode === "edit"}
-											required={tipeRelasi === "personal"}
-											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 disabled:opacity-60 font-semibold"
-										>
-											<option value="">-- Pilih Pegawai --</option>
-											{employees.map((emp) => (
-												<option key={emp.id} value={emp.id}>
-													{emp.value} — {emp.label} ({emp.nama_departemen})
-												</option>
-											))}
-										</select>
+											placeholder="Pilih Pegawai dinilai..."
+										/>
 									</div>
 								)}
 
 								{/* Unit Selector */}
 								{tipeRelasi === "unit" && (
-									<div className="grid grid-cols-2 gap-4">
+									<>
 										<div className="space-y-1.5">
 											<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Tipe Unit</label>
 											<select 
@@ -470,62 +476,47 @@ export default function SupervisorMappingPage() {
 										</div>
 										<div className="space-y-1.5">
 											<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Pilih Unit</label>
-											<select 
+											<SearchableSelect 
+												options={unitOptions}
 												value={kodeUnit}
-												onChange={(e) => setKodeUnit(e.target.value)}
+												onChange={setKodeUnit}
 												disabled={modalMode === "edit"}
-												required={tipeRelasi === "unit"}
-												className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold"
-											>
-												<option value="">-- Pilih Unit --</option>
-												{tipeUnit === "departemen" 
-													? departments.map(d => <option key={d.dep_id} value={d.dep_id}>{d.nama}</option>)
-													: bidangList.map((b, idx) => <option key={idx} value={b.nama}>{b.nama}</option>)
-												}
-											</select>
+												placeholder="Pilih Unit..."
+											/>
 										</div>
-									</div>
+									</>
 								)}
 
 								{/* Supervisor Selector */}
 								<div className="space-y-1.5">
 									<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Pilih Supervisor (Evaluator)</label>
-									<select 
+									<SearchableSelect 
+										options={employeeOptions}
 										value={supervisorId}
-										onChange={(e) => setSupervisorId(e.target.value)}
-										required
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold"
-									>
-										<option value="">-- Pilih Supervisor --</option>
-										{employees.map((emp) => (
-											<option key={emp.id} value={emp.id}>
-												{emp.value} — {emp.label} ({emp.nama_departemen})
-											</option>
-										))}
-									</select>
+										onChange={setSupervisorId}
+										placeholder="Pilih Supervisor..."
+									/>
 								</div>
 
 								{/* Validity Dates */}
-								<div className="grid grid-cols-2 gap-4">
-									<div className="space-y-1.5">
-										<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
-										<input 
-											type="date"
-											value={berlakuMulai}
-											onChange={(e) => setBerlakuMulai(e.target.value)}
-											required
-											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold"
-										/>
-									</div>
-									<div className="space-y-1.5">
-										<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
-										<input 
-											type="date"
-											value={berlakuSampai}
-											onChange={(e) => setBerlakuSampai(e.target.value)}
-											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold"
-										/>
-									</div>
+								<div className="space-y-1.5">
+									<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
+									<input 
+										type="date"
+										value={berlakuMulai}
+										onChange={(e) => setBerlakuMulai(e.target.value)}
+										required
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold shadow-xs"
+									/>
+								</div>
+								<div className="space-y-1.5">
+									<label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
+									<input 
+										type="date"
+										value={berlakuSampai}
+										onChange={(e) => setBerlakuSampai(e.target.value)}
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold shadow-xs"
+									/>
 								</div>
 
 								{modalMode === "edit" && (
