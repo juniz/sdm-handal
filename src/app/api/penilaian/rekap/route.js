@@ -45,6 +45,7 @@ export async function GET(request) {
 		const bulan = searchParams.get("bulan"); // 1-12
 		const tahun = searchParams.get("tahun"); // YYYY
 		const departemen = searchParams.get("departemen") || "ALL";
+		const nama = searchParams.get("nama") || "";
 		const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
 		const limit = Math.max(1, parseInt(searchParams.get("limit") || "10", 10));
 
@@ -139,6 +140,11 @@ export async function GET(request) {
 		if (departemen !== "ALL") {
 			employeeQuery += ` AND p.departemen = ?`;
 			queryParams.push(departemen);
+		}
+
+		if (nama.trim() !== "") {
+			employeeQuery += ` AND (p.nama LIKE ? OR p.nik LIKE ?)`;
+			queryParams.push(`%${nama}%`, `%${nama}%`);
 		}
 
 		employeeQuery += ` ORDER BY p.nama ASC`;

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import moment from "moment";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { 
 	Search, 
 	Lock, 
@@ -35,6 +36,18 @@ export default function AdminRekapBulananPage() {
 	const [meta, setMeta] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 0 });
 	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaFinal: 0, avgMonthlyScore: 0 });
 
+	const [searchName, setSearchName] = useState("");
+	const [debouncedSearchName, setDebouncedSearchName] = useState("");
+
+	// Debounce search input to prevent overloading backend database queries
+	useEffect(() => {
+		const handler = setTimeout(() => {
+			setDebouncedSearchName(searchName);
+			setPage(1); // Reset page to 1 on new search
+		}, 400);
+		return () => clearTimeout(handler);
+	}, [searchName]);
+
 	// Load departments
 	useEffect(() => {
 		const loadDepts = async () => {
@@ -57,7 +70,7 @@ export default function AdminRekapBulananPage() {
 		setErrorMsg("");
 		setSuccessMsg("");
 		try {
-			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&page=${page}&limit=${limit}`);
+			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&nama=${encodeURIComponent(debouncedSearchName)}&page=${page}&limit=${limit}`);
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Gagal memuat rekap bulanan");
 			setRekapList(data.data || []);
@@ -72,7 +85,7 @@ export default function AdminRekapBulananPage() {
 
 	useEffect(() => {
 		loadRekap();
-	}, [currentMonth, currentYear, selectedDept, page, limit]);
+	}, [currentMonth, currentYear, selectedDept, page, limit, debouncedSearchName]);
 
 	const handleLockAction = async (id, actionType) => {
 		setActionLoadingId(id);
@@ -115,7 +128,7 @@ export default function AdminRekapBulananPage() {
 		const encodedUri = encodeURI(csvContent);
 		const link = document.createElement("a");
 		link.setAttribute("href", encodedUri);
-		link.setAttribute("download", `Rekap_Kinerja_${currentYear}_${currentMonth}_${selectedDept}.csv`);
+		link.setAttribute("download", `Rekap_Kinerja_${currentYear}_${currentMonth}_${selectedDept}${debouncedSearchName ? `_${debouncedSearchName}` : ""}.csv`);
 		document.body.appendChild(link);
 		link.click();
 		document.body.removeChild(link);
@@ -130,6 +143,15 @@ export default function AdminRekapBulananPage() {
 	const totalPengurang = summary.totalPengurang;
 	const totalJasaFinal = summary.totalJasaFinal;
 	const avgMonthlyScore = summary.avgMonthlyScore;
+
+	// Format departments for SearchableSelect
+	const deptOptions = [
+		{ value: "ALL", label: "Semua Departemen" },
+		...departments.map((dept) => ({
+			value: dept.dep_id,
+			label: dept.nama
+		}))
+	];
 
 	return (
 		<div className="w-full p-4 md:p-6 space-y-5 font-noto-sans">
@@ -172,8 +194,8 @@ export default function AdminRekapBulananPage() {
 			</div>
 
 			{/* Filter Section */}
-			<div className="bg-white border border-slate-200/60 p-5 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden transition-shadow duration-200 hover:shadow-md">
-				<div className="space-y-1.5">
+			<div className="bg-white border border-slate-200/60 p-5 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 print:hidden transition-shadow duration-200 hover:shadow-md">
+				<div className="space-y-1.5 md:col-span-2">
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Tahun</label>
 					<select 
 						value={currentYear}
@@ -189,7 +211,7 @@ export default function AdminRekapBulananPage() {
 					</select>
 				</div>
 
-				<div className="space-y-1.5">
+				<div className="space-y-1.5 md:col-span-2">
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Bulan</label>
 					<select 
 						value={currentMonth}
@@ -205,30 +227,40 @@ export default function AdminRekapBulananPage() {
 					</select>
 				</div>
 
-				<div className="space-y-1.5">
-					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Departemen</label>
-					<select 
+				<div className="space-y-1.5 md:col-span-3">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Unit / Departemen</label>
+					<SearchableSelect 
+						options={deptOptions}
 						value={selectedDept}
-						onChange={(e) => {
-							setSelectedDept(e.target.value);
+						onChange={(val) => {
+							setSelectedDept(val);
 							setPage(1);
 						}}
-						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
-					>
-						<option value="ALL">Semua Departemen</option>
-						{departments.map((dept) => (
-							<option key={dept.dep_id} value={dept.dep_id}>{dept.nama}</option>
-						))}
-					</select>
+						placeholder="Pilih Unit/Departemen..."
+					/>
 				</div>
 
-				<div className="flex items-end">
+				<div className="space-y-1.5 md:col-span-3">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Cari Pegawai</label>
+					<div className="relative">
+						<Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+						<input 
+							type="text" 
+							placeholder="Nama atau NIK..."
+							value={searchName}
+							onChange={(e) => setSearchName(e.target.value)}
+							className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 transition-all placeholder-slate-400"
+						/>
+					</div>
+				</div>
+
+				<div className="flex items-end md:col-span-2">
 					<button 
 						onClick={loadRekap}
 						className="w-full py-2.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow"
 					>
 						<Search className="h-4 w-4" />
-						Segarkan Data
+						Segarkan
 					</button>
 				</div>
 			</div>

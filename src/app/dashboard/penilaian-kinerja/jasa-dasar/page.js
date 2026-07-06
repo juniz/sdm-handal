@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import moment from "moment";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { 
 	Plus, 
 	Edit, 
@@ -167,6 +168,13 @@ export default function JasaDasarPegawaiPage() {
 		(item.nama_departemen || "").toLowerCase().includes(searchQuery.toLowerCase())
 	);
 
+	// Format employees for SearchableSelect
+	const employeeOptions = employees.map((emp) => ({
+		value: emp.id,
+		label: emp.label,
+		sublabel: `NIK: ${emp.value} — ${emp.nama_departemen || ""}`
+	}));
+
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
 			{/* Header */}
@@ -294,20 +302,13 @@ export default function JasaDasarPegawaiPage() {
 							<div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
 								<div className="space-y-1.5">
 									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Pilih Pegawai</label>
-									<select 
+									<SearchableSelect 
+										options={employeeOptions}
 										value={pegawaiId}
-										onChange={(e) => setPegawaiId(e.target.value)}
+										onChange={setPegawaiId}
 										disabled={modalMode === "edit"}
-										required
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold disabled:opacity-60"
-									>
-										<option value="">-- Pilih Pegawai --</option>
-										{employees.map((emp) => (
-											<option key={emp.id} value={emp.id}>
-												{emp.value} — {emp.label} ({emp.nama_departemen})
-											</option>
-										))}
-									</select>
+										placeholder="Pilih Pegawai..."
+									/>
 								</div>
 
 								<div className="space-y-1.5">
