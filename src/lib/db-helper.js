@@ -81,6 +81,13 @@ const ALLOWED_TABLES = [
 	"it_assets",
 	"it_asset_loans",
 	"it_asset_logs",
+	"penilaian_harian",
+	"kegiatan_harian",
+	"parameter_penilaian",
+	"supervisor_mapping",
+	"rekap_bulanan",
+	"jasa_dasar_pegawai",
+	"master_kegiatan_kerja",
 ];
 
 /**

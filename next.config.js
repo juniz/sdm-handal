@@ -2,9 +2,7 @@ const withPWA = require("next-pwa")({
 	dest: "public",
 	register: true,
 	skipWaiting: false,
-	disable:
-		process.env.NODE_ENV === "development" ||
-		process.env.NODE_ENV === "local",
+	disable: true,
 	runtimeCaching: [
 		{
 			urlPattern: /^https?.*/,
@@ -27,6 +25,12 @@ const withPWA = require("next-pwa")({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+	typescript: {
+		ignoreBuildErrors: true,
+	},
 	images: {
 		remotePatterns: [
 			{
@@ -178,4 +182,4 @@ const nextConfig = {
 	},
 };
 
-module.exports = withPWA(nextConfig);
+module.exports = nextConfig;

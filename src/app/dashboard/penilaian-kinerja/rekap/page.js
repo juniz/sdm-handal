@@ -1,0 +1,364 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import moment from "moment";
+import { 
+	Search, 
+	Lock, 
+	Unlock, 
+	Download, 
+	Printer, 
+	AlertTriangle, 
+	Loader2, 
+	CheckCircle,
+	Coins,
+	FileBarChart,
+	TrendingUp
+} from "lucide-react";
+
+export default function AdminRekapBulananPage() {
+	const [currentMonth, setCurrentMonth] = useState(moment().format("MM"));
+	const [currentYear, setCurrentYear] = useState(moment().format("YYYY"));
+	const [selectedDept, setSelectedDept] = useState("ALL");
+	
+	const [departments, setDepartments] = useState([]);
+	const [rekapList, setRekapList] = useState([]);
+	const [loading, setLoading] = useState(true);
+	
+	const [errorMsg, setErrorMsg] = useState("");
+	const [successMsg, setSuccessMsg] = useState("");
+	const [actionLoadingId, setActionLoadingId] = useState(null);
+
+	// Load departments
+	useEffect(() => {
+		const loadDepts = async () => {
+			try {
+				const res = await fetch("/api/departemen");
+				if (res.ok) {
+					const data = await res.json();
+					setDepartments(data.data || []);
+				}
+			} catch (err) {
+				console.error("Gagal memuat departemen:", err);
+			}
+		};
+		loadDepts();
+	}, []);
+
+	// Load Rekap List
+	const loadRekap = async () => {
+		setLoading(true);
+		setErrorMsg("");
+		setSuccessMsg("");
+		try {
+			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}`);
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Gagal memuat rekap bulanan");
+			setRekapList(data.data || []);
+		} catch (err) {
+			setErrorMsg(err.message);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		loadRekap();
+	}, [currentMonth, currentYear, selectedDept]);
+
+	const handleLockAction = async (id, actionType) => {
+		setActionLoadingId(id);
+		setErrorMsg("");
+		setSuccessMsg("");
+		try {
+			const res = await fetch(`/api/penilaian/rekap/${id}/lock`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: actionType })
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Gagal memproses penguncian");
+
+			setSuccessMsg(
+				actionType === "lock" 
+					? "Rekap bulanan pegawai berhasil dikunci (Final)!" 
+					: "Kunci rekap bulanan pegawai berhasil dibuka!"
+			);
+			
+			// Refresh list
+			await loadRekap();
+		} catch (err) {
+			setErrorMsg(err.message);
+		} finally {
+			setActionLoadingId(null);
+		}
+	};
+
+	const exportToCSV = () => {
+		if (rekapList.length === 0) return;
+		
+		let csvContent = "data:text/csv;charset=utf-8,";
+		csvContent += "NIK,Nama,Departemen,Hari Jadwal,Hari Approved,Gap Hari,Rata-rata Skor,Jasa Dasar,Pengurang Jasa,Jasa Final,Status\n";
+		
+		rekapList.forEach(row => {
+			csvContent += `"${row.nik}","${row.nama}","${row.nama_departemen}",${row.total_hari_jadwal},${row.hari_approved},${row.gap_hari},${Math.round(row.rata_skor_total)},${row.nominal_jasa_dasar},${row.pengurang_jasa},${row.nominal_jasa_final},"${row.status_rekap}"\n`;
+		});
+
+		const encodedUri = encodeURI(csvContent);
+		const link = document.createElement("a");
+		link.setAttribute("href", encodedUri);
+		link.setAttribute("download", `Rekap_Kinerja_${currentYear}_${currentMonth}_${selectedDept}.csv`);
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+	};
+
+	const triggerPrint = () => {
+		window.print();
+	};
+
+	// Aggregate metrics
+	const totalJasaDasar = rekapList.reduce((sum, row) => sum + Number(row.nominal_jasa_dasar), 0);
+	const totalPengurang = rekapList.reduce((sum, row) => sum + Number(row.pengurang_jasa), 0);
+	const totalJasaFinal = rekapList.reduce((sum, row) => sum + Number(row.nominal_jasa_final), 0);
+	const avgMonthlyScore = rekapList.length > 0
+		? Math.round(rekapList.reduce((sum, row) => sum + Number(row.rata_skor_total), 0) / rekapList.length)
+		: 0;
+
+	return (
+		<div className="w-full p-4 md:p-6 space-y-5 font-noto-sans">
+			{/* Header */}
+			<div className="relative bg-primary-900 border border-primary-800/40 rounded-2xl overflow-hidden shadow-sm print:hidden">
+				{/* Decorative radial glow */}
+				<div className="absolute -top-16 -right-16 w-64 h-64 bg-primary-700/10 rounded-full blur-3xl pointer-events-none" />
+				
+				<div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 md:p-8">
+					<div>
+						<div className="flex items-center gap-2 mb-2">
+							<span className="text-[10px] font-bold text-primary-400 uppercase tracking-widest font-mono">Rekapitulasi Kinerja</span>
+						</div>
+						<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-800 leading-tight">
+							Rekap Kinerja Bulanan
+						</h1>
+						<p className="text-slate-500 text-sm mt-1.5 font-medium">
+							Rekapitulasi to-do list harian, gap hari approved, dan pengurang jasa pegawai.
+						</p>
+					</div>
+					<div className="flex gap-2 shrink-0">
+						<button 
+							onClick={exportToCSV}
+							disabled={rekapList.length === 0}
+							className="px-4 py-2.5 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 text-slate-700 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 border border-slate-200 cursor-pointer shadow-xs"
+						>
+							<Download className="h-4 w-4" />
+							Export CSV
+						</button>
+						<button 
+							onClick={triggerPrint}
+							disabled={rekapList.length === 0}
+							className="px-4 py-2.5 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 text-slate-700 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 border border-slate-200 cursor-pointer shadow-xs"
+						>
+							<Printer className="h-4 w-4" />
+							Cetak Laporan
+						</button>
+					</div>
+				</div>
+			</div>
+
+			{/* Filter Section */}
+			<div className="bg-white border border-slate-200/60 p-5 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden transition-shadow duration-200 hover:shadow-md">
+				<div className="space-y-1.5">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Tahun</label>
+					<select 
+						value={currentYear}
+						onChange={(e) => setCurrentYear(e.target.value)}
+						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
+					>
+						<option value="2026">2026</option>
+						<option value="2025">2025</option>
+						<option value="2024">2024</option>
+					</select>
+				</div>
+
+				<div className="space-y-1.5">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Bulan</label>
+					<select 
+						value={currentMonth}
+						onChange={(e) => setCurrentMonth(e.target.value)}
+						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
+					>
+						{moment.months().map((m, idx) => (
+							<option key={idx} value={String(idx + 1).padStart(2, "0")}>{m}</option>
+						))}
+					</select>
+				</div>
+
+				<div className="space-y-1.5">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Departemen</label>
+					<select 
+						value={selectedDept}
+						onChange={(e) => setSelectedDept(e.target.value)}
+						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
+					>
+						<option value="ALL">Semua Departemen</option>
+						{departments.map((dept) => (
+							<option key={dept.dep_id} value={dept.dep_id}>{dept.nama}</option>
+						))}
+					</select>
+				</div>
+
+				<div className="flex items-end">
+					<button 
+						onClick={loadRekap}
+						className="w-full py-2.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.98] text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-1.5 shadow"
+					>
+						<Search className="h-4 w-4" />
+						Segarkan Data
+					</button>
+				</div>
+			</div>
+
+			{errorMsg && (
+				<div className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-xl flex items-start gap-3 print:hidden">
+					<AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+					<span className="font-semibold text-sm leading-relaxed">{errorMsg}</span>
+				</div>
+			)}
+
+			{successMsg && (
+				<div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl flex items-start gap-3 print:hidden">
+					<CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+					<span className="font-semibold text-sm leading-relaxed">{successMsg}</span>
+				</div>
+			)}
+
+			{loading ? (
+				<div className="flex flex-col justify-center items-center py-24 gap-3">
+					<Loader2 className="h-8 w-8 text-primary-600 animate-spin" />
+					<span className="text-sm text-slate-400 font-medium">Memuat data rekap bulanan…</span>
+				</div>
+			) : (
+				<>
+					{/* Aggregate statistics */}
+					<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Total Jasa Dasar</span>
+							<span className="text-xl font-black text-slate-800 font-figtree">Rp {totalJasaDasar.toLocaleString("id-ID")}</span>
+						</div>
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Total Pengurang Jasa</span>
+							<span className="text-xl font-black text-red-600 font-figtree">Rp {totalPengurang.toLocaleString("id-ID")}</span>
+						</div>
+						<div className="bg-primary-900 border border-primary-800/40 rounded-2xl p-5 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
+							<div className="absolute -top-10 -right-10 w-24 h-24 bg-primary-700/10 rounded-full blur-xl pointer-events-none" />
+							<span className="text-[10px] text-primary-400 font-bold uppercase tracking-widest font-mono block relative z-10">Total Jasa Terbayar</span>
+							<span className="text-xl font-black text-primary-400 font-figtree relative z-10">Rp {totalJasaFinal.toLocaleString("id-ID")}</span>
+						</div>
+						<div className="bg-primary-800 border border-primary-800 rounded-2xl p-5 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
+							<div className="absolute -top-10 -right-10 w-24 h-24 bg-primary-700/10 rounded-full blur-xl pointer-events-none" />
+							<span className="text-[10px] text-slate-650 font-bold uppercase tracking-widest font-mono block relative z-10">Rerata Nilai Kinerja</span>
+							<span className="text-xl font-black text-primary-400 font-figtree relative z-10">{avgMonthlyScore} / 100</span>
+						</div>
+					</div>
+
+					{/* Rekapitulasi Table */}
+					<div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden print:border-none print:shadow-none">
+						<div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 print:hidden flex justify-between items-center">
+							<h3 className="font-bold text-slate-800 text-sm font-figtree">Daftar Rekap Bulanan Pegawai</h3>
+						</div>
+
+						<div className="overflow-x-auto">
+							<table className="w-full text-left border-collapse">
+								<thead>
+									<tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase font-bold text-slate-400 tracking-widest font-mono">
+										<th className="px-5 py-3.5">Pegawai</th>
+										<th className="px-5 py-3.5 text-center">Jadwal</th>
+										<th className="px-5 py-3.5 text-center">Approved</th>
+										<th className="px-5 py-3.5 text-center">Gap Hari</th>
+										<th className="px-5 py-3.5 text-center">Rerata Skor</th>
+										<th className="px-5 py-3.5 text-right">Jasa Dasar</th>
+										<th className="px-5 py-3.5 text-right">Pengurang</th>
+										<th className="px-5 py-3.5 text-right">Jasa Final</th>
+										<th className="px-5 py-3.5 text-center print:hidden">Status</th>
+										<th className="px-5 py-3.5 text-right print:hidden">Aksi</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-slate-100 text-xs">
+									{rekapList.length === 0 ? (
+										<tr>
+											<td colSpan="10" className="px-5 py-10 text-center text-slate-400 font-medium">
+												Tidak ada data rekapitulasi untuk bulan/tahun terpilih.
+											</td>
+										</tr>
+									) : (
+										rekapList.map((row) => (
+											<tr key={row.id} className="hover:bg-[#E0F7FE]/20 transition-colors duration-150">
+												<td className="px-5 py-4">
+													<span className="font-bold text-slate-800 block text-sm font-figtree">{row.nama}</span>
+													<span className="text-[10px] text-slate-400 block mt-0.5 font-medium">NIK: {row.nik} — {row.nama_departemen}</span>
+												</td>
+												<td className="px-5 py-4 text-center font-semibold text-slate-700 font-figtree">
+													{row.total_hari_jadwal} hari
+												</td>
+												<td className="px-5 py-4 text-center font-bold text-emerald-600 font-figtree">
+													{row.hari_approved} hari
+												</td>
+												<td className={`px-5 py-4 text-center font-bold font-figtree ${row.gap_hari > 0 ? "text-rose-600" : "text-slate-500"}`}>
+													{row.gap_hari} hari
+												</td>
+												<td className="px-5 py-4 text-center font-bold text-slate-700 font-figtree">
+													{Math.round(row.rata_skor_total)}
+												</td>
+												<td className="px-5 py-4 text-right font-medium text-slate-600 font-mono">
+													Rp {Number(row.nominal_jasa_dasar).toLocaleString("id-ID")}
+												</td>
+												<td className={`px-5 py-4 text-right font-bold font-mono ${row.pengurang_jasa > 0 ? "text-red-600" : "text-slate-400"}`}>
+													Rp {Number(row.pengurang_jasa).toLocaleString("id-ID")}
+												</td>
+												<td className="px-5 py-4 text-right font-extrabold text-[#0090CC] text-sm font-mono">
+													Rp {Number(row.nominal_jasa_final).toLocaleString("id-ID")}
+												</td>
+												<td className="px-5 py-4 text-center print:hidden">
+													{row.status_rekap === "final" ? (
+														<span className="px-2.5 py-1 text-[9px] font-bold rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 font-figtree uppercase tracking-wider">
+															Locked
+														</span>
+													) : (
+														<span className="px-2.5 py-1 text-[9px] font-bold rounded-full border bg-slate-50 text-slate-700 border-slate-200 font-figtree uppercase tracking-wider">
+															Draft
+														</span>
+													)}
+												</td>
+												<td className="px-5 py-4 text-right print:hidden">
+													{actionLoadingId === row.id ? (
+														<Loader2 className="h-5 w-5 animate-spin text-slate-400 ml-auto" />
+													) : row.status_rekap === "final" ? (
+														<button 
+															onClick={() => handleLockAction(row.id, "unlock")}
+															className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 hover:text-rose-800 active:scale-[0.98] transition-colors text-rose-700 font-bold rounded-lg text-[10px] inline-flex items-center gap-1 border border-rose-100 cursor-pointer"
+														>
+															<Unlock className="h-3 w-3" />
+															Unlock
+														</button>
+													) : (
+														<button 
+															onClick={() => handleLockAction(row.id, "lock")}
+															className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 active:scale-[0.98] transition-colors text-emerald-700 font-bold rounded-lg text-[10px] inline-flex items-center gap-1 border border-emerald-100 cursor-pointer"
+														>
+															<Lock className="h-3 w-3" />
+															Lock
+														</button>
+													)}
+												</td>
+											</tr>
+										))
+									)}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</>
+			)}
+		</div>
+	);
+}
