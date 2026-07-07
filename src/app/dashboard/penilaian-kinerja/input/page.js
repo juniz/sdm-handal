@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import { 
 	Calendar as CalendarIcon, 
@@ -43,6 +43,12 @@ export default function DailyInputPage() {
 	
 	const [errorMsg, setErrorMsg] = useState("");
 	const [successMsg, setSuccessMsg] = useState("");
+
+	const activitiesRef = useRef(activities);
+	activitiesRef.current = activities;
+
+	const isSavingRef = useRef(false);
+	const hasPendingSaveRef = useRef(false);
 
 	useEffect(() => {
 		loadDailyData();
@@ -273,7 +279,8 @@ export default function DailyInputPage() {
 		updatedList[idx] = {
 			...updatedList[idx],
 			status_selesai: newStatus,
-			alasan_belum_selesai: newStatus === "selesai" ? null : (updatedList[idx].alasan_belum_selesai || "")
+			alasan_belum_selesai: newStatus === "selesai" ? null : (updatedList[idx].alasan_belum_selesai || ""),
+			selesai_at: newStatus === "selesai" ? (updatedList[idx].selesai_at || new Date().toISOString()) : null
 		};
 		await syncActivities(updatedList);
 	};
@@ -288,23 +295,51 @@ export default function DailyInputPage() {
 	};
 
 	const syncActivities = async (updatedList) => {
+		// 1. Update React state immediately (optimistic UI)
+		setActivities(updatedList);
+		activitiesRef.current = updatedList;
+
+		// 2. Set pending flag
+		hasPendingSaveRef.current = true;
+
+		// 3. If already saving, return and let the active save loop pick it up
+		if (isSavingRef.current) {
+			return;
+		}
+
+		// 4. Start save loop
+		isSavingRef.current = true;
 		setSaving(true);
 		setErrorMsg("");
+
 		try {
-			const res = await fetch(`/api/penilaian/harian/${harianRecord.id}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ 
-					kegiatan: updatedList,
-					alasan_terlambat: alasanTerlambat || null
-				})
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Gagal menyimpan kegiatan");
-			setActivities(data.data);
+			while (hasPendingSaveRef.current) {
+				// Clear the flag before making the request
+				hasPendingSaveRef.current = false;
+				const listToSave = activitiesRef.current;
+
+				const res = await fetch(`/api/penilaian/harian/${harianRecord.id}`, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ 
+						kegiatan: listToSave,
+						alasan_terlambat: alasanTerlambat || null
+					})
+				});
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || "Gagal menyimpan kegiatan");
+				
+				// Update activities state with the latest saved data from server,
+				// but only if there was no new user input in the meantime!
+				if (!hasPendingSaveRef.current) {
+					setActivities(data.data);
+					activitiesRef.current = data.data;
+				}
+			}
 		} catch (err) {
 			setErrorMsg(err.message);
 		} finally {
+			isSavingRef.current = false;
 			setSaving(false);
 		}
 	};
@@ -642,9 +677,17 @@ export default function DailyInputPage() {
 							<div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm">
 								{/* Sheet header */}
 								<div className="flex justify-between items-center px-5 md:px-6 py-4 border-b border-slate-100">
-									<div>
-										<h3 className="font-bold text-slate-800 font-figtree">Daftar Kegiatan Kerja</h3>
-										<p className="text-xs text-slate-400 mt-0.5 font-medium">Kelola minimal 1 hingga 20 pekerjaan utama.</p>
+									<div className="flex items-center gap-3">
+										<div>
+											<h3 className="font-bold text-slate-800 font-figtree">Daftar Kegiatan Kerja</h3>
+											<p className="text-xs text-slate-400 mt-0.5 font-medium">Kelola minimal 1 hingga 20 pekerjaan utama.</p>
+										</div>
+										{saving && (
+											<span className="flex items-center gap-1.5 text-xs font-semibold text-[#185FA5] bg-[#E6F1FB] px-2.5 py-1 rounded-full border border-blue-100 animate-pulse">
+												<Loader2 className="h-3 w-3 animate-spin" />
+												Menyimpan...
+											</span>
+										)}
 									</div>
 									{/* Progress pill */}
 									<div className="flex flex-col items-end gap-1.5">
@@ -748,7 +791,7 @@ export default function DailyInputPage() {
 														<input
 															type="checkbox"
 															checked={item.status_selesai === "selesai"}
-															disabled={isReadOnly || saving}
+															disabled={isReadOnly}
 															onChange={() => handleToggleComplete(index)}
 															className="mt-0.5 h-5 w-5 text-primary-600 border-slate-300 rounded focus:ring-primary-600 cursor-pointer disabled:cursor-not-allowed"
 														/>
@@ -765,14 +808,13 @@ export default function DailyInputPage() {
 																	type="text"
 																	placeholder="Penjabaran singkat / catatan hasil pekerjaan (opsional)"
 																	value={item.penjabaran || ""}
-																	disabled={saving}
 																	onChange={(e) => {
 																		const updatedList = [...activities];
 																		updatedList[index] = { ...updatedList[index], penjabaran: e.target.value };
 																		setActivities(updatedList);
 																	}}
 																	onBlur={() => syncActivities(activities)}
-																	className="w-full mt-1.5 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 font-semibold text-slate-800 placeholder:text-slate-350 transition-colors"
+																	className="w-full mt-1.5 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 font-semibold text-slate-800 placeholder:text-slate-355 transition-colors"
 																/>
 															)}
 															<div className="flex flex-wrap items-center gap-2 mt-2">
@@ -789,7 +831,6 @@ export default function DailyInputPage() {
 																) : (
 																	<select
 																		value={item.prioritas || "sedang"}
-																		disabled={saving}
 																		onChange={(e) => handlePriorityChange(index, e.target.value)}
 																		className={`text-[10px] font-bold uppercase tracking-wider rounded-md border px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-primary-600 cursor-pointer ${
 																			item.prioritas === "tinggi"
@@ -839,7 +880,6 @@ export default function DailyInputPage() {
 													{!isReadOnly && (
 														<button
 															onClick={() => handleDeleteActivity(index)}
-															disabled={saving}
 															className="text-slate-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:focus:opacity-100 shrink-0 cursor-pointer"
 														>
 															<Trash2 className="h-4 w-4" />
