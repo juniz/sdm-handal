@@ -280,7 +280,7 @@ export default function DailyInputPage() {
 			...updatedList[idx],
 			status_selesai: newStatus,
 			alasan_belum_selesai: newStatus === "selesai" ? null : (updatedList[idx].alasan_belum_selesai || ""),
-			selesai_at: newStatus === "selesai" ? (updatedList[idx].selesai_at || new Date().toISOString()) : null
+			selesai_at: newStatus === "selesai" ? (updatedList[idx].selesai_at || moment().format("YYYY-MM-DD HH:mm:ss")) : null
 		};
 		await syncActivities(updatedList);
 	};

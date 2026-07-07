@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { 
 	Plus, 
 	Edit, 
@@ -19,10 +20,13 @@ import {
 export default function MasterKegiatanKerjaPage() {
 	const [masterList, setMasterList] = useState([]);
 	const [departments, setDepartments] = useState([]);
+	const [userProfile, setUserProfile] = useState(null);
 	const [loading, setLoading] = useState(true);
 	
 	const [errorMsg, setErrorMsg] = useState("");
 	const [successMsg, setSuccessMsg] = useState("");
+
+	const isIT = userProfile && (userProfile.departemen === "IT" || userProfile.departemen_name?.toLowerCase().includes("it"));
 
 	// Filter State
 	const [selectedDeptFilter, setSelectedDeptFilter] = useState("all");
@@ -43,7 +47,22 @@ export default function MasterKegiatanKerjaPage() {
 	useEffect(() => {
 		loadMasterList();
 		loadDepartments();
+		loadUserProfile();
 	}, []);
+
+	const loadUserProfile = async () => {
+		try {
+			const res = await fetch("/api/auth/user");
+			if (res.ok) {
+				const data = await res.json();
+				if (data.user) {
+					setUserProfile(data.user);
+				}
+			}
+		} catch (err) {
+			console.error("Gagal memuat profil pengguna:", err);
+		}
+	};
 
 	const loadMasterList = async () => {
 		setLoading(true);
@@ -189,10 +208,18 @@ export default function MasterKegiatanKerjaPage() {
 
 	// Client-side filtering logic
 	const filteredList = masterList.filter(item => {
-		// Department Filter
-		if (selectedDeptFilter !== "all") {
-			if (selectedDeptFilter === "global" && item.dep_id !== null) return false;
-			if (selectedDeptFilter !== "global" && item.dep_id !== selectedDeptFilter) return false;
+		// If not IT, strictly limit to user's unit and global templates
+		if (!isIT) {
+			const userDept = userProfile?.departemen;
+			if (item.dep_id !== null && item.dep_id !== userDept) {
+				return false;
+			}
+		} else {
+			// Department Filter (for IT admin)
+			if (selectedDeptFilter !== "all") {
+				if (selectedDeptFilter === "global" && item.dep_id !== null) return false;
+				if (selectedDeptFilter !== "global" && item.dep_id !== selectedDeptFilter) return false;
+			}
 		}
 
 		// Search Query
@@ -218,13 +245,15 @@ export default function MasterKegiatanKerjaPage() {
 					</h1>
 					<p className="text-slate-500 text-sm mt-1">Kelola template nama kegiatan standar yang dapat dipilih oleh pegawai per unit.</p>
 				</div>
-				<button 
-					onClick={handleOpenAdd}
-					className="relative z-10 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.98] transition-all text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow"
-				>
-					<Plus className="h-4 w-4 text-primary-600" />
-					Tambah Template
-				</button>
+				{isIT && (
+					<button 
+						onClick={handleOpenAdd}
+						className="relative z-10 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 active:scale-[0.98] transition-all text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow"
+					>
+						<Plus className="h-4 w-4 text-white" />
+						Tambah Template
+					</button>
+				)}
 			</div>
 
 			{/* Notifications */}
@@ -258,15 +287,24 @@ export default function MasterKegiatanKerjaPage() {
 				<div className="flex w-full md:w-auto items-center gap-2">
 					<Filter className="h-4 w-4 text-slate-400 shrink-0" />
 					<select 
-						value={selectedDeptFilter}
-						onChange={(e) => setSelectedDeptFilter(e.target.value)}
-						className="w-full md:w-56 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 font-medium text-slate-700 bg-white"
+						value={isIT ? selectedDeptFilter : (userProfile?.departemen || "")}
+						disabled={!isIT}
+						onChange={(e) => isIT && setSelectedDeptFilter(e.target.value)}
+						className="w-full md:w-56 px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 font-medium text-slate-700 bg-white disabled:bg-slate-50 disabled:text-slate-400"
 					>
-						<option value="all">Semua Unit Kerja</option>
-						<option value="global">Umum / Global</option>
-						{departments.map((dept) => (
-							<option key={dept.dep_id} value={dept.dep_id}>{dept.nama}</option>
-						))}
+						{isIT ? (
+							<>
+								<option value="all">Semua Unit Kerja</option>
+								<option value="global">Umum / Global</option>
+								{departments.map((dept) => (
+									<option key={dept.dep_id} value={dept.dep_id}>{dept.nama}</option>
+								))}
+							</>
+						) : (
+							<option value={userProfile?.departemen || ""}>
+								{userProfile?.departemen_name || "Unit Kerja Saya"}
+							</option>
+						)}
 					</select>
 				</div>
 			</div>
@@ -290,8 +328,8 @@ export default function MasterKegiatanKerjaPage() {
 									<th className="px-5 py-3.5">Template Kegiatan</th>
 									<th className="px-5 py-3.5">Prioritas</th>
 									<th className="px-5 py-3.5">Deskripsi Panduan</th>
-									<th className="px-5 py-3.5 text-center">Status</th>
-									<th className="px-5 py-3.5 text-right">Aksi</th>
+									{isIT && <th className="px-5 py-3.5 text-center">Status</th>}
+									{isIT && <th className="px-5 py-3.5 text-right">Aksi</th>}
 								</tr>
 							</thead>
 							<tbody className="divide-y divide-slate-150 text-xs text-slate-700 font-medium">
@@ -325,33 +363,37 @@ export default function MasterKegiatanKerjaPage() {
 										<td className="px-5 py-4 max-w-xs text-slate-500 break-words leading-relaxed font-medium">
 											{row.deskripsi || "-"}
 										</td>
-										<td className="px-5 py-4 text-center">
-											<button 
-												onClick={() => handleToggleActive(row)}
-												className={`p-1.5 rounded-lg transition-all border cursor-pointer active:scale-90 ${
-													row.is_aktif === 1 
-														? "text-emerald-700 bg-emerald-50 border-emerald-100 hover:bg-emerald-100" 
-														: "text-slate-400 bg-slate-50 border-slate-200 hover:bg-slate-100"
-												}`}
-												title={row.is_aktif === 1 ? "Nonaktifkan" : "Aktifkan"}
-											>
-												<Power className="h-3.5 w-3.5" />
-											</button>
-										</td>
-										<td className="px-5 py-4 text-right space-x-1.5 whitespace-nowrap">
-											<button 
-												onClick={() => handleOpenEdit(row)}
-												className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
-											>
-												<Edit className="h-4 w-4" />
-											</button>
-											<button 
-												onClick={() => handleDelete(row.id)}
-												className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
-											>
-												<Trash2 className="h-4 w-4" />
-											</button>
-										</td>
+										{isIT && (
+											<td className="px-5 py-4 text-center">
+												<button 
+													onClick={() => handleToggleActive(row)}
+													className={`p-1.5 rounded-lg transition-all border cursor-pointer active:scale-90 ${
+														row.is_aktif === 1 
+															? "text-emerald-700 bg-emerald-50 border-emerald-100 hover:bg-emerald-100" 
+															: "text-slate-400 bg-slate-50 border-slate-200 hover:bg-slate-100"
+													}`}
+													title={row.is_aktif === 1 ? "Nonaktifkan" : "Aktifkan"}
+												>
+													<Power className="h-3.5 w-3.5" />
+												</button>
+											</td>
+										)}
+										{isIT && (
+											<td className="px-5 py-4 text-right space-x-1.5 whitespace-nowrap">
+												<button 
+													onClick={() => handleOpenEdit(row)}
+													className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
+												>
+													<Edit className="h-4 w-4" />
+												</button>
+												<button 
+													onClick={() => handleDelete(row.id)}
+													className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
+												>
+													<Trash2 className="h-4 w-4" />
+												</button>
+											</td>
+										)}
 									</tr>
 								))}
 							</tbody>
@@ -380,16 +422,19 @@ export default function MasterKegiatanKerjaPage() {
 								
 								<div className="space-y-1.5">
 									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Unit Kerja / Departemen</label>
-									<select 
-										value={depId}
-										onChange={(e) => setDepId(e.target.value)}
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold"
-									>
-										<option value="">Umum / Semua Departemen (Global)</option>
-										{departments.map((dept) => (
-											<option key={dept.dep_id} value={dept.dep_id}>{dept.nama}</option>
-										))}
-									</select>
+									<SearchableSelect
+										options={[
+											{ value: "", label: "Umum / Semua Departemen (Global)", sublabel: "Akan muncul untuk semua pegawai" },
+											...departments.map((dept) => ({
+												value: dept.dep_id,
+												label: dept.nama,
+												sublabel: dept.dep_id
+											}))
+										]}
+										value={depId || ""}
+										onChange={(val) => setDepId(val)}
+										placeholder="Pilih Unit Kerja / Departemen..."
+									/>
 								</div>
 
 								<div className="space-y-1.5">

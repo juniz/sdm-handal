@@ -116,11 +116,22 @@ export async function PUT(request, { params }) {
 			});
 		}
 
-		// 2. Insert or update items
 		for (let i = 0; i < kegiatan.length; i++) {
 			const item = kegiatan[i];
 			const statusSelesai = item.status_selesai === "selesai" ? "selesai" : "belum";
-			const selesaiAt = statusSelesai === "selesai" ? (item.selesai_at || new Date()) : null;
+			let selesaiAt = null;
+			if (statusSelesai === "selesai") {
+				if (item.selesai_at) {
+					if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(item.selesai_at)) {
+						selesaiAt = item.selesai_at;
+					} else {
+						const parsedDate = new Date(item.selesai_at);
+						selesaiAt = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+					}
+				} else {
+					selesaiAt = new Date();
+				}
+			}
 			const alasanBelumSelesai = statusSelesai === "belum" ? (item.alasan_belum_selesai || null) : null;
 			const prioritas = item.prioritas || "sedang";
 
