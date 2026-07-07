@@ -61,7 +61,7 @@ const MENU_CONFIG = [
 			{ icon: User, label: "Profil", href: "/dashboard/profile" },
 			{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
 			{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
-            { icon: Server, label: "Peminjaman Aset IT", href: "/dashboard/pengajuan-aset" },
+			{ icon: Server, label: "Peminjaman Aset IT", href: "/dashboard/pengajuan-aset" },
 		],
 	},
 	{
@@ -160,7 +160,7 @@ const MENU_CONFIG = [
 				icon: ClipboardList,
 				label: "Master Kegiatan Kerja",
 				href: "/dashboard/penilaian-kinerja/master-kegiatan",
-				check: (role, department) => department === adminType.IT,
+				// check: (role, department) => department === adminType.IT,
 			},
 		],
 	},
@@ -320,9 +320,8 @@ export default function DashboardLayout({ children }) {
 
 			{/* Sidebar - Persistent on desktop, off-canvas drawer on mobile */}
 			<aside
-				className={`fixed top-0 left-0 z-40 w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 ${
-					isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-				}`}
+				className={`fixed top-0 left-0 z-40 w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+					}`}
 			>
 				<div className="h-full px-4 py-6 overflow-y-auto flex flex-col justify-between select-none">
 					<div>
@@ -369,15 +368,13 @@ export default function DashboardLayout({ children }) {
 													<Link
 														href={item.href}
 														onClick={() => setIsSidebarOpen(false)}
-														className={`flex items-center px-3 py-2 rounded-lg text-[13px] font-semibold transition-all group relative ${
-															isActive
+														className={`flex items-center px-3 py-2 rounded-lg text-[13px] font-semibold transition-all group relative ${isActive
 																? "bg-primary-800/60 text-primary-400 font-bold border-l-[3px] border-primary-400 pl-[9px]"
 																: "text-slate-650 hover:text-slate-900 hover:bg-slate-200/40"
-														}`}
+															}`}
 													>
-														<Icon className={`w-4 h-4 shrink-0 transition-colors duration-150 ${
-															isActive ? "text-primary-400" : "text-slate-400 group-hover:text-slate-600"
-														}`} />
+														<Icon className={`w-4 h-4 shrink-0 transition-colors duration-150 ${isActive ? "text-primary-400" : "text-slate-400 group-hover:text-slate-600"
+															}`} />
 														<span className="ml-3 truncate">{item.label}</span>
 													</Link>
 												</li>
@@ -396,11 +393,11 @@ export default function DashboardLayout({ children }) {
 								<div className="w-9 h-9 rounded-full bg-white text-primary-400 flex items-center justify-center font-bold text-[13px] border border-primary-800 shrink-0">
 									{userProfile.nama
 										? userProfile.nama
-												.split(" ")
-												.map((n) => n[0])
-												.slice(0, 2)
-												.join("")
-												.toUpperCase()
+											.split(" ")
+											.map((n) => n[0])
+											.slice(0, 2)
+											.join("")
+											.toUpperCase()
 										: "U"}
 								</div>
 								<div className="flex-1 min-w-0">
