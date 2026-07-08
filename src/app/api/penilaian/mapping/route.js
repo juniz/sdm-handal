@@ -136,7 +136,17 @@ export async function PUT(request) {
 		}
 
 		const body = await request.json();
-		const { id, is_aktif, berlaku_sampai, supervisor_id } = body;
+		const { 
+			id, 
+			tipe_relasi, 
+			pegawai_id, 
+			supervisor_id, 
+			tipe_unit, 
+			kode_unit, 
+			berlaku_mulai, 
+			berlaku_sampai, 
+			is_aktif 
+		} = body;
 
 		if (!id) {
 			return NextResponse.json({ error: "ID mapping diperlukan" }, { status: 400 });
@@ -144,8 +154,22 @@ export async function PUT(request) {
 
 		const dataToUpdate = {};
 		if (is_aktif !== undefined) dataToUpdate.is_aktif = is_aktif === 0 ? 0 : 1;
-		if (berlaku_sampai !== undefined) dataToUpdate.berlaku_sampai = berlaku_sampai || null;
 		if (supervisor_id !== undefined) dataToUpdate.supervisor_id = supervisor_id;
+		if (berlaku_mulai !== undefined) dataToUpdate.berlaku_mulai = berlaku_mulai;
+		if (berlaku_sampai !== undefined) dataToUpdate.berlaku_sampai = berlaku_sampai || null;
+
+		if (tipe_relasi !== undefined) {
+			dataToUpdate.tipe_relasi = tipe_relasi;
+			if (tipe_relasi === "personal") {
+				dataToUpdate.pegawai_id = pegawai_id;
+				dataToUpdate.tipe_unit = null;
+				dataToUpdate.kode_unit = null;
+			} else if (tipe_relasi === "unit") {
+				dataToUpdate.pegawai_id = null;
+				dataToUpdate.tipe_unit = tipe_unit;
+				dataToUpdate.kode_unit = kode_unit;
+			}
+		}
 
 		await update({
 			table: "supervisor_mapping",
