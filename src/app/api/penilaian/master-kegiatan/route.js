@@ -91,12 +91,12 @@ export async function POST(request) {
 
 		const loggedInUser = verified.payload;
 		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const body = await request.json();
 		const { dep_id, nama_kegiatan, deskripsi, prioritas, is_aktif } = body;
+
+		// Jika bukan IT, paksa dep_id ke departemen user login
+		const finalDepId = isIT ? (dep_id || null) : loggedInUser.departemen;
 
 		if (!nama_kegiatan || !nama_kegiatan.trim()) {
 			return NextResponse.json({ error: "Nama kegiatan wajib diisi" }, { status: 400 });
@@ -105,7 +105,7 @@ export async function POST(request) {
 		const result = await insert({
 			table: "master_kegiatan_kerja",
 			data: {
-				dep_id: dep_id || null,
+				dep_id: finalDepId,
 				nama_kegiatan: nama_kegiatan.substring(0, 200),
 				deskripsi: deskripsi || null,
 				prioritas: prioritas || "sedang",
@@ -118,7 +118,7 @@ export async function POST(request) {
 			message: "Master kegiatan berhasil ditambahkan",
 			data: {
 				id: result.insertId,
-				dep_id,
+				dep_id: finalDepId,
 				nama_kegiatan,
 				deskripsi,
 				prioritas: prioritas || "sedang",

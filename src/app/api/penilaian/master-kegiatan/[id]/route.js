@@ -23,9 +23,6 @@ export async function PUT(request, { params }) {
 
 		const loggedInUser = verified.payload;
 		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const { id } = await params;
 		const body = await request.json();
@@ -44,10 +41,17 @@ export async function PUT(request, { params }) {
 			return NextResponse.json({ error: "Master kegiatan tidak ditemukan" }, { status: 404 });
 		}
 
+		// Jika bukan IT, hanya boleh mengubah template milik departemen sendiri
+		if (!isIT && existing.dep_id !== loggedInUser.departemen) {
+			return NextResponse.json({ error: "Forbidden - Anda hanya diperbolehkan mengubah template unit sendiri" }, { status: 403 });
+		}
+
+		const finalDepId = isIT ? (dep_id || null) : loggedInUser.departemen;
+
 		await update({
 			table: "master_kegiatan_kerja",
 			data: {
-				dep_id: dep_id || null,
+				dep_id: finalDepId,
 				nama_kegiatan: nama_kegiatan.substring(0, 200),
 				deskripsi: deskripsi || null,
 				prioritas: prioritas || "sedang",
@@ -84,9 +88,6 @@ export async function DELETE(request, { params }) {
 
 		const loggedInUser = verified.payload;
 		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const { id } = await params;
 
@@ -97,6 +98,11 @@ export async function DELETE(request, { params }) {
 
 		if (!existing) {
 			return NextResponse.json({ error: "Master kegiatan tidak ditemukan" }, { status: 404 });
+		}
+
+		// Jika bukan IT, hanya boleh menghapus template milik departemen sendiri
+		if (!isIT && existing.dep_id !== loggedInUser.departemen) {
+			return NextResponse.json({ error: "Forbidden - Anda hanya diperbolehkan menghapus template unit sendiri" }, { status: 403 });
 		}
 
 		await delete_({
