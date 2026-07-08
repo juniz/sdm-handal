@@ -23,12 +23,11 @@ export async function GET() {
 
 		const loggedInUser = verified.payload;
 
-		// Check if active supervisor in mapping
+		// Check if active supervisor in mapping (allowing future starting dates to show menu)
 		const mapping = await rawQuery(`
 			SELECT id FROM supervisor_mapping
 			WHERE supervisor_id = ?
 			  AND is_aktif = 1
-			  AND berlaku_mulai <= CURDATE()
 			  AND (berlaku_sampai IS NULL OR berlaku_sampai >= CURDATE())
 			LIMIT 1
 		`, [loggedInUser.id]);
