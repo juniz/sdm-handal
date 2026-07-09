@@ -95,14 +95,14 @@ const MENU_CONFIG = [
 				label: "Pegawai Organik",
 				href: "/dashboard/pegawai-organik",
 				check: (role, department) =>
-					department === adminType.IT || department === adminType.SPI,
+					department === adminType.IT || department === adminType.SPI, allowedUserIds: [36, 10, 42],
 			},
 			{
 				icon: UserCog,
 				label: "Manajemen Data Pegawai",
 				href: "/dashboard/pegawai-manajemen",
 				check: (role, department) =>
-					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT,
+					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT, allowedUserIds: [36, 10, 42],
 			},
 			{
 				icon: Server,
@@ -212,6 +212,7 @@ export default function DashboardLayout({ children }) {
 	const [userDepartment, setUserDepartment] = useState(null);
 	const [isSupervisor, setIsSupervisor] = useState(false);
 	const [userProfile, setUserProfile] = useState(null);
+	const [userId, setUserId] = useState(null);
 	const pathname = usePathname();
 	const router = useRouter();
 
@@ -224,6 +225,7 @@ export default function DashboardLayout({ children }) {
 					const data = await response.json();
 					const userData = data.user;
 					setUserProfile(userData);
+					setUserId(userData.id);
 
 					setUserRole(userData.jabatan);
 
@@ -265,14 +267,24 @@ export default function DashboardLayout({ children }) {
 		// Cek visibility static (env var) - default true jika undefined
 		const isEnvVisible = group.visible !== false;
 
-		// Cek visibility dynamic (role & department) - default true jika undefined
-		const isRoleVisible = group.checkRole
+		// Cek visibility dynamic (role & department atau bypass via whitelist allowedUserIds)
+		const isGroupWhitelisted = group.allowedUserIds && Array.isArray(group.allowedUserIds) && userId !== null
+			? group.allowedUserIds.map(Number).includes(Number(userId))
+			: false;
+
+		const isRoleVisible = isGroupWhitelisted || (group.checkRole
 			? group.checkRole(userRole, userDepartment)
-			: true;
+			: true);
 
 		if (isEnvVisible && isRoleVisible) {
 			// Filter items within the group
 			const filteredItems = group.items.filter((item) => {
+				// Bypass check jika ID user terdaftar di whitelist (OR logic)
+				if (item.allowedUserIds && Array.isArray(item.allowedUserIds) && userId !== null) {
+					const isWhitelisted = item.allowedUserIds.map(Number).includes(Number(userId));
+					if (isWhitelisted) return true;
+				}
+
 				if (item.check) {
 					return item.check(userRole, userDepartment, isSupervisor);
 				}
@@ -369,8 +381,8 @@ export default function DashboardLayout({ children }) {
 														href={item.href}
 														onClick={() => setIsSidebarOpen(false)}
 														className={`flex items-center px-3 py-2 rounded-lg text-[13px] font-semibold transition-all group relative ${isActive
-																? "bg-primary-800/60 text-primary-400 font-bold border-l-[3px] border-primary-400 pl-[9px]"
-																: "text-slate-650 hover:text-slate-900 hover:bg-slate-200/40"
+															? "bg-primary-800/60 text-primary-400 font-bold border-l-[3px] border-primary-400 pl-[9px]"
+															: "text-slate-650 hover:text-slate-900 hover:bg-slate-200/40"
 															}`}
 													>
 														<Icon className={`w-4 h-4 shrink-0 transition-colors duration-150 ${isActive ? "text-primary-400" : "text-slate-400 group-hover:text-slate-600"
