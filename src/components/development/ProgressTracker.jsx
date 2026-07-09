@@ -18,12 +18,9 @@ export default function ProgressTracker({
 		progress_description: "",
 	});
 
-	// Authorization checks
 	const isUserFromIT =
-		user?.departement_id === "IT" ||
-		user?.departemen === "IT" ||
-		user?.jbtn?.toLowerCase().includes("it") ||
-		user?.jabatan?.toLowerCase().includes("it");
+		user?.departement_id?.toUpperCase() === "IT" ||
+		user?.departemen?.toUpperCase() === "IT";
 
 	// Use username if nik is not available
 	const userIdentifier = user?.nik || user?.username || user?.id;

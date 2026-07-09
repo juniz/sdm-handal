@@ -26,7 +26,7 @@ export default function MasterKegiatanKerjaPage() {
 	const [errorMsg, setErrorMsg] = useState("");
 	const [successMsg, setSuccessMsg] = useState("");
 
-	const isIT = userProfile && (userProfile.departemen === "IT" || userProfile.departemen_name?.toLowerCase().includes("it"));
+	const isIT = userProfile && userProfile.departemen?.toUpperCase() === "IT";
 
 	// Filter State
 	const [selectedDeptFilter, setSelectedDeptFilter] = useState("all");

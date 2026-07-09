@@ -83,12 +83,7 @@ const RapatPage = () => {
 					console.log("User data fetched:", data.user);
 					setUserData(data.user);
 
-					// Cek apakah user adalah IT
-					const isIT =
-						data.user.departemen === "IT" ||
-						data.user.departemen?.toLowerCase().includes("it") ||
-						data.user.jbtn?.toLowerCase().includes("it") ||
-						data.user.jabatan?.toLowerCase().includes("it");
+					const isIT = data.user.departemen?.toUpperCase() === "IT";
 					setIsITUser(isIT);
 
 					// Update formData dengan default values

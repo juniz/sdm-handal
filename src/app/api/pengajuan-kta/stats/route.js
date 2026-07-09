@@ -39,14 +39,9 @@ export async function GET(request) {
 		const userDepartment = userData[0].departemen;
 		const userDepartmentName = userData[0].departemen_name;
 
-		// Cek apakah user dari IT atau HRD
 		const isITorHRD =
-			userDepartment === "IT" ||
-			userDepartment === "HRD" ||
-			userDepartmentName?.toLowerCase().includes("it") ||
-			userDepartmentName?.toLowerCase().includes("teknologi") ||
-			userDepartmentName?.toLowerCase().includes("hrd") ||
-			userDepartmentName?.toLowerCase().includes("human resource");
+			userDepartment?.toUpperCase() === "IT" ||
+			userDepartment?.toUpperCase() === "HRD";
 
 		// Hanya IT/HRD yang bisa akses statistik
 		if (!isITorHRD) {

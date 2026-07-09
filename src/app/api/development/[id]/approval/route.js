@@ -54,30 +54,8 @@ export async function POST(request, props) {
 			);
 		}
 
-		// Check if user is from IT department
-		const [
-			deptResult,
-		] = await connection.execute(
-			"SELECT nama FROM departemen WHERE dep_id = ?",
-			[userResult[0].departemen]
-		);
-
-		// Check if user is from IT department (including SIM)
-		const isITDepartment = (deptName) => {
-			if (!deptName) return false;
-			const name = deptName.toLowerCase();
-			return (
-				name.includes("it") ||
-				name.includes("information technology") ||
-				name.includes("teknologi informasi") ||
-				name.includes("sim") ||
-				name.includes("sistem informasi") ||
-				name.includes("unit sim") ||
-				name.includes("information system")
-			);
-		};
-
-		if (deptResult.length === 0 || !isITDepartment(deptResult[0].nama)) {
+		const isIT = userResult[0].departemen?.toUpperCase() === "IT";
+		if (!isIT) {
 			await connection.end();
 			return NextResponse.json(
 				{

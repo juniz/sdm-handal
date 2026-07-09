@@ -90,7 +90,7 @@ export async function POST(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 
 		const body = await request.json();
 		const { dep_id, nama_kegiatan, deskripsi, prioritas, is_aktif } = body;

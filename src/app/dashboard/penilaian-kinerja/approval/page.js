@@ -11,8 +11,11 @@ import {
 	Check, 
 	RotateCcw, 
 	AlertCircle,
-	X
+	X,
+	MapPin
 } from "lucide-react";
+import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
+import { Map, MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/mapcn";
 
 export default function SupervisorApprovalPage() {
 	const [pendingList, setPendingList] = useState([]);
@@ -268,6 +271,81 @@ export default function SupervisorApprovalPage() {
 									<p className="text-xs text-rose-955 leading-relaxed font-semibold break-words">
 										{harianDetail.alasan_terlambat}
 									</p>
+								</div>
+							)}
+
+							{/* Bukti Presensi & Lokasi */}
+							{harianDetail?.presensi && (harianDetail.presensi.photo || (harianDetail.presensi.latitude && harianDetail.presensi.longitude)) && (
+								<div className="space-y-3">
+									<h4 className="font-bold text-slate-800 text-sm font-figtree">Bukti Presensi & Lokasi</h4>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+										{/* Foto Presensi */}
+										<div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl flex flex-col items-center justify-center min-h-[220px]">
+											<span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider font-figtree mb-3">Foto Presensi Masuk</span>
+											{harianDetail.presensi.photo ? (
+												<div className="rounded-xl overflow-hidden border border-slate-100 shadow-xs w-full max-w-[160px] aspect-square relative flex items-center justify-center bg-black">
+													<OptimizedPhotoDisplay
+														photoUrl={harianDetail.presensi.photo}
+														alt="Foto Presensi Masuk"
+														width={160}
+														height={160}
+														priority={false}
+														lazy={true}
+													/>
+												</div>
+											) : (
+												<div className="text-slate-400 text-xs font-semibold py-10 flex flex-col items-center gap-2">
+													<MapPin className="w-8 h-8 text-slate-300" />
+													<span>Tidak ada foto presensi</span>
+												</div>
+											)}
+										</div>
+
+										{/* Peta Lokasi */}
+										<div className="bg-slate-50 border border-slate-200/60 p-4 rounded-xl flex flex-col min-h-[220px]">
+											<span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider font-figtree mb-3">Peta Lokasi</span>
+											{harianDetail.presensi.latitude && harianDetail.presensi.longitude ? (
+												<div className="w-full flex-1 rounded-xl overflow-hidden border border-slate-200 shadow-inner h-[160px] min-h-[160px] relative">
+													<Map
+														center={[harianDetail.presensi.longitude, harianDetail.presensi.latitude]}
+														zoom={15}
+														className="w-full h-full"
+													>
+														{/* Marker Pegawai */}
+														<MapMarker
+															longitude={harianDetail.presensi.longitude}
+															latitude={harianDetail.presensi.latitude}
+														>
+															<MarkerContent>
+																<div className="flex size-7 items-center justify-center rounded-full border-2 border-white bg-blue-500 text-white shadow-lg">
+																	<MapPin className="w-4 h-4" />
+																</div>
+															</MarkerContent>
+															<MarkerTooltip>Lokasi Pegawai</MarkerTooltip>
+														</MapMarker>
+
+														{/* Marker Kantor */}
+														<MapMarker
+															longitude={parseFloat(process.env.NEXT_PUBLIC_OFFICE_LNG || "111.9015")}
+															latitude={parseFloat(process.env.NEXT_PUBLIC_OFFICE_LAT || "-7.9797")}
+														>
+															<MarkerContent>
+																<div className="flex size-7 items-center justify-center rounded-full border-2 border-white bg-emerald-500 text-white shadow-lg">
+																	<MapPin className="w-4 h-4" />
+																</div>
+															</MarkerContent>
+															<MarkerTooltip>Kantor (RS Bhayangkara Nganjuk)</MarkerTooltip>
+														</MapMarker>
+													</Map>
+												</div>
+											) : (
+												<div className="text-slate-400 text-xs font-semibold py-10 flex flex-col items-center justify-center gap-2 flex-1">
+													<MapPin className="w-8 h-8 text-slate-300" />
+													<span>Koordinat lokasi tidak tersedia</span>
+												</div>
+											)}
+										</div>
+									</div>
 								</div>
 							)}
 
