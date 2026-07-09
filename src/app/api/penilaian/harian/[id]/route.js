@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { selectFirst, select, insert, update, delete_, rawQuery } from "@/lib/db-helper";
+import moment from "moment-timezone";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -231,6 +232,71 @@ export async function POST(request, { params }) {
 
 			if (harian.status !== "draft" && harian.status !== "revisi") {
 				return NextResponse.json({ error: "Penilaian sudah dikirim atau disetujui" }, { status: 400 });
+			}
+
+			// Validasi jam pulang berdasarkan jadwal shift
+			try {
+				const evalDateStr = moment(harian.tanggal).format("YYYY-MM-DD");
+				const todayStr = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+
+				if (evalDateStr === todayStr) {
+					const monthStr = moment(evalDateStr).format("MM");
+					const yearStr = moment(evalDateStr).format("YYYY");
+					const dayStr = moment(evalDateStr).format("D");
+
+					// Ambil jadwal reguler
+					const schedule = await selectFirst({
+						table: "jadwal_pegawai",
+						where: {
+							id: harian.pegawai_id,
+							bulan: monthStr,
+							tahun: yearStr
+						}
+					});
+
+					// Ambil jadwal tambahan
+					const scheduleTambahan = await selectFirst({
+						table: "jadwal_tambahan",
+						where: {
+							id: harian.pegawai_id,
+							bulan: monthStr,
+							tahun: yearStr
+						}
+					});
+
+					let shift = schedule ? (schedule[`h${dayStr}`] || "") : "";
+					if (shift === "") {
+						shift = scheduleTambahan ? (scheduleTambahan[`h${dayStr}`] || "") : "";
+					}
+
+					if (shift && shift !== "OFF" && shift !== "Libur") {
+						const shiftInfo = await selectFirst({
+							table: "jam_masuk",
+							where: { shift: shift }
+						});
+
+						if (shiftInfo) {
+							const jamMasuk = shiftInfo.jam_masuk;
+							const jamPulang = shiftInfo.jam_pulang;
+
+							// Parse jam target checkout
+							let targetCheckout = moment.tz(`${evalDateStr} ${jamPulang}`, "YYYY-MM-DD HH:mm:ss", "Asia/Jakarta");
+							if (jamPulang < jamMasuk) {
+								// Shift malam: checkout esok hari
+								targetCheckout = targetCheckout.add(1, "day");
+							}
+
+							const now = moment().tz("Asia/Jakarta");
+							if (now.isBefore(targetCheckout)) {
+								return NextResponse.json({
+									error: `Pengiriman diblokir. Anda baru dapat mengirim penilaian setelah jam pulang shift ${shift} (${targetCheckout.format("HH:mm")}).`
+								}, { status: 400 });
+							}
+						}
+					}
+				}
+			} catch (validationErr) {
+				console.error("Gagal memproses validasi jam pulang server-side:", validationErr);
 			}
 
 			// Get all activities
