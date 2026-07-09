@@ -125,9 +125,12 @@ export default function MasterKegiatanKerjaPage() {
 		setErrorMsg("");
 		setSuccessMsg("");
 		
+		const uppercaseNama = namaKegiatan.trim().toUpperCase();
+		setNamaKegiatan(uppercaseNama);
+		
 		const payload = {
 			dep_id: isIT ? (depId || null) : (userProfile?.departemen || null),
-			nama_kegiatan: namaKegiatan.trim(),
+			nama_kegiatan: uppercaseNama,
 			deskripsi: deskripsi.trim() || null,
 			prioritas: prioritas,
 			is_aktif: isAktif
