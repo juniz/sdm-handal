@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
-import { selectFirst, rawQuery } from "@/lib/db-helper";
+import { selectFirst, rawQuery, select } from "@/lib/db-helper";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -136,11 +136,17 @@ export async function GET(request) {
 			isTambahanMap[`h${i}`] = fromTambahan;
 		}
 
+		// Ambil seluruh data master shift dari jam_masuk
+		const shiftDetails = await select({
+			table: "jam_masuk"
+		});
+
 		return NextResponse.json({
 			success: true,
 			hasSchedule: true,
 			schedule: days,
-			isTambahan: isTambahanMap
+			isTambahan: isTambahanMap,
+			shiftDetails: shiftDetails
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/jadwal:", error);

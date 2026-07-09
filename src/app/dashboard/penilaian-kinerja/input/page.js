@@ -25,6 +25,9 @@ export default function DailyInputPage() {
 	const [activeTab, setActiveTab] = useState("kegiatan"); // "kegiatan" | "status"
 	
 	const [scheduleInfo, setScheduleInfo] = useState({ hasSchedule: false, shift: "", isTambahan: false });
+	const [shiftDetails, setShiftDetails] = useState([]);
+	const [showWarningModal, setShowWarningModal] = useState(false);
+	const [warningModalData, setWarningModalData] = useState({ shiftName: "", checkoutTime: "" });
 	const [attendanceInfo, setAttendanceInfo] = useState(null);
 	const [harianRecord, setHarianRecord] = useState(null);
 	const [activities, setActivities] = useState([]);
@@ -89,6 +92,7 @@ export default function DailyInputPage() {
 			const schedRes = await fetch(`/api/penilaian/jadwal?bulan=${month}&tahun=${year}`);
 			if (!schedRes.ok) throw new Error("Gagal mengambil jadwal");
 			const schedData = await schedRes.json();
+			setShiftDetails(schedData.shiftDetails || []);
 
 			if (!schedData.hasSchedule || !schedData.schedule[`h${day}`]) {
 				setScheduleInfo({ hasSchedule: false, shift: "", isTambahan: false });
@@ -371,6 +375,36 @@ export default function DailyInputPage() {
 		if (activities.length === 0) {
 			setErrorMsg("Minimal harus mengisi 1 kegiatan sebelum dikirim");
 			return;
+		}
+
+		// Validasi jam pulang berdasarkan jadwal (hanya jika tanggal pengisian adalah hari ini)
+		const todayStr = moment().format("YYYY-MM-DD");
+		if (selectedDate === todayStr && scheduleInfo.hasSchedule && scheduleInfo.shift) {
+			const shiftName = scheduleInfo.shift;
+			if (shiftName !== "OFF" && shiftName !== "Libur") {
+				const sInfo = shiftDetails.find(s => s.shift === shiftName);
+				if (sInfo) {
+					const jamMasuk = sInfo.jam_masuk;
+					const jamPulang = sInfo.jam_pulang;
+
+					// Tentukan batas waktu checkout
+					let targetCheckout = moment(`${selectedDate} ${jamPulang}`, "YYYY-MM-DD HH:mm:ss");
+					if (jamPulang < jamMasuk) {
+						// Shift malam, checkout di keesokan harinya
+						targetCheckout = targetCheckout.add(1, "day");
+					}
+
+					const now = moment();
+					if (now.isBefore(targetCheckout)) {
+						setWarningModalData({
+							shiftName: shiftName,
+							checkoutTime: targetCheckout.format("HH:mm")
+						});
+						setShowWarningModal(true);
+						return;
+					}
+				}
+			}
 		}
 
 		setSubmitting(true);
@@ -921,6 +955,52 @@ export default function DailyInputPage() {
 					</div>
 				</div>
 				</>
+			)}
+			{/* ── Warning Modal ──────────────────────────────────────── */}
+			{showWarningModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+					<div className="bg-white border border-slate-200/80 rounded-2xl max-w-md w-full shadow-2xl p-6 space-y-5 scale-95 animate-in zoom-in-95 duration-200">
+						{/* Icon & Title */}
+						<div className="flex items-start gap-4">
+							<div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 shrink-0 border border-amber-100">
+								<AlertTriangle className="h-6 w-6" />
+							</div>
+							<div className="space-y-1">
+								<h3 className="text-base font-bold text-slate-800 font-figtree">
+									Pengiriman Dibatasi
+								</h3>
+								<p className="text-xs text-slate-500 font-medium">
+									Anda belum dapat mengirimkan laporan penilaian kinerja hari ini.
+								</p>
+							</div>
+						</div>
+
+						{/* Detail Info Card */}
+						<div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4 space-y-3">
+							<div className="flex justify-between items-center text-xs">
+								<span className="text-slate-400 font-bold uppercase tracking-wide font-mono">Shift Jadwal</span>
+								<span className="font-semibold text-slate-850 bg-slate-200/50 px-2 py-0.5 rounded-md">{warningModalData.shiftName}</span>
+							</div>
+							<div className="flex justify-between items-center text-xs">
+								<span className="text-slate-400 font-bold uppercase tracking-wide font-mono">Jam Pulang Shift</span>
+								<span className="font-bold text-primary-600 text-sm">{warningModalData.checkoutTime} WIB</span>
+							</div>
+							<p className="text-xs font-semibold text-slate-600 leading-relaxed pt-2.5 border-t border-slate-200/60">
+								Laporan kinerja harian hanya dapat dikirimkan kepada supervisor setelah Anda menyelesaikan jam kerja/jam pulang sesuai jadwal yang tertera.
+							</p>
+						</div>
+
+						{/* Actions */}
+						<div className="flex justify-end pt-1">
+							<button
+								onClick={() => setShowWarningModal(false)}
+								className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-sm transition-all duration-200 hover:shadow-md cursor-pointer active:scale-[0.98]"
+							>
+								OK, Mengerti
+							</button>
+						</div>
+					</div>
+				</div>
 			)}
 		</div>
 	);
