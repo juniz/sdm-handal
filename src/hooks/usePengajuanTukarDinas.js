@@ -71,14 +71,9 @@ const usePengajuanTukarDinas = () => {
 				setUserDepartmentId(deptId);
 
 				// Check if user is from IT or HRD
-				const deptLower = dept ? dept.toLowerCase() : "";
 				const isITorHRD =
-					deptId === "IT" ||
-					deptId === "HRD" ||
-					(deptLower && deptLower.includes("it")) ||
-					(deptLower && deptLower.includes("teknologi")) ||
-					(deptLower && deptLower.includes("hrd")) ||
-					(deptLower && deptLower.includes("human resource"));
+					deptId?.toUpperCase() === "IT" ||
+					deptId?.toUpperCase() === "HRD";
 
 				setUserDepartment(isITorHRD ? "IT_HRD" : "USER");
 			}

@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 // Helper check authorization
 async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
 	if (Number(loggedInUser.id) === Number(targetEmployeeId)) return true;
-	if (loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it")) return true;
+	if (loggedInUser.departemen?.toUpperCase() === "IT") return true;
 
 	const personalMapping = await selectFirst({
 		table: "supervisor_mapping",

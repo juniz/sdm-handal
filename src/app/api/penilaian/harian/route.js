@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 // Helper check authorization
 async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
 	if (Number(loggedInUser.id) === Number(targetEmployeeId)) return true;
-	if (loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it")) return true;
+	if (loggedInUser.departemen?.toUpperCase() === "IT") return true;
 
 	const personalMapping = await selectFirst({
 		table: "supervisor_mapping",
@@ -244,6 +244,7 @@ export async function GET(request) {
 		});
 
 		let kegiatan = [];
+		let presensi = null;
 		if (harian) {
 			kegiatan = await select({
 				table: "kegiatan_harian",
@@ -251,11 +252,59 @@ export async function GET(request) {
 				orderBy: "urutan",
 				order: "ASC"
 			});
+
+			// Fetch checkin photo from rekap_presensi
+			const rekap = await selectFirst({
+				table: "rekap_presensi",
+				where: {
+					id: pegawaiId,
+					jam_datang: {
+						operator: "LIKE",
+						value: `${tanggal}%`
+					}
+				},
+				fields: ["photo"]
+			});
+
+			let photo = rekap?.photo || null;
+
+			// Fallback to temporary_presensi if not checked out yet
+			if (!photo) {
+				const temp = await selectFirst({
+					table: "temporary_presensi",
+					where: {
+						id: pegawaiId,
+						jam_datang: {
+							operator: "LIKE",
+							value: `${tanggal}%`
+						}
+					},
+					fields: ["photo"]
+				});
+				photo = temp?.photo || null;
+			}
+
+			// Fetch coordinates from security_logs
+			const secLog = await selectFirst({
+				table: "security_logs",
+				where: {
+					id_pegawai: pegawaiId,
+					tanggal: tanggal,
+					action_type: "CHECKIN"
+				},
+				fields: ["latitude", "longitude"]
+			});
+
+			presensi = {
+				photo: photo,
+				latitude: secLog ? parseFloat(secLog.latitude) : null,
+				longitude: secLog ? parseFloat(secLog.longitude) : null,
+			};
 		}
 
 		return NextResponse.json({
 			success: true,
-			data: harian ? { ...harian, kegiatan } : null
+			data: harian ? { ...harian, kegiatan, presensi } : null
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/harian:", error);

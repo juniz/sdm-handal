@@ -98,14 +98,9 @@ export default function PengajuanKTAPage() {
 				const dept = data.data.departemen_name || data.data.departemen;
 				const deptId = data.data.departemen;
 
-				// Cek apakah user dari IT atau HRD (bisa berdasarkan ID atau nama)
 				const isITorHRD =
-					deptId === "IT" ||
-					deptId === "HRD" ||
-					dept?.toLowerCase().includes("it") ||
-					dept?.toLowerCase().includes("teknologi") ||
-					dept?.toLowerCase().includes("hrd") ||
-					dept?.toLowerCase().includes("human resource");
+					deptId?.toUpperCase() === "IT" ||
+					deptId?.toUpperCase() === "HRD";
 
 				// IT dan HRD bisa mengajukan DAN memproses
 				setUserDepartment(isITorHRD ? "IT_HRD" : "USER");

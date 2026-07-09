@@ -6,18 +6,8 @@
  * @returns {boolean} - True if user is from IT department
  */
 export const isITUser = (user) => {
-	if (!user?.departemen_name) return false;
-
-	const deptName = user.departemen_name.toLowerCase();
-	return (
-		deptName.includes("it") ||
-		deptName.includes("information technology") ||
-		deptName.includes("teknologi informasi") ||
-		deptName.includes("sim") ||
-		deptName.includes("sistem informasi") ||
-		deptName.includes("unit sim") ||
-		deptName.includes("information system")
-	);
+	if (!user) return false;
+	return user.departemen?.toUpperCase() === "IT";
 };
 
 /**

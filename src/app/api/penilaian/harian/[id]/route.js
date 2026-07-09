@@ -303,7 +303,7 @@ export async function POST(request, { params }) {
 
 		// Verify authorized supervisor
 		// Wait, IT department can override in emergency, but standard check:
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (Number(authorizedSupervisorId) !== Number(loggedInUser.id) && !isIT) {
 			return NextResponse.json({ error: "Forbidden - Anda bukan supervisor yang sah untuk pegawai ini" }, { status: 403 });
 		}

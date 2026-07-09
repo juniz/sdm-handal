@@ -22,7 +22,7 @@ export async function PUT(request, { params }) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 
 		const { id } = await params;
 		const body = await request.json();
@@ -87,7 +87,7 @@ export async function DELETE(request, { params }) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 
 		const { id } = await params;
 

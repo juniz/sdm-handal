@@ -22,7 +22,7 @@ export async function GET() {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (!isIT) {
 			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
 		}
@@ -67,7 +67,7 @@ export async function POST(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (!isIT) {
 			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
 		}
@@ -118,7 +118,7 @@ export async function PUT(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (!isIT) {
 			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
 		}
@@ -168,7 +168,7 @@ export async function DELETE(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (!isIT) {
 			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
 		}

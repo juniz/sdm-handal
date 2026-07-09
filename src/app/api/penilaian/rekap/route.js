@@ -36,7 +36,7 @@ export async function GET(request) {
 		const loggedInUser = verified.payload;
 
 		// Restriction: Temporarily IT department only
-		const isIT = loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it");
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
 		if (!isIT) {
 			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
 		}

@@ -10,7 +10,7 @@ async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
 	if (Number(loggedInUser.id) === Number(targetEmployeeId)) return true;
 
 	// Check if IT department (admin)
-	if (loggedInUser.departemen === "IT" || loggedInUser.departemen_name?.toLowerCase().includes("it")) return true;
+	if (loggedInUser.departemen?.toUpperCase() === "IT") return true;
 
 	// Check if logged-in user is supervisor of targetEmployeeId (direct personal mapping)
 	const personalMapping = await selectFirst({
