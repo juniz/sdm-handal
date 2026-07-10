@@ -35,7 +35,7 @@ echo "✅ Database connection successful!"
 
 # Execute the schema file
 echo "📊 Executing database schema..."
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < database_schema_development_requests.sql
+mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$(dirname "$0")/../database/database_schema_development_requests.sql"
 
 if [ $? -eq 0 ]; then
     echo "✅ Database schema created successfully!"

@@ -1,5 +1,5 @@
 
-import { rawQuery } from "./src/lib/db-helper.js";
+import { rawQuery } from "../src/lib/db-helper.js";
 
 async function check() {
     try {

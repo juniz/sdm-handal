@@ -1,4 +1,4 @@
-const { rawQuery } = require('./src/lib/db-helper');
+const { rawQuery } = require('../src/lib/db-helper');
 
 async function test() {
   try {

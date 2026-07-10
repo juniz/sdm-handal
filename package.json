@@ -27,7 +27,7 @@
 		"cluster:scale-down": "pm2 scale sdm-app -2",
 		"cluster:reset": "pm2 scale sdm-app 6",
 		"monitor": "pm2 monit",
-		"load-test": "echo '🧪 Load testing for 300 concurrent users...' && echo 'Install artillery: npm install -g artillery' && echo 'Run: artillery run load-test.yml'",
+		"load-test": "echo '🧪 Load testing for 300 concurrent users...' && echo 'Install artillery: npm install -g artillery' && echo 'Run: artillery run load-testing/load-test.yml'",
 		"health-check": "curl -f http://localhost:3001 || exit 1",
 		"performance-check": "pm2 show sdm-app && pm2 monit",
 		"photo-watcher": "node scripts/photo-watcher.js",
