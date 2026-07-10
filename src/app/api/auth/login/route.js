@@ -93,6 +93,7 @@ export async function POST(request) {
 
 		return NextResponse.json({
 			message: "Login berhasil",
+			token,
 			user: {
 				id: user.id,
 				username: user.username.toString(),
