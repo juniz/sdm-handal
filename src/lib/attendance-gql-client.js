@@ -8,7 +8,35 @@ async function gql(query, variables = {}) {
   const headers = { "Content-Type": "application/json" };
 
   if (typeof window !== "undefined") {
-    const token = Cookies.get("auth_token") || localStorage.getItem("auth_token_backup");
+    let token = Cookies.get("auth_token") || localStorage.getItem("auth_token_backup");
+
+    // Auto session restore: if client token is empty, fetch from /api/auth/session
+    if (!token) {
+      try {
+        console.log("No client token, attempting to restore session from server cookie...");
+        // Use a synchronous-like await since gql is async anyway
+        const sessionRes = await fetch("/api/auth/session");
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData.token) {
+            token = sessionData.token;
+            // Save to client-readable cookie and local storage
+            Cookies.set("auth_token", token, {
+              expires: 7,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              path: "/",
+            });
+            localStorage.setItem("auth_token_backup", token);
+            localStorage.setItem("auth_token_timestamp", Date.now().toString());
+            console.log("Session successfully restored from server cookie!");
+          }
+        }
+      } catch (err) {
+        console.error("Failed to auto-restore session:", err);
+      }
+    }
+
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
