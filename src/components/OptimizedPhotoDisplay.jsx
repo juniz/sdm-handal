@@ -22,6 +22,7 @@ const OptimizedPhotoDisplay = ({
 	const [isMounted, setIsMounted] = useState(false);
 	const [showDebugger, setShowDebugger] = useState(false);
 	const imgRef = useRef(null);
+	const mountTimeRef = useRef(Date.now());
 	const maxRetries = 3;
 
 	// Handle mounting untuk menghindari hydration mismatch
@@ -57,15 +58,27 @@ const OptimizedPhotoDisplay = ({
 				return fullUrl;
 			}
 
+			// Jika path relatif ke uploads (sistem backend baru), gunakan backend URL
+			if (url.includes("/uploads/")) {
+				const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+				const cleanPath = url.startsWith("/") ? url : `/${url}`;
+				const fullUrl = `${backendUrl}${cleanPath}`;
+
+				const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
+				const cacheParam = `t=${mountTimeRef.current}`;
+				const params = [cacheParam, retryParam].filter(Boolean).join("&");
+				const separator = fullUrl.includes("?") ? "&" : "?";
+				return `${fullUrl}${separator}${params}`;
+			}
+
 			// Jika path relatif biasa (sistem lama), tambahkan base URL dan cache busting
 			const baseUrl = process.env.NEXT_PUBLIC_URL || "";
 			const cleanPath = url.startsWith("/") ? url : `/${url}`;
 			const fullUrl = `${baseUrl}${cleanPath}`;
 
 			// Tambahkan cache busting untuk URL lama
-			const timestamp = Date.now();
 			const retryParam = retryCount > 0 ? `retry=${retryCount}` : "";
-			const cacheParam = `t=${timestamp}`;
+			const cacheParam = `t=${mountTimeRef.current}`;
 			const params = [cacheParam, retryParam].filter(Boolean).join("&");
 			const separator = fullUrl.includes("?") ? "&" : "?";
 			return `${fullUrl}${separator}${params}`;
@@ -267,7 +280,6 @@ const OptimizedPhotoDisplay = ({
 					priority={priority}
 					loading={lazy ? "lazy" : "eager"}
 					unoptimized={true}
-					quality={85}
 					placeholder="blur"
 					blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCdABmX/9k="
 					sizes={`${width}px`}

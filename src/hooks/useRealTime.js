@@ -6,9 +6,11 @@ import "moment/locale/id";
 moment.locale("id");
 
 export function useRealTime() {
-	const [time, setTime] = useState(moment());
+	const [mounted, setMounted] = useState(false);
+	const [time, setTime] = useState(() => moment());
 
 	useEffect(() => {
+		setMounted(true);
 		// Update setiap detik
 		const timer = setInterval(() => {
 			setTime(moment());
@@ -20,8 +22,9 @@ export function useRealTime() {
 
 	return {
 		time: time.toDate(),
-		formattedTime: time.format("HH:mm:ss"),
-		formattedDate: time.format("dddd, DD MMMM YYYY"),
+		formattedTime: mounted ? time.format("HH:mm:ss") : "",
+		formattedDate: mounted ? time.format("dddd, DD MMMM YYYY") : "",
 		momentInstance: time,
 	};
 }
+
