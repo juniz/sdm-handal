@@ -1,20 +1,23 @@
-/**
- * GraphQL client for the SDM attendance module.
- * Calls the NestJS backend directly, bypassing Next.js API routes.
- *
- * Auth: sends the auth_token cookie automatically (credentials: 'include').
- * The NestJS JwtSdmStrategy reads the cookie via cookie-parser.
- */
+import Cookies from "js-cookie";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
 
 async function gql(query, variables = {}) {
+  const headers = { "Content-Type": "application/json" };
+
+  if (typeof window !== "undefined") {
+    const token = Cookies.get("auth_token") || localStorage.getItem("auth_token_backup");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
   const res = await fetch(GQL_ENDPOINT, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include", // Send auth_token cookie cross-origin
+    headers,
+    credentials: "include", // Send auth_token cookie cross-origin if permitted
     body: JSON.stringify({ query, variables }),
   });
 
