@@ -1,8 +1,59 @@
 import Cookies from "js-cookie";
+import moment from "moment";
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
+
+// Helper untuk memformat data unfinished attendance ke format yang dikenali oleh page UI
+function formatUnfinishedResult(result) {
+  if (result && result.hasUnfinished && result.data) {
+    const raw = result.data;
+    const currentTime = moment().format("YYYY-MM-DD HH:mm:ss");
+
+    // Hitung durasi kerja saat ini
+    const currentDuration = moment(currentTime).diff(moment(raw.jamDatang));
+    const durationFormatted = moment.utc(currentDuration).format("HH:mm:ss");
+
+    // Hitung time_info & is_overdue & can_auto_checkout
+    let expectedCheckout = moment(`${moment(raw.jamDatang).format("YYYY-MM-DD")} ${raw.jamPulang}`);
+    if (raw.jamPulang < raw.jamMasuk) {
+      expectedCheckout = expectedCheckout.add(1, "day");
+    }
+    const isOverdue = moment().isAfter(expectedCheckout.clone().add(2, "hours"));
+
+    // format time_info
+    let timeInfoFormatted = "";
+    if (isOverdue) {
+      timeInfoFormatted = "Overdue (Sistem akan auto checkout)";
+    } else {
+      const diffMs = expectedCheckout.diff(moment());
+      if (diffMs > 0) {
+        const diffHrs = Math.floor(diffMs / 3600000);
+        const diffMins = Math.floor((diffMs % 3600000) / 60000);
+        timeInfoFormatted = `${diffHrs} jam ${diffMins} menit lagi`;
+      } else {
+        timeInfoFormatted = "Sudah melewati jam pulang";
+      }
+    }
+
+    result.data = {
+      ...raw,
+      current_duration: durationFormatted,
+      is_overdue: isOverdue,
+      can_auto_checkout: isOverdue,
+      time_info: {
+        formatted: timeInfoFormatted
+      },
+      status_info: {
+        jam_datang_formatted: moment(raw.jamDatang).format("DD/MM/YYYY HH:mm:ss"),
+        shift_info: `${raw.shift} (${raw.jamMasuk} - ${raw.jamPulang})`,
+        work_date: moment(raw.jamDatang).format("DD MMMM YYYY")
+      }
+    };
+  }
+  return result;
+}
 
 async function gql(query, variables = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -73,11 +124,14 @@ export async function fetchAttendanceInitialData() {
       status: attendanceStatus { hasCheckedIn hasCheckedOut isCompleted }
       unfinished: unfinishedAttendance {
         hasUnfinished
-        data { idPegawai shift jamDatang status keterlambatan }
+        data { idPegawai shift jamDatang status keterlambatan jamMasuk jamPulang }
       }
       locationSettings { isLocationValidationEnabled locationValidationStatus message }
     }
   `);
+  if (data?.unfinished) {
+    data.unfinished = formatUnfinishedResult(data.unfinished);
+  }
   return data;
 }
 
@@ -113,10 +167,10 @@ export async function fetchUnfinishedAttendance() {
   const data = await gql(`
     query { unfinishedAttendance {
       hasUnfinished
-      data { idPegawai shift jamDatang status keterlambatan }
+      data { idPegawai shift jamDatang status keterlambatan jamMasuk jamPulang }
     }}
   `);
-  return data.unfinishedAttendance;
+  return formatUnfinishedResult(data.unfinishedAttendance);
 }
 
 // ─── Mutations ───────────────────────────────────────────────────────────────
