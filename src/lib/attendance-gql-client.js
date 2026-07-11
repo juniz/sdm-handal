@@ -20,7 +20,8 @@ function formatUnfinishedResult(result) {
     if (raw.jamPulang < raw.jamMasuk) {
       expectedCheckout = expectedCheckout.add(1, "day");
     }
-    const isOverdue = moment().isAfter(expectedCheckout.clone().add(2, "hours"));
+    // Langsung overdue setelah jam pulang shift terlewati (tanpa grace period)
+    const isOverdue = moment().isAfter(expectedCheckout);
 
     // format time_info
     let timeInfoFormatted = "";
