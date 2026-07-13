@@ -80,9 +80,6 @@ export async function PUT(request, { params }) {
 		const body = await request.json();
 		const { kegiatan = [], alasan_terlambat, sumber_absensi, nilai_kondisi, skor_absensi } = body;
 
-		if (kegiatan.length > 20) {
-			return NextResponse.json({ error: "Maksimal 20 kegiatan per hari" }, { status: 400 });
-		}
 
 		// Update main evaluation record (reasons + active attendance updates)
 		const updateData = {

@@ -243,10 +243,7 @@ export default function DailyInputPage() {
 	const handleAddActivity = async (e) => {
 		e.preventDefault();
 		if (!newActivityTitle.trim()) return;
-		if (activities.length >= 20) {
-			setErrorMsg("Maksimal 20 kegiatan per hari");
-			return;
-		}
+
 
 		const updatedList = [
 			...activities,

@@ -61,12 +61,8 @@ export default function LoginPage() {
 				throw new Error(data.message || "Login gagal");
 			}
 
-			const cookies = response.headers.get("set-cookie");
-			if (cookies) {
-				const tokenMatch = cookies.match(/auth_token=([^;]+)/);
-				if (tokenMatch) {
-					setClientToken(tokenMatch[1]);
-				}
+			if (data.token) {
+				setClientToken(data.token);
 			}
 
 			window.location.href = "/dashboard";

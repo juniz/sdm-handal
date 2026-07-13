@@ -109,7 +109,7 @@ const nextConfig = {
 					"style-src 'self' 'unsafe-inline'",
 					"img-src 'self' data: https:",
 					"font-src 'self'",
-					"connect-src 'self'",
+					"connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001",
 					"object-src 'none'",
 					"base-uri 'self'",
 					"form-action 'self'",

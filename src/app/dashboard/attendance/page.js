@@ -21,6 +21,17 @@ import {
 	Loader2,
 } from "lucide-react";
 import { useRealTime } from "@/hooks/useRealTime";
+import {
+	fetchAttendanceInitialData,
+	fetchTodayAttendance as apiFetchToday,
+	fetchAttendanceStatus as apiFetchStatus,
+	fetchCompletedAttendance as apiFetchCompleted,
+	fetchUnfinishedAttendance as apiFetchUnfinished,
+	mutationCheckIn,
+	mutationCheckOut,
+	mutationAutoCheckout,
+} from "@/lib/attendance-gql-client";
+
 
 // Helper untuk format 2 digit
 const padZero = (num) => {
@@ -30,6 +41,7 @@ const padZero = (num) => {
 export default function AttendancePage() {
 	const [photo, setPhoto] = useState(null);
 	const [isLocationValid, setIsLocationValid] = useState(false);
+	const [userLocation, setUserLocation] = useState(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [status, setStatus] = useState(null);
 	const { formattedTime, formattedDate, momentInstance } = useRealTime();
@@ -70,18 +82,10 @@ export default function AttendancePage() {
 	}, []);
 
 	const fetchLocationSettings = async () => {
-		try {
-			const response = await fetch("/api/attendance/location-settings");
-			const data = await response.json();
-			if (data.data) {
-				setLocationValidationEnabled(data.data.isLocationValidationEnabled);
-			}
-		} catch (error) {
-			console.error("Error fetching location settings:", error);
-			// Default ke enabled jika gagal
-			setLocationValidationEnabled(true);
-		}
+		// Location settings now fetched as part of InitialLoad batch query
+		// See the mount useEffect below
 	};
+
 
 	const checkLocationPermission = async () => {
 		try {
@@ -174,28 +178,16 @@ export default function AttendancePage() {
 	};
 
 	const fetchShift = async () => {
-		const response = await fetch(`/api/attendance`);
-		const data = await response.json();
-		setJadwal(data.data[0]);
+		// Shift fetched as part of InitialLoad batch — no-op standalone
 	};
 
 	const fetchTodayAttendance = async () => {
 		try {
-			const timestamp = new Date().getTime();
-			const response = await fetch(`/api/attendance/today?t=${timestamp}`, {
-				cache: "no-cache",
-				headers: {
-					"Cache-Control": "no-cache",
-					Pragma: "no-cache",
-				},
-			});
-			const data = await response.json();
-
-			if (data.data) {
-				setTodayAttendance(data.data);
-				setJamPulang(data.jam_pulang);
+			const result = await apiFetchToday();
+			if (result?.data) {
+				setTodayAttendance(result.data);
+				setJamPulang(result.jamPulang);
 			} else {
-				// Jika tidak ada presensi aktif, reset state
 				setTodayAttendance(null);
 				setJamPulang(null);
 			}
@@ -208,21 +200,8 @@ export default function AttendancePage() {
 
 	const fetchCompletedAttendance = async () => {
 		try {
-			const timestamp = new Date().getTime();
-			const response = await fetch(`/api/attendance/completed?t=${timestamp}`, {
-				cache: "no-cache",
-				headers: {
-					"Cache-Control": "no-cache",
-					Pragma: "no-cache",
-				},
-			});
-			const data = await response.json();
-
-			if (data.data) {
-				setCompletedAttendance(data.data);
-			} else {
-				setCompletedAttendance(null);
-			}
+			const result = await apiFetchCompleted();
+			setCompletedAttendance(result ?? null);
 		} catch (error) {
 			console.error("Error fetching completed attendance:", error);
 			setCompletedAttendance(null);
@@ -231,22 +210,8 @@ export default function AttendancePage() {
 
 	const fetchAttendanceStatus = async () => {
 		try {
-			const timestamp = new Date().getTime();
-			const response = await fetch(`/api/attendance/status?t=${timestamp}`, {
-				cache: "no-cache",
-				headers: {
-					"Cache-Control": "no-cache",
-					Pragma: "no-cache",
-				},
-			});
-			const data = await response.json();
-
-			if (data.data) {
-				setAttendanceStatus(data.data);
-				// PERBAIKAN: Jangan update todayAttendance dari status API
-				// karena bisa menyebabkan konflik dengan data dari /today API
-				// Status API hanya untuk mendapatkan informasi status, bukan data attendance
-			}
+			const result = await apiFetchStatus();
+			if (result) setAttendanceStatus(result);
 		} catch (error) {
 			console.error("Error fetching attendance status:", error);
 		}
@@ -254,10 +219,9 @@ export default function AttendancePage() {
 
 	const fetchUnfinishedAttendance = async () => {
 		try {
-			const response = await fetch("/api/attendance/unfinished");
-			const data = await response.json();
-			if (data.has_unfinished) {
-				setUnfinishedAttendance(data.data);
+			const result = await apiFetchUnfinished();
+			if (result?.hasUnfinished) {
+				setUnfinishedAttendance(result.data);
 				setShowUnfinishedAlert(true);
 			} else {
 				setUnfinishedAttendance(null);
@@ -268,19 +232,13 @@ export default function AttendancePage() {
 		}
 	};
 
+
 	const handleAutoCheckout = async () => {
 		try {
 			setIsSubmitting(true);
-			const response = await fetch("/api/attendance/auto-checkout", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
+			const result = await mutationAutoCheckout();
 
-			const data = await response.json();
-
-			if (response.ok) {
+			if (result?.success) {
 				setStatus("success");
 				setUnfinishedAttendance(null);
 				setShowUnfinishedAlert(false);
@@ -291,14 +249,12 @@ export default function AttendancePage() {
 				await fetchCompletedAttendance();
 				await fetchUnfinishedAttendance();
 
-				// Scroll ke alert
 				setTimeout(() => {
 					alertRef.current?.scrollIntoView({ behavior: "smooth" });
 					alertRef.current?.focus();
 				}, 100);
 			} else {
 				setStatus("error");
-				console.error("Auto checkout failed:", data);
 			}
 		} catch (error) {
 			console.error("Error in auto checkout:", error);
@@ -308,35 +264,57 @@ export default function AttendancePage() {
 		}
 	};
 
+
 	const dismissUnfinishedAlert = () => {
 		setShowUnfinishedAlert(false);
 	};
 
 	useEffect(() => {
-		// PERBAIKAN: Clear state terlebih dahulu saat component mount
-		// untuk memastikan tidak ada data lama yang tertinggal
 		setTodayAttendance(null);
 		setCompletedAttendance(null);
-		setAttendanceStatus({
-			hasCheckedIn: false,
-			hasCheckedOut: false,
-			isCompleted: false,
-		});
+		setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false, isCompleted: false });
 		setUnfinishedAttendance(null);
 		setShowUnfinishedAlert(false);
 		setJamPulang(null);
 
-		// Kemudian fetch data fresh
+		// Single batched GraphQL request replaces 5 sequential fetches
 		const fetchAllData = async () => {
-			await fetchShift();
-			await fetchTodayAttendance();
-			await fetchCompletedAttendance();
-			await fetchAttendanceStatus();
-			await fetchUnfinishedAttendance();
+			try {
+				const d = await fetchAttendanceInitialData();
+
+				// Shift
+				if (d.shift?.shiftToday) setShift(d.shift.shiftToday);
+
+				// Today attendance
+				if (d.today?.data) {
+					setTodayAttendance(d.today.data);
+					setJamPulang(d.today.jamPulang);
+				}
+
+				// Completed
+				if (d.completed) setCompletedAttendance(d.completed);
+
+				// Status
+				if (d.status) setAttendanceStatus(d.status);
+
+				// Unfinished
+				if (d.unfinished?.hasUnfinished) {
+					setUnfinishedAttendance(d.unfinished.data);
+					setShowUnfinishedAlert(true);
+				}
+
+				// Location settings
+				if (d.locationSettings) {
+					setLocationValidationEnabled(d.locationSettings.isLocationValidationEnabled);
+				}
+			} catch (error) {
+				console.error("Error loading attendance data:", error);
+			}
 		};
 
 		fetchAllData();
 	}, []);
+
 
 	// Auto-clear state jika semua API mengembalikan null (tidak ada data)
 	useEffect(() => {
@@ -388,10 +366,7 @@ export default function AttendancePage() {
 					componentName: "AttendancePage",
 					actionAttempted: "Check-in with location verification",
 					severity: "HIGH",
-					additionalData: {
-						securityStatus,
-						isLocationValid,
-					},
+					additionalData: { securityStatus, isLocationValid },
 				});
 				setStatus("security_error");
 				setTimeout(() => {
@@ -402,15 +377,7 @@ export default function AttendancePage() {
 			return;
 		}
 
-		// Check if camera is ready
 		if (!cameraRef.current?.isReady()) {
-			await logError({
-				error: "Camera not ready when attempting check-in",
-				errorType: "CameraError",
-				componentName: "AttendancePage",
-				actionAttempted: "Pre-flight check for attendance",
-				severity: "MEDIUM",
-			});
 			setStatus("camera_error");
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -421,138 +388,60 @@ export default function AttendancePage() {
 
 		setIsSubmitting(true);
 		try {
-			// Capture photo automatically
 			const capturedPhoto = await cameraRef.current?.capturePhoto();
-			if (!capturedPhoto) {
-				const error = new Error("Gagal mengambil foto");
-				await logError({
-					error,
-					errorType: "PhotoCaptureError",
-					componentName: "AttendancePage",
-					actionAttempted: "Capturing photo for check-in",
-					severity: "HIGH",
+			if (!capturedPhoto) throw new Error("Gagal mengambil foto");
+
+			let lat, lng, acc;
+			if (userLocation) {
+				lat = userLocation.latitude;
+				lng = userLocation.longitude;
+				acc = userLocation.accuracy;
+			} else {
+				const position = await new Promise((resolve, reject) => {
+					navigator.geolocation.getCurrentPosition(resolve, reject, {
+						enableHighAccuracy: true,
+						timeout: 10000,
+					});
 				});
-				throw error;
+				lat = position.coords.latitude;
+				lng = position.coords.longitude;
+				acc = position.coords.accuracy;
 			}
 
-			// Debug logging
-			console.log("Captured photo info:", {
-				type: typeof capturedPhoto,
-				length: capturedPhoto?.length,
-				startsWith: capturedPhoto?.substring(0, 30),
-			});
-
-			// Dapatkan lokasi terkini
-			const position = await new Promise((resolve, reject) => {
-				navigator.geolocation.getCurrentPosition(resolve, reject);
-			});
-
-			const response = await fetch("/api/attendance", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
+			const result = await mutationCheckIn({
+				photo: capturedPhoto,
+				timestamp: momentInstance.format("YYYY-MM-DD HH:mm:ss"),
+				latitude: lat,
+				longitude: lng,
+				securityData: {
+					confidence: securityStatus.confidence,
+					warnings: securityStatus.warnings,
+					accuracy: acc,
 				},
-				body: JSON.stringify({
-					photo: capturedPhoto,
-					timestamp: momentInstance.format("YYYY-MM-DD HH:mm:ss"),
-					latitude: position.coords.latitude.toString(),
-					longitude: position.coords.longitude.toString(),
-					isCheckingOut: false,
-					securityData: {
-						confidence: securityStatus.confidence,
-						warnings: securityStatus.warnings,
-						accuracy: position.coords.accuracy,
-					},
-				}),
 			});
 
-			if (!response.ok) {
-				let errorData;
-				try {
-					errorData = await response.json();
-				} catch (jsonError) {
-					// Jika response bukan JSON, gunakan text
-					errorData = { error: "UNKNOWN", message: await response.text() };
-				}
-
-				// Handle specific error for unfinished attendance
-				if (errorData.error === "UNFINISHED_ATTENDANCE") {
-					// Refresh unfinished attendance data
-					await fetchUnfinishedAttendance();
-					setStatus("unfinished_attendance");
-					setTimeout(() => {
-						alertRef.current?.scrollIntoView({ behavior: "smooth" });
-						alertRef.current?.focus();
-					}, 100);
-					return;
-				}
-
-				// Handle specific error for no schedule
-				if (errorData.error === "NO_SCHEDULE") {
-					setStatus("no_schedule");
-					setTimeout(() => {
-						alertRef.current?.scrollIntoView({ behavior: "smooth" });
-						alertRef.current?.focus();
-					}, 100);
-					return;
-				}
-
-				const error = new Error(`Gagal melakukan presensi: ${response.status}`);
-				await logError({
-					error,
-					errorType: "AttendanceSubmissionError",
-					componentName: "AttendancePage",
-					actionAttempted: "Submitting check-in data to API",
-					severity: "HIGH",
-					additionalData: {
-						responseStatus: response.status,
-						errorData: errorData,
-						hasPhoto: !!capturedPhoto,
-						securityStatus,
-					},
-				});
-				throw error;
+			if (result?.error === "UNFINISHED_ATTENDANCE") {
+				await fetchUnfinishedAttendance();
+				setStatus("unfinished_attendance");
+			} else if (result?.error === "NO_SCHEDULE") {
+				setStatus("no_schedule");
+			} else if (result?.success) {
+				setStatus("success");
+				setPhoto(capturedPhoto);
+				await fetchAttendanceStatus();
+				await fetchTodayAttendance();
+				await fetchCompletedAttendance();
+			} else {
+				setStatus("error");
 			}
 
-			const data = await response.json();
-			setStatus("success");
-			setPhoto(capturedPhoto); // Set photo for display
-
-			// Update status presensi setelah berhasil checkin
-			await fetchAttendanceStatus();
-			await fetchTodayAttendance();
-			await fetchCompletedAttendance();
-
-			// Scroll ke alert dan fokuskan
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
 				alertRef.current?.focus();
 			}, 100);
 		} catch (error) {
 			console.error("Error submitting attendance:", error);
-
-			// Log error if not already logged
-			if (
-				!error.message.includes("Gagal mengambil foto") &&
-				!error.message.includes("Gagal melakukan presensi")
-			) {
-				await logError({
-					error,
-					errorType: "UnexpectedCheckInError",
-					componentName: "AttendancePage",
-					actionAttempted: "Check-in process",
-					severity: "HIGH",
-					additionalData: {
-						step: "unknown",
-						securityStatus,
-						isLocationValid,
-					},
-				});
-			}
-
 			setStatus("error");
-
-			// Scroll ke alert dan fokuskan juga saat error
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
 				alertRef.current?.focus();
@@ -562,8 +451,8 @@ export default function AttendancePage() {
 		}
 	};
 
+
 	const handleCheckOut = async () => {
-		// Hanya lakukan validasi lokasi jika diaktifkan
 		if (locationValidationEnabled && securityStatus.isLocationSpoofed) {
 			setStatus("security_error");
 			setTimeout(() => {
@@ -575,47 +464,40 @@ export default function AttendancePage() {
 
 		setIsSubmitting(true);
 		try {
-			// No photo required for checkout
-			const capturedPhoto = null;
+			let lat, lng, acc;
+			if (userLocation) {
+				lat = userLocation.latitude;
+				lng = userLocation.longitude;
+				acc = userLocation.accuracy;
+			} else {
+				const position = await new Promise((resolve, reject) => {
+					navigator.geolocation.getCurrentPosition(resolve, reject, {
+						enableHighAccuracy: true,
+						timeout: 10000,
+					});
+				});
+				lat = position.coords.latitude;
+				lng = position.coords.longitude;
+				acc = position.coords.accuracy;
+			}
 
-			// Dapatkan lokasi terkini
-			const position = await new Promise((resolve, reject) => {
-				navigator.geolocation.getCurrentPosition(resolve, reject);
-			});
-
-			const response = await fetch("/api/attendance", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
+			const result = await mutationCheckOut({
+				timestamp: momentInstance.format("YYYY-MM-DD HH:mm:ss"),
+				latitude: lat,
+				longitude: lng,
+				securityData: {
+					confidence: securityStatus.confidence,
+					warnings: securityStatus.warnings,
+					accuracy: acc,
 				},
-				body: JSON.stringify({
-					photo: capturedPhoto,
-					timestamp: momentInstance.format("YYYY-MM-DD HH:mm:ss"),
-					latitude: position.coords.latitude.toString(),
-					longitude: position.coords.longitude.toString(),
-					isCheckingOut: true,
-					securityData: {
-						confidence: securityStatus.confidence,
-						warnings: securityStatus.warnings,
-						accuracy: position.coords.accuracy,
-					},
-				}),
 			});
 
-			if (!response.ok) throw new Error("Gagal melakukan presensi pulang");
+			if (!result?.success) throw new Error(result?.error ?? "Gagal melakukan presensi pulang");
 
-			const data = await response.json();
 			setStatus("success");
-
-			// Update status presensi setelah berhasil checkout
 			await fetchAttendanceStatus();
 
-			// Refresh halaman setelah delay
-			setTimeout(() => {
-				window.location.reload();
-			}, 2000);
-
-			// Scroll ke alert dan fokuskan
+			setTimeout(() => { window.location.reload(); }, 2000);
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
 				alertRef.current?.focus();
@@ -623,8 +505,6 @@ export default function AttendancePage() {
 		} catch (error) {
 			console.error("Error submitting check-out:", error);
 			setStatus("error");
-
-			// Scroll ke alert dan fokuskan juga saat error
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
 				alertRef.current?.focus();
@@ -634,9 +514,18 @@ export default function AttendancePage() {
 		}
 	};
 
+
 	// Fungsi untuk memformat jam
 	const formatTime = (dateTimeString) => {
 		return moment(dateTimeString).format("HH:mm:ss");
+	};
+
+	// Handler untuk verifikasi lokasi dan penyimpanan koordinat
+	const handleLocationVerified = (isValid, location) => {
+		setIsLocationValid(isValid);
+		if (location) {
+			setUserLocation(location);
+		}
 	};
 
 	// Handler untuk perubahan status security dari SecureLocationMap
@@ -981,7 +870,7 @@ export default function AttendancePage() {
 						{locationPermission === "granted" && (
 							<div className="hidden">
 								<SecureLocationMap
-									onLocationVerified={setIsLocationValid}
+									onLocationVerified={handleLocationVerified}
 									onSecurityStatusChange={handleSecurityStatusChange}
 								/>
 							</div>
@@ -1047,7 +936,7 @@ export default function AttendancePage() {
 						{/* Hidden Auto Location Verification for Checkout */}
 						<div className="hidden">
 							<SecureLocationMap
-								onLocationVerified={setIsLocationValid}
+								onLocationVerified={handleLocationVerified}
 								onSecurityStatusChange={handleSecurityStatusChange}
 							/>
 						</div>

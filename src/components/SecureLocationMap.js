@@ -47,9 +47,9 @@ const SecureLocationMap = ({ onLocationVerified, onSecurityStatusChange }) => {
 	// Notify parent components about location and security status
 	useEffect(() => {
 		if (onLocationVerified) {
-			onLocationVerified(isLocationValid);
+			onLocationVerified(isLocationValid, currentLocation);
 		}
-	}, [isLocationValid, onLocationVerified]);
+	}, [isLocationValid, currentLocation, onLocationVerified]);
 
 	useEffect(() => {
 		if (onSecurityStatusChange) {
