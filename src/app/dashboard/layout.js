@@ -201,14 +201,14 @@ export default function DashboardLayout({ children }) {
 			{/* Backdrop overlay for mobile */}
 			{isSidebarOpen && (
 				<div
-					className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-xs md:hidden"
+					className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-xs md:hidden"
 					onClick={() => setIsSidebarOpen(false)}
 				/>
 			)}
 
 			{/* Sidebar - Persistent on desktop, off-canvas drawer on mobile */}
 			<aside
-				className={`fixed top-0 left-0 z-40 w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+				className={`fixed top-0 left-0 z-[100] w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
 					}`}
 			>
 				<div className="h-full px-4 py-6 overflow-y-auto flex flex-col justify-between select-none">
