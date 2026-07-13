@@ -39,19 +39,19 @@ export function SearchableSelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "w-full justify-between text-left font-normal bg-slate-50 border-slate-200 rounded-xl px-3.5 py-2.5 h-auto text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60 transition-all shadow-xs",
+            "w-full justify-between text-left font-normal bg-slate-50 border-slate-200 rounded-xl px-3.5 py-2.5 h-auto text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60 transition-all shadow-xs min-w-0",
             className
           )}
         >
           {selectedOption ? (
-            <div className="flex flex-col items-start text-left">
-              <span className="font-semibold text-slate-800 text-xs sm:text-sm">{selectedOption.label}</span>
+            <div className="flex flex-col items-start text-left min-w-0 flex-1">
+              <span className="font-semibold text-slate-800 text-xs sm:text-sm truncate w-full">{selectedOption.label}</span>
               {selectedOption.sublabel && (
-                <span className="text-[10px] text-slate-400 font-medium">{selectedOption.sublabel}</span>
+                <span className="text-[10px] text-slate-400 font-medium truncate w-full">{selectedOption.sublabel}</span>
               )}
             </div>
           ) : (
-            <span className="text-slate-400 font-medium">{placeholder}</span>
+            <span className="text-slate-400 font-medium truncate">{placeholder}</span>
           )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-55 text-slate-405" />
         </Button>

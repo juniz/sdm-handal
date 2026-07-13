@@ -55,17 +55,66 @@ export async function GET(request) {
 			});
 		}
 
-		// Mode 2: Administrative fetch for CRUD management
+		// Mode 2: Administrative fetch for CRUD management with pagination
+		const page = parseInt(searchParams.get("page") || "1", 10);
+		const limit = parseInt(searchParams.get("limit") || "10", 10);
+		const search = searchParams.get("search") || "";
+		const dept = searchParams.get("dept") || "all";
+
+		let whereClause = "WHERE 1=1";
+		const params = [];
+
+		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
+		if (!isIT) {
+			whereClause += " AND (m.dep_id IS NULL OR m.dep_id = ?)";
+			params.push(loggedInUser.departemen);
+		} else if (dept !== "all") {
+			if (dept === "global") {
+				whereClause += " AND m.dep_id IS NULL";
+			} else {
+				whereClause += " AND m.dep_id = ?";
+				params.push(dept);
+			}
+		}
+
+		if (search.trim() !== "") {
+			whereClause += " AND (m.nama_kegiatan LIKE ? OR m.deskripsi LIKE ? OR d.nama LIKE ?)";
+			const searchPattern = `%${search}%`;
+			params.push(searchPattern, searchPattern, searchPattern);
+		}
+
+		// Count total records
+		const countResult = await rawQuery(`
+			SELECT COUNT(*) as total
+			FROM master_kegiatan_kerja m
+			LEFT JOIN departemen d ON m.dep_id = d.dep_id
+			${whereClause}
+		`, params);
+		const total = countResult[0]?.total || 0;
+		const totalPages = Math.ceil(total / limit);
+
+		// Fetch page items
+		const offset = (page - 1) * limit;
+		const paginatedParams = [...params, limit, offset];
+
 		const list = await rawQuery(`
 			SELECT m.*, d.nama AS nama_departemen
 			FROM master_kegiatan_kerja m
 			LEFT JOIN departemen d ON m.dep_id = d.dep_id
+			${whereClause}
 			ORDER BY CASE WHEN m.dep_id IS NULL THEN 0 ELSE 1 END, d.nama ASC, m.nama_kegiatan ASC
-		`);
+			LIMIT ? OFFSET ?
+		`, paginatedParams);
 
 		return NextResponse.json({
 			success: true,
-			data: list
+			data: list,
+			pagination: {
+				page,
+				limit,
+				total,
+				totalPages
+			}
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/master-kegiatan:", error);

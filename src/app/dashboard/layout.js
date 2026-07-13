@@ -25,6 +25,7 @@ import {
 	GitMerge,
 	SlidersHorizontal,
 	Activity,
+	Shield,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -48,162 +49,62 @@ function UserProfileSkeleton() {
 	);
 }
 
-/**
- * Konfigurasi Menu Dashboard
- * Menggunakan prinsip DRY dan konfigurasi terpusat.
- * Struktur menu dibagi menjadi grup untuk meningkatkan keterbacaan dan organisasi.
- */
-const MENU_CONFIG = [
-	{
-		label: "Menu Utama",
-		items: [
-			{ icon: Home, label: "Dashboard", href: "/dashboard" },
-			{ icon: User, label: "Profil", href: "/dashboard/profile" },
-			{ icon: Calendar, label: "Presensi", href: "/dashboard/attendance" },
-			{ icon: Calendar, label: "Jadwal", href: "/dashboard/schedule" },
-			{ icon: Server, label: "Peminjaman Aset IT", href: "/dashboard/pengajuan-aset" },
-		],
-	},
-	{
-		label: "Administrasi",
-		// Hanya tampil jika environment variable MENU_ADMIN aktif ("true")
-		visible: process.env.NEXT_PUBLIC_MENU_ADMIN === "true",
-		items: [
-			{ icon: Ticket, label: "Ticket IT", href: "/dashboard/ticket" },
-			{
-				icon: UserCheck,
-				label: "Assignment IT",
-				href: "/dashboard/ticket-assignment",
-			},
-			{
-				icon: FileText,
-				label: "Pengajuan Development",
-				href: "/dashboard/development",
-			},
-			{
-				icon: CreditCard,
-				label: "Pengajuan KTA",
-				href: "/dashboard/pengajuan-kta",
-			},
-			{
-				icon: RefreshCcw,
-				label: "Tukar Dinas",
-				href: "/dashboard/pengajuan-tukar-dinas",
-			},
-			{
-				icon: Users,
-				label: "Pegawai Organik",
-				href: "/dashboard/pegawai-organik",
-				check: (role, department) =>
-					department === adminType.IT || department === adminType.SPI, allowedUserIds: [36, 10, 42],
-			},
-			{
-				icon: UserCog,
-				label: "Manajemen Data Pegawai",
-				href: "/dashboard/pegawai-manajemen",
-				check: (role, department) =>
-					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT, allowedUserIds: [36, 10, 42],
-			},
-			{
-				icon: Server,
-				label: "Manajemen Aset IT",
-				href: "/dashboard/it-assets",
-				check: (role, department) =>
-					department === process.env.NEXT_PUBLIC_DEPARTMENT_IT,
-			},
-		],
-	},
-	{
-		label: "Penilaian Kinerja",
-		items: [
-			{
-				icon: ClipboardList,
-				label: "Penilaian Saya Hari Ini",
-				href: "/dashboard/penilaian-kinerja/input",
-			},
-			{
-				icon: History,
-				label: "Riwayat Penilaian Saya",
-				href: "/dashboard/penilaian-kinerja/riwayat",
-			},
-			{
-				icon: CheckSquare,
-				label: "Penilaian Tim (Approval)",
-				href: "/dashboard/penilaian-kinerja/approval",
-				check: (role, department, isSupervisor) => isSupervisor === true,
-			},
-			{
-				icon: TrendingUp,
-				label: "Rekap Kinerja Bulanan",
-				href: "/dashboard/penilaian-kinerja/rekap",
-				check: (role, department) => department === adminType.IT,
-			},
-			{
-				icon: CreditCard,
-				label: "Jasa Dasar Pegawai",
-				href: "/dashboard/penilaian-kinerja/jasa-dasar",
-				check: (role, department) => department === adminType.IT,
-			},
-			{
-				icon: GitMerge,
-				label: "Mapping Supervisor",
-				href: "/dashboard/penilaian-kinerja/mapping",
-				check: (role, department) => department === adminType.IT,
-			},
-			{
-				icon: SlidersHorizontal,
-				label: "Parameter Penilaian",
-				href: "/dashboard/penilaian-kinerja/parameter",
-				check: (role, department) => department === adminType.IT,
-			},
-			{
-				icon: ClipboardList,
-				label: "Master Kegiatan Kerja",
-				href: "/dashboard/penilaian-kinerja/master-kegiatan",
-				// check: (role, department) => department === adminType.IT,
-			},
-		],
-	},
-	{
-		label: "Laporan",
-		items: [{ icon: FileText, label: "Laporan", href: "/dashboard/reports" }],
-	},
-	{
-		label: "Keuangan",
-		checkRole: (role, department) =>
-			department === adminType.IT || department === adminType.KEU,
-		items: [
-			{
-				icon: FileText,
-				label: "Penggajian",
-				href: "/dashboard/penggajian/data-gaji",
-			},
-			{
-				icon: DollarSign,
-				label: "Gapok",
-				href: "/dashboard/penggajian/gapok",
-			},
-			{
-				icon: DollarSign,
-				label: "Pembagian Presentase",
-				href: "/dashboard/penggajian/presentase",
-			},
-		],
-	},
-	{
-		label: "System",
-		// Hanya tampil untuk role Admin atau Departemen IT/SPI
-		checkRole: (role, department) =>
-			role?.includes("Admin") || department === adminType.IT,
-		items: [
-			{
-				icon: AlertTriangle,
-				label: "Error Logs",
-				href: "/dashboard/admin/error-logs",
-			},
-		],
-	},
-];
+import { fetchMyMenus } from "@/lib/menu-gql-client";
+
+const ICON_MAP = {
+	Home,
+	User,
+	Calendar,
+	FileText,
+	Ticket,
+	UserCheck,
+	AlertTriangle,
+	CreditCard,
+	RefreshCcw,
+	Users,
+	UserCog,
+	DollarSign,
+	Server,
+	ClipboardList,
+	History,
+	CheckSquare,
+	TrendingUp,
+	GitMerge,
+	SlidersHorizontal,
+	Activity,
+	Shield,
+};
+
+const groupAndSortMenus = (flatMenus) => {
+	const groupsMap = {};
+
+	flatMenus.forEach((menu) => {
+		if (!groupsMap[menu.groupLabel]) {
+			groupsMap[menu.groupLabel] = {
+				label: menu.groupLabel,
+				groupOrder: menu.groupOrder,
+				items: [],
+			};
+		}
+		groupsMap[menu.groupLabel].items.push({
+			id: menu.id,
+			label: menu.label,
+			href: menu.href,
+			iconName: menu.iconName,
+			itemOrder: menu.itemOrder,
+		});
+	});
+
+	const sortedGroups = Object.values(groupsMap).sort(
+		(a, b) => a.groupOrder - b.groupOrder
+	);
+
+	sortedGroups.forEach((group) => {
+		group.items.sort((a, b) => a.itemOrder - b.itemOrder);
+	});
+
+	return sortedGroups;
+};
 
 export default function DashboardLayout({ children }) {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -213,12 +114,14 @@ export default function DashboardLayout({ children }) {
 	const [isSupervisor, setIsSupervisor] = useState(false);
 	const [userProfile, setUserProfile] = useState(null);
 	const [userId, setUserId] = useState(null);
+	const [menuGroups, setMenuGroups] = useState([]);
+	const [isLoadingMenus, setIsLoadingMenus] = useState(true);
 	const pathname = usePathname();
 	const router = useRouter();
 
-	// Check user role
+	// Check user role & fetch menus
 	useEffect(() => {
-		const checkUserRole = async () => {
+		const checkUserRoleAndMenus = async () => {
 			try {
 				const response = await fetch("/api/auth/user");
 				if (response.ok) {
@@ -238,7 +141,6 @@ export default function DashboardLayout({ children }) {
 					) {
 						department = adminType.SPI;
 					} else if (userData.jbtn) {
-						// Fallback to jabatan if department is not set or not one of the special ones
 						department = userData.jbtn;
 					}
 
@@ -254,50 +156,24 @@ export default function DashboardLayout({ children }) {
 					} catch (supErr) {
 						console.error("Error checking supervisor role:", supErr);
 					}
+
+					// Fetch dynamic menu from DB
+					try {
+						const menus = await fetchMyMenus();
+						const grouped = groupAndSortMenus(menus);
+						setMenuGroups(grouped);
+					} catch (menuErr) {
+						console.error("Error fetching dynamic menus:", menuErr);
+					}
 				}
 			} catch (error) {
 				console.error("Error checking user role:", error);
+			} finally {
+				setIsLoadingMenus(false);
 			}
 		};
-		checkUserRole();
+		checkUserRoleAndMenus();
 	}, []);
-
-	// Filter menu groups berdasarkan kondisi visibility dan role
-	const menuGroups = MENU_CONFIG.map((group) => {
-		// Cek visibility static (env var) - default true jika undefined
-		const isEnvVisible = group.visible !== false;
-
-		// Cek visibility dynamic (role & department atau bypass via whitelist allowedUserIds)
-		const isGroupWhitelisted = group.allowedUserIds && Array.isArray(group.allowedUserIds) && userId !== null
-			? group.allowedUserIds.map(Number).includes(Number(userId))
-			: false;
-
-		const isRoleVisible = isGroupWhitelisted || (group.checkRole
-			? group.checkRole(userRole, userDepartment)
-			: true);
-
-		if (isEnvVisible && isRoleVisible) {
-			// Filter items within the group
-			const filteredItems = group.items.filter((item) => {
-				// Bypass check jika ID user terdaftar di whitelist (OR logic)
-				if (item.allowedUserIds && Array.isArray(item.allowedUserIds) && userId !== null) {
-					const isWhitelisted = item.allowedUserIds.map(Number).includes(Number(userId));
-					if (isWhitelisted) return true;
-				}
-
-				if (item.check) {
-					return item.check(userRole, userDepartment, isSupervisor);
-				}
-				return true;
-			});
-
-			// Only return group if it has items
-			if (filteredItems.length > 0) {
-				return { ...group, items: filteredItems };
-			}
-		}
-		return null;
-	}).filter(Boolean);
 
 	const handleLogout = async () => {
 		try {
@@ -373,7 +249,7 @@ export default function DashboardLayout({ children }) {
 									)}
 									<ul className="space-y-0.5">
 										{group.items.map((item) => {
-											const Icon = item.icon;
+											const Icon = ICON_MAP[item.iconName] || FileText;
 											const isActive = pathname === item.href;
 											return (
 												<li key={item.href}>
