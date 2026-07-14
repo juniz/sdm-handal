@@ -90,6 +90,32 @@ export async function middleware(request) {
 			return response;
 		}
 
+		// Route-level protection for dashboard routes (except the root /dashboard itself)
+		if (request.nextUrl.pathname.startsWith("/dashboard") && request.nextUrl.pathname !== "/dashboard") {
+			try {
+				const origin = request.nextUrl.origin;
+				const menusRes = await fetch(`${origin}/api/menu/my-menus`, {
+					headers: {
+						Cookie: `auth_token=${tokenValue}`,
+					},
+				});
+				if (menusRes.ok) {
+					const { hrefs } = await menusRes.json();
+					const currentPath = request.nextUrl.pathname;
+					// Check for exact match or sub-path match
+					const isAllowed = hrefs.some(
+						(href) => currentPath === href || currentPath.startsWith(href + "/")
+					);
+					if (!isAllowed) {
+						console.log(`Path ${currentPath} is not allowed for user. Redirecting to /dashboard`);
+						return NextResponse.redirect(new URL("/dashboard?error=unauthorized_route", request.url));
+					}
+				}
+			} catch (err) {
+				console.error("Middleware menu verification error:", err);
+			}
+		}
+
 		console.log("Token valid, proceeding to next middleware");
 		return NextResponse.next();
 	} catch (error) {

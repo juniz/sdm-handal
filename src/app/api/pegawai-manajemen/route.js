@@ -44,7 +44,7 @@ export async function GET(request) {
 		params.push(limit, offset);
 		const data = await rawQuery(
 			`
-			SELECT p.*, d.nama as nama_departemen,
+			SELECT p.*, d.nama as nama_departemen, sk.ktg as nama_stts_kerja,
 				tkj.threshold_persen,
 				tkj.bobot_jabatan,
 				tkj.bobot_personal,
@@ -77,6 +77,7 @@ export async function GET(request) {
 			LEFT JOIN resiko_kerja res ON p.kode_resiko = res.kode_resiko
 			LEFT JOIN emergency_index em ON p.kode_emergency = em.kode_emergency
 			LEFT JOIN pendidikan pend ON p.pendidikan = pend.tingkat
+			LEFT JOIN stts_kerja sk ON p.stts_kerja = sk.stts
 			
 			-- Join with latest evaluation index
 			LEFT JOIN (
@@ -170,6 +171,36 @@ export async function GET(request) {
 			};
 		});
 
+		// Fetch stats for active employees following search and department filters
+		let statsWhereClause = "WHERE p.stts_aktif = 'AKTIF'";
+		const statsParams = [];
+
+		if (search) {
+			statsWhereClause += " AND (p.nama LIKE ? OR p.nik LIKE ?)";
+			statsParams.push(`%${search}%`, `%${search}%`);
+		}
+		if (departemen) {
+			statsWhereClause += " AND p.departemen = ?";
+			statsParams.push(departemen);
+		}
+
+		const statsResult = await rawQuery(`
+			SELECT 
+				COUNT(*) as total_aktif,
+				SUM(CASE WHEN p.stts_kerja = 'POL' THEN 1 ELSE 0 END) as polri,
+				SUM(CASE WHEN p.stts_kerja = 'PNS' THEN 1 ELSE 0 END) as pns,
+				SUM(CASE WHEN p.stts_kerja NOT IN ('POL', 'PNS') OR p.stts_kerja IS NULL THEN 1 ELSE 0 END) as non_pns_polri
+			FROM pegawai p
+			${statsWhereClause}
+		`, statsParams);
+
+		const stats = {
+			total_aktif: parseInt(statsResult[0]?.total_aktif || 0, 10),
+			polri: parseInt(statsResult[0]?.polri || 0, 10),
+			pns: parseInt(statsResult[0]?.pns || 0, 10),
+			non_pns_polri: parseInt(statsResult[0]?.non_pns_polri || 0, 10),
+		};
+
 		return NextResponse.json({
 			status: "success",
 			data: dataWithPercentage,
@@ -177,6 +208,7 @@ export async function GET(request) {
 			meta: {
 				total_aggregate_index: totalAggregate,
 			},
+			stats,
 		});
 	} catch (error) {
 		console.error("Error fetching pegawai:", error);

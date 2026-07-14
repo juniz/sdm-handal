@@ -31,6 +31,13 @@ export default function MasterKegiatanKerjaPage() {
 	// Filter State
 	const [selectedDeptFilter, setSelectedDeptFilter] = useState("all");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+	// Pagination State
+	const [page, setPage] = useState(1);
+	const [limit, setLimit] = useState(10);
+	const [totalPages, setTotalPages] = useState(1);
+	const [totalRecords, setTotalRecords] = useState(0);
 
 	// Form Modal State
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,10 +52,29 @@ export default function MasterKegiatanKerjaPage() {
 	const [saving, setSaving] = useState(false);
 
 	useEffect(() => {
-		loadMasterList();
 		loadDepartments();
 		loadUserProfile();
 	}, []);
+
+	// Debounce search input
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedSearchQuery(searchQuery);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
+
+	// Fetch data when filters/pagination changes
+	useEffect(() => {
+		if (userProfile) {
+			loadMasterList(page, limit, debouncedSearchQuery, selectedDeptFilter);
+		}
+	}, [page, limit, debouncedSearchQuery, selectedDeptFilter, userProfile]);
+
+	// Reset page to 1 on query/filter changes
+	useEffect(() => {
+		setPage((prev) => (prev !== 1 ? 1 : prev));
+	}, [debouncedSearchQuery, selectedDeptFilter, limit]);
 
 	const loadUserProfile = async () => {
 		try {
@@ -64,14 +90,16 @@ export default function MasterKegiatanKerjaPage() {
 		}
 	};
 
-	const loadMasterList = async () => {
+	const loadMasterList = async (currentPage = page, currentLimit = limit, currentSearch = debouncedSearchQuery, currentDept = selectedDeptFilter) => {
 		setLoading(true);
 		setErrorMsg("");
 		try {
-			const res = await fetch("/api/penilaian/master-kegiatan");
+			const res = await fetch(`/api/penilaian/master-kegiatan?page=${currentPage}&limit=${currentLimit}&search=${encodeURIComponent(currentSearch)}&dept=${currentDept}`);
 			if (!res.ok) throw new Error("Gagal mengambil template kegiatan");
 			const data = await res.json();
 			setMasterList(data.data || []);
+			setTotalPages(data.pagination?.totalPages || 1);
+			setTotalRecords(data.pagination?.total || 0);
 		} catch (err) {
 			console.error(err);
 			setErrorMsg(err.message);
@@ -209,33 +237,8 @@ export default function MasterKegiatanKerjaPage() {
 		}
 	};
 
-	// Client-side filtering logic
-	const filteredList = masterList.filter(item => {
-		// If not IT, strictly limit to user's unit and global templates
-		if (!isIT) {
-			const userDept = userProfile?.departemen;
-			if (item.dep_id !== null && item.dep_id !== userDept) {
-				return false;
-			}
-		} else {
-			// Department Filter (for IT admin)
-			if (selectedDeptFilter !== "all") {
-				if (selectedDeptFilter === "global" && item.dep_id !== null) return false;
-				if (selectedDeptFilter !== "global" && item.dep_id !== selectedDeptFilter) return false;
-			}
-		}
-
-		// Search Query
-		if (searchQuery.trim() !== "") {
-			const query = searchQuery.toLowerCase();
-			const matchTitle = item.nama_kegiatan.toLowerCase().includes(query);
-			const matchDesc = item.deskripsi?.toLowerCase().includes(query) || false;
-			const matchDeptName = item.nama_departemen?.toLowerCase().includes(query) || false;
-			return matchTitle || matchDesc || matchDeptName;
-		}
-
-		return true;
-	});
+	// Server-side filtered and paginated list
+	const filteredList = masterList;
 
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
@@ -405,6 +408,65 @@ export default function MasterKegiatanKerjaPage() {
 								))}
 							</tbody>
 						</table>
+					</div>
+
+					{/* Pagination Footer */}
+					<div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+						<div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+							<span>Menampilkan</span>
+							<select
+								value={limit}
+								onChange={(e) => setLimit(parseInt(e.target.value, 10))}
+								className="px-2 py-1.5 border border-slate-200 rounded-lg bg-white text-slate-700 font-bold focus:outline-none focus:border-primary-600 focus:ring-1 focus:ring-primary-100 cursor-pointer"
+							>
+								<option value={10}>10</option>
+								<option value={25}>25</option>
+								<option value={50}>50</option>
+								<option value={100}>100</option>
+							</select>
+							<span>dari {totalRecords} template kegiatan</span>
+						</div>
+
+						<div className="flex items-center gap-1.5">
+							<button
+								onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+								disabled={page === 1}
+								className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed select-none"
+							>
+								Sebelumnya
+							</button>
+
+							<div className="flex items-center gap-1">
+								{Array.from({ length: totalPages }, (_, i) => i + 1)
+									.filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+									.map((p, idx, arr) => {
+										const showDots = idx > 0 && p - arr[idx - 1] > 1;
+										return (
+											<div key={p} className="flex items-center gap-1">
+												{showDots && <span className="text-slate-400 text-xs px-1">...</span>}
+												<button
+													onClick={() => setPage(p)}
+													className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer select-none ${
+														page === p
+															? "bg-primary-600 text-white shadow-sm shadow-primary-600/10"
+															: "bg-white text-slate-650 border border-slate-200 hover:bg-slate-50"
+													}`}
+												>
+													{p}
+												</button>
+											</div>
+										);
+									})}
+							</div>
+
+							<button
+								onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+								disabled={page === totalPages}
+								className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition-all cursor-pointer disabled:opacity-40 disabled:hover:bg-white disabled:cursor-not-allowed select-none"
+							>
+								Selanjutnya
+							</button>
+						</div>
 					</div>
 				</div>
 			)}

@@ -220,12 +220,12 @@ export default function PegawaiManajemenPage() {
         </div>
 
         {/* ── Main Card ────────────────────────────────── */}
-        <div className="pgw-animate-in pgw-animate-in-delay-2 bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="pgw-animate-in pgw-animate-in-delay-2 rounded-xl sm:rounded-2xl overflow-hidden">
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
-            {/* Tab Bar */}
-            <div className="pgw-tab-list-container bg-white">
+            {/* Tab Bar (Commented out to hide visually as requested, structure preserved) */}
+            {/* <div className="pgw-tab-list-container bg-white">
               <TabsList className="pgw-tab-list" aria-label="Modul manajemen pegawai">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
@@ -237,17 +237,15 @@ export default function PegawaiManajemenPage() {
                       aria-label={tab.label}
                     >
                       <Icon size={18} className="pgw-tab-icon" aria-hidden="true" />
-                      {/* Short label on mobile */}
                       <span className="pgw-tab-label-short">
                         {tab.label.split(" ")[0]}
                       </span>
-                      {/* Full label on desktop */}
                       <span className="pgw-tab-label-long">{tab.label}</span>
                     </TabsTrigger>
                   );
                 })}
               </TabsList>
-            </div>
+            </div> */}
 
             {/* Active Tab Context Strip */}
             {/* {activeTabData && (

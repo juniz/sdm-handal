@@ -290,11 +290,11 @@ export default function DashboardPage() {
 			<div className="absolute top-0 inset-x-0 h-[400px] bg-gradient-to-b from-[#0093dd]/[0.10] to-transparent -z-10 pointer-events-none" />
 			<div className="absolute top-[-80px] right-[-60px] w-72 h-72 bg-[#0093dd]/15 rounded-full blur-[80px] -z-10 pointer-events-none" />
 			<div className="absolute top-[200px] left-[-60px] w-64 h-64 bg-[#0093dd]/10 rounded-full blur-[80px] -z-10 pointer-events-none" />
-			
+
 			<div className="max-w-md mx-auto px-4 pt-6 space-y-7 relative">
 
 				{/* Sticky Search Menu */}
-				<div className="sticky top-0 pt-4 pb-2 z-[60] -mx-4 px-4">
+				{/* <div className="sticky top-0 pt-4 pb-2 z-[60] -mx-4 px-4">
 					<div className="absolute inset-0 bg-slate-50/80 backdrop-blur-md -z-10" />
 					<div className="flex items-center gap-2">
 						<div className="relative flex-1 flex items-center h-12 rounded-[20px] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-slate-200/40 overflow-hidden focus-within:ring-2 focus-within:ring-[#0093dd]/30 focus-within:bg-white transition-all">
@@ -319,7 +319,7 @@ export default function DashboardPage() {
 							<NotificationBellMobile />
 						</div>
 					</div>
-				</div>
+				</div> */}
 
 				<div className="space-y-7">
 					{/* Sembunyikan profil dan statistik presensi ketika sedang mencari untuk mengurangi distraksi */}
@@ -363,7 +363,7 @@ export default function DashboardPage() {
 							<QuickActions searchQuery={searchQuery} />
 						</div>
 					)}
-					
+
 					{/* Status Jika Pencarian Kosong */}
 					{searchQuery && (
 						<div className="flex flex-col items-center justify-center py-10 opacity-60">

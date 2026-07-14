@@ -50,6 +50,9 @@ import {
 	Zap,
 	Info,
 	Bug,
+	Briefcase,
+	Award,
+	SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getClientToken } from "@/lib/client-auth";
@@ -73,6 +76,12 @@ export default function PegawaiDataSection() {
 		totalPages: 0,
 	});
 	const [totalAggregate, setTotalAggregate] = useState(0);
+	const [stats, setStats] = useState({
+		total_aktif: 0,
+		polri: 0,
+		pns: 0,
+		non_pns_polri: 0,
+	});
 	const [showForm, setShowForm] = useState(false);
 	const [showDelete, setShowDelete] = useState(false);
 	const [showEvaluasiForm, setShowEvaluasiForm] = useState(false);
@@ -115,6 +124,9 @@ export default function PegawaiDataSection() {
 				setData(result.data || []);
 				setPagination(result.pagination || {});
 				setTotalAggregate(result.meta?.total_aggregate_index || 0);
+				if (result.stats) {
+					setStats(result.stats);
+				}
 			} else {
 				toast.error(result.message || "Gagal mengambil data");
 			}
@@ -208,7 +220,71 @@ export default function PegawaiDataSection() {
 	};
 
 	return (
-		<Card>
+		<div className="space-y-6">
+			{/* KPI Cards Section */}
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+				{/* Card 1: Total Pegawai Aktif */}
+				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+					<div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
+					<CardContent className="p-5 flex items-center justify-between">
+						<div className="space-y-1">
+							<p className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Pegawai Aktif</p>
+							<h3 className="text-3xl font-extrabold text-slate-800 tracking-tight font-figtree">{stats.total_aktif}</h3>
+							<p className="text-[10px] text-slate-500 font-semibold mt-0.5">Total seluruh status aktif</p>
+						</div>
+						<div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500">
+							<Users className="w-6 h-6" />
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Card 2: Pegawai POLRI */}
+				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+					<div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
+					<CardContent className="p-5 flex items-center justify-between">
+						<div className="space-y-1">
+							<p className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Pegawai POLRI</p>
+							<h3 className="text-3xl font-extrabold text-slate-800 tracking-tight font-figtree">{stats.polri}</h3>
+							<p className="text-[10px] text-slate-500 font-semibold mt-0.5">Anggota Polri aktif (POL)</p>
+						</div>
+						<div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0093dd]">
+							<Briefcase className="w-6 h-6" />
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Card 3: Pegawai PNS */}
+				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+					<div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
+					<CardContent className="p-5 flex items-center justify-between">
+						<div className="space-y-1">
+							<p className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Pegawai PNS</p>
+							<h3 className="text-3xl font-extrabold text-slate-800 tracking-tight font-figtree">{stats.pns}</h3>
+							<p className="text-[10px] text-slate-500 font-semibold mt-0.5">Pegawai Negeri Sipil aktif</p>
+						</div>
+						<div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500">
+							<Award className="w-6 h-6" />
+						</div>
+					</CardContent>
+				</Card>
+
+				{/* Card 4: Pegawai Non-PNS/Polri */}
+				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+					<div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
+					<CardContent className="p-5 flex items-center justify-between">
+						<div className="space-y-1">
+							<p className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Non-PNS & POLRI</p>
+							<h3 className="text-3xl font-extrabold text-slate-800 tracking-tight font-figtree">{stats.non_pns_polri}</h3>
+							<p className="text-[10px] text-slate-500 font-semibold mt-0.5">Pegawai aktif selain PNS/Polri</p>
+						</div>
+						<div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-500">
+							<SlidersHorizontal className="w-6 h-6" />
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+			<Card>
 			<CardHeader className="space-y-4 px-4 sm:px-6">
 				<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 					<CardTitle className="flex items-center gap-2 text-xl font-bold">
@@ -326,7 +402,7 @@ export default function PegawaiDataSection() {
 										<TableHead>Jabatan</TableHead>
 										<TableHead>Departemen</TableHead>
 										{/* <TableHead className="text-center">Total Index</TableHead> */}
-										<TableHead className="text-center group relative">
+										{/* <TableHead className="text-center group relative">
 											<div
 												className="flex items-center justify-center gap-1 cursor-help"
 												onClick={() => setShowRumusDialog(true)}
@@ -334,7 +410,8 @@ export default function PegawaiDataSection() {
 												Persentase
 												<Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700" />
 											</div>
-										</TableHead>
+										</TableHead> */}
+										<TableHead>Status Kerja</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead className="text-right">Aksi</TableHead>
 									</TableRow>
@@ -353,10 +430,13 @@ export default function PegawaiDataSection() {
 											{/* <TableCell className="text-center font-medium">
 												{p.total_index_remunerasi ?? "-"}
 											</TableCell> */}
-											<TableCell className="text-center font-medium">
+											{/* <TableCell className="text-center font-medium">
 												{p.remunerasi_percentage
 													? `${p.remunerasi_percentage}%`
 													: "-"}
+											</TableCell> */}
+											<TableCell>
+												{p.nama_stts_kerja || p.stts_kerja || "-"}
 											</TableCell>
 											<TableCell>
 												<Badge
@@ -459,12 +539,10 @@ export default function PegawaiDataSection() {
 										</div>
 										<div className="col-span-2 sm:col-span-1">
 											<div className="text-xs text-gray-500 mb-0.5">
-												Persentase
+												Status Kerja
 											</div>
 											<div className="font-medium">
-												{p.remunerasi_percentage
-													? `${p.remunerasi_percentage}%`
-													: "-"}
+												{p.nama_stts_kerja || p.stts_kerja || "-"}
 											</div>
 										</div>
 									</div>
@@ -605,5 +683,6 @@ export default function PegawaiDataSection() {
 				/>
 			)}
 		</Card>
+		</div>
 	);
 }
