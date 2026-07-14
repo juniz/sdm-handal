@@ -226,7 +226,8 @@ export default function MonitoringPage() {
     const connect = () => {
       if (cancelled) return;
 
-      const streamUrl = `${BACKEND_URL}/api/v1/monitor/logs/stream`;
+      const token = getClientToken();
+      const streamUrl = `${BACKEND_URL}/api/v1/monitor/logs/stream?token=${encodeURIComponent(token || "")}`;
       es = new EventSource(streamUrl, { withCredentials: true });
 
       es.onopen = () => {
