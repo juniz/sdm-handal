@@ -82,7 +82,9 @@ export async function middleware(request) {
 			}
 
 			console.log("No valid token found, redirecting to login");
-			const response = NextResponse.redirect(new URL("/", request.url));
+			const redirectUrl = new URL("/", request.url);
+			redirectUrl.searchParams.set("error", tokenError === "expired" ? "session_expired" : "invalid_token");
+			const response = NextResponse.redirect(redirectUrl);
 			// Bersihkan cookie yang tidak valid
 			if (tokenValue) {
 				response.cookies.delete("auth_token");
@@ -129,7 +131,9 @@ export async function middleware(request) {
 			return response;
 		}
 
-		const response = NextResponse.redirect(new URL("/", request.url));
+		const redirectUrl = new URL("/", request.url);
+		redirectUrl.searchParams.set("error", "server_error");
+		const response = NextResponse.redirect(redirectUrl);
 		// Bersihkan cookie jika terjadi error
 		response.cookies.delete("auth_token");
 		return response;

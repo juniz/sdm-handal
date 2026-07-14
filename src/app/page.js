@@ -8,6 +8,7 @@ import {
 	setClientToken,
 	getClientToken,
 	forceRestoreFromBackup,
+	removeClientToken,
 } from "@/lib/client-auth";
 import Image from "next/image";
 
@@ -23,6 +24,27 @@ export default function LoginPage() {
 	// Delay rendering of animation classes to avoid hydration mismatch, and auth checks
 	useEffect(() => {
 		setMounted(true);
+
+		// Parse query parameters
+		const params = new URLSearchParams(window.location.search);
+		const errorParam = params.get("error");
+		if (errorParam) {
+			// If there is an authentication error, clear all client-side tokens to prevent redirection loops
+			if (errorParam === "session_expired" || errorParam === "invalid_token" || errorParam === "server_error") {
+				removeClientToken();
+				if (errorParam === "session_expired") {
+					setError("Sesi Anda telah berakhir. Silakan masuk kembali.");
+				} else if (errorParam === "invalid_token") {
+					setError("Token keamanan tidak valid. Silakan masuk kembali.");
+				} else {
+					setError("Terjadi kesalahan pada server. Silakan masuk kembali.");
+				}
+				// Clean URL to avoid repeating on manual reload
+				window.history.replaceState({}, document.title, "/");
+				return;
+			}
+		}
+
 		const checkExistingAuth = async () => {
 			const existingToken = getClientToken();
 			if (existingToken) {
