@@ -11,7 +11,8 @@ import {
   CalendarDays,
   PieChart,
   Cpu,
-  HardDrive
+  HardDrive,
+  Database
 } from "lucide-react";
 import { getClientToken } from "@/lib/client-auth";
 import LogViewer from "@/components/development/LogViewer";
@@ -32,9 +33,11 @@ export default function MonitoringPage() {
   const [slowEndpoints, setSlowEndpoints] = useState([]);
   const [errors, setErrors] = useState([]);
   const [authEvents, setAuthEvents] = useState([]);
+  const [slowQueries, setSlowQueries] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedErrorIdx, setExpandedErrorIdx] = useState(null);
   const [expandedSlowIdx, setExpandedSlowIdx] = useState(null);
+  const [expandedQueryIdx, setExpandedQueryIdx] = useState(null);
 
   // Helper to format local Date object to YYYY-MM-DD
   const formatDateLocal = (date) => {
@@ -76,12 +79,13 @@ export default function MonitoringPage() {
     const qs = buildDateParams();
 
     try {
-      const [summaryRes, trafficRes, slowRes, errorsRes, authRes] = await Promise.all([
+      const [summaryRes, trafficRes, slowRes, errorsRes, authRes, queriesRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/v1/monitor/summary${qs}`, { headers }),
         fetch(`${BACKEND_URL}/api/v1/monitor/traffic${qs}`, { headers }),
         fetch(`${BACKEND_URL}/api/v1/monitor/slow-endpoints${qs}`, { headers }),
         fetch(`${BACKEND_URL}/api/v1/monitor/errors?limit=10${qs ? "&" + qs.slice(1) : ""}`, { headers }),
         fetch(`${BACKEND_URL}/api/v1/monitor/auth-events?limit=10${qs ? "&" + qs.slice(1) : ""}`, { headers }),
+        fetch(`${BACKEND_URL}/api/v1/monitor/slow-queries?limit=10${qs ? "&" + qs.slice(1) : ""}`, { headers }),
       ]);
 
       if (summaryRes.ok) {
@@ -103,6 +107,10 @@ export default function MonitoringPage() {
       if (authRes.ok) {
         const resJson = await authRes.json();
         setAuthEvents(resJson.data?.data || []);
+      }
+      if (queriesRes.ok) {
+        const resJson = await queriesRes.json();
+        setSlowQueries(resJson.data?.data || []);
       }
     } catch (err) {
       console.error("Failed to fetch monitoring data:", err);
@@ -779,6 +787,81 @@ export default function MonitoringPage() {
 
       {/* Live Log Stream */}
       <LogViewer logs={logs} isConnected={isConnected} isPaused={isPaused} setIsPaused={setIsPaused} onClear={() => setLogs([])} />
+
+      {/* Slow Database Queries Card */}
+      <Card className="border-slate-100 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+            <Database className="h-4 w-4 text-indigo-500 mr-2" />
+            Query Database Lambat (&gt;100ms)
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("query")} className="text-xs h-7 border-slate-200">
+            Unduh Log Query
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="max-h-[350px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[120px] text-xs">Waktu</TableHead>
+                  <TableHead className="w-[100px] text-xs">Koneksi</TableHead>
+                  <TableHead className="text-xs">SQL Query</TableHead>
+                  <TableHead className="w-[100px] text-xs text-right">Durasi</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {slowQueries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-slate-400 py-10 text-xs">Tidak ada query lambat tercatat.</TableCell>
+                  </TableRow>
+                ) : (
+                  slowQueries.map((q, idx) => (
+                    <Fragment key={idx}>
+                      <TableRow
+                        className="hover:bg-slate-50 cursor-pointer"
+                        onClick={() => setExpandedQueryIdx(expandedQueryIdx === idx ? null : idx)}
+                      >
+                        <TableCell className="text-xs font-mono text-slate-500">
+                          {new Date(q.timestamp).toLocaleTimeString("id-ID", { hour12: false })}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <Badge className="bg-slate-100 text-slate-700 border-none font-bold text-[10px] uppercase">{q.connection || "default"}</Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="font-mono text-slate-600 truncate max-w-[500px]" title={q.query}>{q.query}</div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs">
+                          <Badge className="bg-amber-100 text-amber-800 border-none font-bold">{q.durationMs} ms</Badge>
+                        </TableCell>
+                      </TableRow>
+                      {expandedQueryIdx === idx && (
+                        <TableRow className="bg-slate-50/50">
+                          <TableCell colSpan={4} className="p-3">
+                            <div className="space-y-2">
+                              <div className="bg-slate-900 text-indigo-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[200px]">
+                                {q.query}
+                              </div>
+                              {q.parameters && q.parameters.length > 0 && (
+                                <div className="text-xs">
+                                  <div className="text-slate-500 font-bold mb-1">Parameters:</div>
+                                  <pre className="bg-slate-950 p-2 rounded text-[10px] text-slate-300 font-mono overflow-x-auto max-h-[100px]">
+                                    {JSON.stringify(q.parameters, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Errors + Auth Tables */}
       <div className="grid gap-4 md:grid-cols-2">
