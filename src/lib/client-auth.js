@@ -12,6 +12,26 @@ export function isPWAMode() {
 	);
 }
 
+// Fungsi untuk mengecek apakah JWT sudah expired secara waktu (client-side check)
+export function isTokenExpired(token) {
+	if (!token) return true;
+	try {
+		const parts = token.split(".");
+		if (parts.length !== 3) return true;
+		
+		// Decode payload (bagian kedua JWT)
+		const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+		if (payload && typeof payload.exp === "number") {
+			const now = Math.floor(Date.now() / 1000);
+			return payload.exp < now;
+		}
+		return false;
+	} catch (e) {
+		console.warn("Failed to check token expiry on client:", e);
+		return true; // Anggap token rusak sebagai expired
+	}
+}
+
 // Fungsi untuk menyimpan token di client-side
 export function setClientToken(token) {
 	// Simpan di cookie
@@ -49,6 +69,11 @@ export function getClientToken() {
 		const cookieToken = Cookies.get("auth_token");
 
 		if (cookieToken) {
+			if (isTokenExpired(cookieToken)) {
+				console.log("Cookie token is expired, clearing");
+				removeClientToken();
+				return null;
+			}
 			return cookieToken;
 		}
 
@@ -86,7 +111,7 @@ export function getClientToken() {
 			const tokenAge = Date.now() - parseInt(selectedTimestamp);
 			const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 hari
 
-			if (tokenAge < maxAge) {
+			if (tokenAge < maxAge && !isTokenExpired(selectedToken)) {
 				console.log(
 					"Using backup token, age:",
 					Math.round(tokenAge / 1000 / 60),
@@ -103,12 +128,9 @@ export function getClientToken() {
 
 				return selectedToken;
 			} else {
-				console.log("Backup token expired, clearing");
+				console.log("Backup token expired or invalid, clearing");
 				// Hapus token yang expired
-				localStorage.removeItem("auth_token_backup");
-				localStorage.removeItem("auth_token_timestamp");
-				localStorage.removeItem("auth_token_pwa");
-				localStorage.removeItem("auth_pwa_timestamp");
+				removeClientToken();
 			}
 		}
 
@@ -185,10 +207,13 @@ export function forceRestoreFromBackup() {
 			const tokenAge = Date.now() - parseInt(selectedTimestamp);
 			const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 hari
 
-			if (tokenAge < maxAge) {
+			if (tokenAge < maxAge && !isTokenExpired(selectedToken)) {
 				console.log("Force restoring token from backup");
 				setClientToken(selectedToken);
 				return true;
+			} else {
+				console.log("Force restore found expired or invalid token, clearing");
+				removeClientToken();
 			}
 		}
 

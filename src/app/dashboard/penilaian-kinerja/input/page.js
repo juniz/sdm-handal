@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 export default function DailyInputPage() {
-	const [selectedDate, setSelectedDate] = useState(moment().format("YYYY-MM-DD"));
+	const [selectedDate, setSelectedDate] = useState(null); // resolved on mount to handle night shifts
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
@@ -53,7 +53,57 @@ export default function DailyInputPage() {
 	const isSavingRef = useRef(false);
 	const hasPendingSaveRef = useRef(false);
 
+	// Resolve the active work date on mount.
+	// For night-shift workers (jam_pulang < jam_masuk) who are past midnight,
+	// the "work date" is still yesterday until the shift ends.
 	useEffect(() => {
+		const resolveWorkDate = async () => {
+			const todayStr = moment().format("YYYY-MM-DD");
+			const yesterdayMoment = moment().subtract(1, "day");
+			const yesterdayStr = yesterdayMoment.format("YYYY-MM-DD");
+
+			try {
+				// Fetch the schedule for yesterday's month/year
+				const yMonth = yesterdayMoment.format("MM");
+				const yYear = yesterdayMoment.format("YYYY");
+				const yDay = yesterdayMoment.format("D");
+
+				const res = await fetch(`/api/penilaian/jadwal?bulan=${yMonth}&tahun=${yYear}`);
+				if (res.ok) {
+					const data = await res.json();
+					const yShiftName = data.schedule?.[`h${yDay}`];
+					if (yShiftName && yShiftName !== "OFF" && yShiftName !== "Libur" && data.shiftDetails) {
+						const sInfo = data.shiftDetails.find(s => s.shift === yShiftName);
+						if (sInfo) {
+							const jamMasuk = sInfo.jam_masuk; // e.g. "20:00:00"
+							const jamPulang = sInfo.jam_pulang; // e.g. "06:59:00"
+							// Shift malam: jam_pulang < jam_masuk (spans midnight)
+							if (jamPulang < jamMasuk) {
+								// Shift ends at jam_pulang on today's calendar date
+								const shiftEndToday = moment(`${todayStr} ${jamPulang}`, "YYYY-MM-DD HH:mm:ss");
+								const nowMoment = moment();
+								// If current time is still before/at end of night shift, rollback to yesterday
+								if (nowMoment.isSameOrBefore(shiftEndToday)) {
+									setSelectedDate(yesterdayStr);
+									return;
+								}
+							}
+						}
+					}
+				}
+			} catch (e) {
+				console.warn("resolveWorkDate failed, defaulting to today:", e);
+			}
+
+			// Default: use today
+			setSelectedDate(todayStr);
+		};
+
+		resolveWorkDate();
+	}, []);
+
+	useEffect(() => {
+		if (!selectedDate) return; // wait until date is resolved
 		loadDailyData();
 	}, [selectedDate]);
 
