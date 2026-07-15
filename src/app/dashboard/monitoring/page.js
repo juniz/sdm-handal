@@ -9,7 +9,9 @@ import {
   ShieldAlert, 
   Download,
   CalendarDays,
-  PieChart
+  PieChart,
+  Cpu,
+  HardDrive
 } from "lucide-react";
 import { getClientToken } from "@/lib/client-auth";
 import LogViewer from "@/components/development/LogViewer";
@@ -300,12 +302,9 @@ export default function MonitoringPage() {
     const buildPath = (pts) => {
       if (pts.length === 0) return "";
       let p = `M ${pts[0].x} ${pts[0].y}`;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const xc = (pts[i].x + pts[i + 1].x) / 2;
-        const yc = (pts[i].y + pts[i + 1].y) / 2;
-        p += ` Q ${pts[i].x} ${pts[i].y}, ${xc} ${yc}`;
+      for (let i = 1; i < pts.length; i++) {
+        p += ` L ${pts[i].x} ${pts[i].y}`;
       }
-      p += ` L ${pts[pts.length - 1].x} ${pts[pts.length - 1].y}`;
       return p;
     };
 
@@ -552,6 +551,100 @@ export default function MonitoringPage() {
     );
   };
 
+  const formatUptime = (seconds) => {
+    if (!seconds) return "0 detik";
+    const d = Math.floor(seconds / (3600 * 24));
+    const h = Math.floor((seconds % (3600 * 24)) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+
+    const parts = [];
+    if (d > 0) parts.push(`${d} hari`);
+    else {
+      if (h > 0) parts.push(`${h} jam`);
+      if (m > 0) parts.push(`${m} menit`);
+      if (h === 0 && m === 0) parts.push(`${s} detik`);
+    }
+    return parts.join(" ");
+  };
+
+  const renderResourcesCard = () => {
+    const res = summary?.resources;
+    if (!res) {
+      return (
+        <div className="h-[180px] flex items-center justify-center text-slate-400 text-sm">
+          Menunggu data resource...
+        </div>
+      );
+    }
+
+    const cpuVal = res.cpu ?? 0;
+    const heapUsed = res.memory?.heapUsed ?? 0;
+    const heapTotal = res.memory?.heapTotal ?? 0;
+    const rss = res.memory?.rss ?? 0;
+    const memoryPercent = heapTotal > 0 ? (heapUsed / heapTotal) * 100 : 0;
+
+    return (
+      <div className="space-y-4">
+        {/* CPU and Uptime Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 bg-slate-50/50 rounded-lg border border-slate-100/50">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">CPU Load</span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold text-slate-700">{cpuVal.toFixed(1)}%</span>
+              <span className="text-[10px] text-slate-400">/{res.cores} Cores</span>
+            </div>
+            {/* Tiny progress bar */}
+            <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-500 ${
+                  cpuVal > 80 ? "bg-rose-500" : cpuVal > 50 ? "bg-amber-500" : "bg-sky-500"
+                }`}
+                style={{ width: `${Math.min(100, cpuVal)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50/50 rounded-lg border border-slate-100/50">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Server Uptime</span>
+            <div className="text-[11px] font-semibold text-slate-700 mt-2 truncate" title={formatUptime(res.uptime)}>
+              {formatUptime(res.uptime)}
+            </div>
+            <span className="text-[10px] text-slate-400 block mt-1">Sejak startup terakhir</span>
+          </div>
+        </div>
+
+        {/* Node.js Heap Memory */}
+        <div className="p-3 bg-slate-50/50 rounded-lg border border-slate-100/50 space-y-2">
+          <div className="flex justify-between items-center text-[10px]">
+            <span className="uppercase font-bold tracking-wider text-slate-400">Node.js Heap Memory</span>
+            <span className="font-semibold text-slate-600">{heapUsed} MB / {heapTotal} MB</span>
+          </div>
+          
+          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                memoryPercent > 85 ? "bg-rose-500" : memoryPercent > 60 ? "bg-amber-500" : "bg-indigo-500"
+              }`}
+              style={{ width: `${Math.min(100, memoryPercent)}%` }}
+            />
+          </div>
+
+          <div className="flex justify-between text-[10px] text-slate-500">
+            <span>RSS (Total OS): <strong>{rss} MB</strong></span>
+            <span>Usage: <strong>{memoryPercent.toFixed(1)}%</strong></span>
+          </div>
+        </div>
+
+        {/* Runtime info */}
+        <div className="flex justify-between items-center text-[10px] text-slate-400 px-1 border-t border-slate-100 pt-3">
+          <span>Runtime: <strong>Node.js {res.nodeVersion}</strong></span>
+          <span className="capitalize">OS: <strong>{res.platform}</strong></span>
+        </div>
+      </div>
+    );
+  };
+
   const handleDownloadLogs = (type) => {
     const token = getClientToken();
     const date = dateRange?.to ? formatDateLocal(dateRange.to) : today;
@@ -657,15 +750,32 @@ export default function MonitoringPage() {
         </Card>
       </div>
 
-      {/* Slow Endpoints Bar Chart */}
-      <Card className="border-slate-100 shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-slate-700">Endpoint Terlambat (Top 5)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {renderSlowEndpointsBar()}
-        </CardContent>
-      </Card>
+      {/* Slow Endpoints + Server Resources Row */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Slow Endpoints Bar Chart */}
+        <Card className="col-span-2 border-slate-100 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-slate-700">Endpoint Terlambat (Top 5)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {renderSlowEndpointsBar()}
+          </CardContent>
+        </Card>
+
+        {/* Server Resources Card */}
+        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-slate-50/10">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+              <Cpu className="h-4 w-4 mr-2 text-indigo-500 animate-pulse" />
+              Resource Server
+            </CardTitle>
+            <HardDrive className="h-4 w-4 text-slate-400" />
+          </CardHeader>
+          <CardContent>
+            {renderResourcesCard()}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Live Log Stream */}
       <LogViewer logs={logs} isConnected={isConnected} isPaused={isPaused} setIsPaused={setIsPaused} onClear={() => setLogs([])} />
