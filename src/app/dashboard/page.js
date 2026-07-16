@@ -177,7 +177,7 @@ const AdminMenu = ({ searchQuery = "" }) => {
 				initial={shouldReduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: shouldReduceMotion ? 0 : 0.4 }}
-				className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-1.5 space-y-0.5 relative z-10"
+				className="bg-white rounded-[24px] border border-slate-200/60 shadow-sm p-1.5 space-y-0.5 relative"
 			>
 				{filteredActions.map((action) => (
 					<motion.button
