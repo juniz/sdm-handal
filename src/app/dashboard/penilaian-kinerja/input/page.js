@@ -14,7 +14,8 @@ import {
 	Loader2, 
 	PlusCircle, 
 	Info,
-	Edit3
+	Edit3,
+	RotateCcw
 } from "lucide-react";
 
 export default function DailyInputPage() {
@@ -22,6 +23,7 @@ export default function DailyInputPage() {
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
+	const [cancelling, setCancelling] = useState(false);
 	const [activeTab, setActiveTab] = useState("kegiatan"); // "kegiatan" | "status"
 	
 	const [scheduleInfo, setScheduleInfo] = useState({ hasSchedule: false, shift: "", isTambahan: false });
@@ -472,6 +474,28 @@ export default function DailyInputPage() {
 			setErrorMsg(err.message);
 		} finally {
 			setSubmitting(false);
+		}
+	};
+
+	const handleCancelSubmit = async () => {
+		setCancelling(true);
+		setErrorMsg("");
+		setSuccessMsg("");
+		try {
+			const res = await fetch(`/api/penilaian/harian/${harianRecord.id}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ action: "cancel" })
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Gagal membatalkan pengiriman");
+			
+			setSuccessMsg("Pengiriman penilaian berhasil dibatalkan! Status kembali menjadi draf.");
+			await loadDailyData();
+		} catch (err) {
+			setErrorMsg(err.message);
+		} finally {
+			setCancelling(false);
 		}
 	};
 
@@ -985,14 +1009,39 @@ export default function DailyInputPage() {
 										</div>
 									)}
 
+									{/* ── Cancel submit action */}
+									{harianRecord && harianRecord.status === "submitted" && (
+										<div className="pt-4 border-t border-slate-100 flex justify-end">
+											<button
+												type="button"
+												onClick={handleCancelSubmit}
+												disabled={cancelling}
+												className="px-6 py-2.5 bg-rose-50 hover:bg-rose-100 disabled:bg-slate-100 disabled:text-slate-400 border border-rose-200 text-rose-700 font-bold rounded-xl text-sm transition-all duration-200 flex items-center gap-2 shadow hover:-translate-y-[1px] active:scale-[0.98] cursor-pointer"
+											>
+												{cancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+												Batal Kirim Penilaian
+											</button>
+										</div>
+									)}
+
 									{/* ── Read-only notice */}
 									{isReadOnly && (
 										<div className="p-4 bg-[#F8FAFC] border border-slate-200/60 rounded-xl flex items-start gap-3">
 											<Info className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
 											<p className="text-xs text-slate-500 leading-relaxed font-medium">
-												Penilaian harian ini telah dikunci karena berstatus{" "}
-												<strong className="capitalize text-slate-700">{harianRecord.status}</strong>.
-												Perubahan tidak dapat dilakukan kecuali dikembalikan oleh supervisor untuk direvisi.
+												{harianRecord.status === "submitted" ? (
+													<>
+														Penilaian harian ini telah dikunci karena berstatus{" "}
+														<strong className="text-slate-700">Menunggu Approval</strong>.
+														Perubahan tidak dapat dilakukan kecuali Anda membatalkan pengiriman atau dikembalikan oleh supervisor untuk direvisi.
+													</>
+												) : (
+													<>
+														Penilaian harian ini telah dikunci karena berstatus{" "}
+														<strong className="capitalize text-slate-700">{harianRecord.status}</strong>.
+														Perubahan tidak dapat dilakukan kecuali dikembalikan oleh supervisor untuk direvisi.
+													</>
+												)}
 											</p>
 										</div>
 									)}

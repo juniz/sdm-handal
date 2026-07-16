@@ -206,7 +206,7 @@ export async function POST(request, { params }) {
 		const body = await request.json();
 		const { action, catatan_supervisor } = body;
 
-		if (!action || !["submit", "approve", "revisi"].includes(action)) {
+		if (!action || !["submit", "approve", "revisi", "cancel"].includes(action)) {
 			return NextResponse.json({ error: "Aksi tidak valid" }, { status: 400 });
 		}
 
@@ -352,6 +352,34 @@ export async function POST(request, { params }) {
 					skor_kegiatan: skorKegiatan,
 					skor_total: skorTotal,
 					status: "submitted"
+				}
+			});
+		}
+
+		// 1.5 CANCEL ACTION
+		if (action === "cancel") {
+			// Owner validation
+			if (Number(harian.pegawai_id) !== Number(loggedInUser.id)) {
+				return NextResponse.json({ error: "Forbidden - Hanya pemilik yang dapat membatalkan pengiriman" }, { status: 403 });
+			}
+
+			if (harian.status !== "submitted") {
+				return NextResponse.json({ error: "Penilaian hanya dapat dibatalkan jika statusnya menunggu approval" }, { status: 400 });
+			}
+
+			await update({
+				table: "penilaian_harian",
+				data: {
+					status: "draft"
+				},
+				where: { id: id }
+			});
+
+			return NextResponse.json({
+				success: true,
+				message: "Pengiriman penilaian berhasil dibatalkan",
+				data: {
+					status: "draft"
 				}
 			});
 		}
