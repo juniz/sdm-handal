@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Check, Clock, AlertCircle, Calendar, Loader2 } from "lucide-react";
-
+import { fetchSdmAttendanceStats } from "@/lib/attendance-gql-client";
+ 
 const DayStatus = ({ day, status }) => {
 	const statusConfig = useMemo(() => {
 		switch (status) {
@@ -89,14 +90,13 @@ export function AttendanceStats() {
 	useEffect(() => {
 		const fetchStats = async () => {
 			try {
-				const response = await fetch("/api/attendance/stats");
-				const data = await response.json();
+				const data = await fetchSdmAttendanceStats();
 
-				if (data.error) {
-					throw new Error(data.error);
+				if (!data) {
+					throw new Error("Gagal mengambil data statistik presensi");
 				}
 
-				setStats(data.data);
+				setStats(data);
 			} catch (error) {
 				console.error("Error fetching stats:", error);
 				setError(error.message);

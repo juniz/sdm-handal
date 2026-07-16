@@ -56,3 +56,6 @@ pm2.log
 
 # uploads folder
 /uploads/
+
+# graphify
+graphify-out

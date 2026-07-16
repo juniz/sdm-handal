@@ -49,7 +49,7 @@ export function BottomNavigation() {
 	};
 
 	return (
-		<div className="fixed bottom-6 left-4 right-4 md:hidden">
+		<div className="fixed bottom-6 left-4 right-4 md:hidden z-50">
 			{/* Container dengan efek glass morphism */}
 			<div className="relative bg-white/80 backdrop-blur-lg rounded-full shadow-lg border border-white/20">
 				<div className="flex justify-around items-center h-16 px-4">

@@ -238,3 +238,58 @@ export async function mutationAutoCheckout() {
   `);
   return data.autoCheckout;
 }
+
+let sdmProfilePromise = null;
+export async function fetchSdmProfile() {
+  if (!sdmProfilePromise) {
+    sdmProfilePromise = gql(`
+      query {
+        sdmProfile {
+          id
+          username
+          nama
+          departemen
+          departemen_name
+          jabatan
+          tmp_lahir
+          tgl_lahir
+          alamat
+          photo
+        }
+      }
+    `).catch(err => {
+      sdmProfilePromise = null;
+      throw err;
+    });
+  }
+  const data = await sdmProfilePromise;
+  return data.sdmProfile;
+}
+
+let sdmStatsPromise = null;
+export async function fetchSdmAttendanceStats() {
+  if (!sdmStatsPromise) {
+    sdmStatsPromise = gql(`
+      query {
+        sdmAttendanceStats {
+          daily {
+            day
+            status
+          }
+          stats {
+            total
+            onTime
+            late
+            leave
+          }
+        }
+      }
+    `).catch(err => {
+      sdmStatsPromise = null;
+      throw err;
+    });
+  }
+  const data = await sdmStatsPromise;
+  return data.sdmAttendanceStats;
+}
+
