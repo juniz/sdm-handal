@@ -1,13 +1,13 @@
 "use client";
-
+ 
 import { useState, useEffect } from "react";
-import { jwtDecode } from "jwt-decode";
-
+import { fetchSdmProfile } from "@/lib/attendance-gql-client";
+ 
 export function useUser() {
 	const [user, setUser] = useState(null);
 	const [error, setError] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
-
+ 
 	useEffect(() => {
 		const fetchUser = async () => {
 			try {
@@ -15,23 +15,18 @@ export function useUser() {
 				if (typeof window === "undefined") {
 					return;
 				}
-
-				// Gunakan API endpoint untuk mendapatkan data user
-				const response = await fetch("/api/auth/user");
-				const data = await response.json();
-
-				if (!response.ok) {
-					throw new Error(data.error || "Gagal mengambil data user");
-				}
-
-				if (!data.user) {
+ 
+				// Gunakan GraphQL client untuk mendapatkan data user
+				const sdmProfile = await fetchSdmProfile();
+ 
+				if (!sdmProfile) {
 					throw new Error("Data user tidak ditemukan");
 				}
-
+ 
 				// Format tanggal lahir jika ada
 				let formattedDate = "";
-				if (data.user.tgl_lahir) {
-					formattedDate = new Date(data.user.tgl_lahir).toLocaleDateString(
+				if (sdmProfile.tgl_lahir) {
+					formattedDate = new Date(sdmProfile.tgl_lahir).toLocaleDateString(
 						"id-ID",
 						{
 							day: "2-digit",
@@ -40,9 +35,9 @@ export function useUser() {
 						}
 					);
 				}
-
+ 
 				setUser({
-					...data.user,
+					...sdmProfile,
 					formattedBirthDate: formattedDate,
 				});
 				setError(null);
@@ -54,10 +49,10 @@ export function useUser() {
 				setIsLoading(false);
 			}
 		};
-
+ 
 		fetchUser();
 	}, []);
-
+ 
 	return {
 		user,
 		error,
