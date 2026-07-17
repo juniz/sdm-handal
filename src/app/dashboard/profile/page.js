@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
 	User,
-	Mail,
-	Phone,
 	MapPin,
 	Calendar,
 	Briefcase,
@@ -21,25 +18,32 @@ import {
 	Printer,
 	Loader2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { removeClientToken } from "@/lib/client-auth";
 import EducationHistorySection from "./EducationHistorySection";
 import SeminarHistorySection from "./SeminarHistorySection";
 import { printCVReport } from "@/components/profile/PrintCVReport";
+import {
+	fetchProfileDetail,
+	mutationUpdateProfile,
+	fetchEducationHistory,
+	fetchSeminarHistory,
+	fetchPendidikanList,
+	mutationUpdatePassword,
+} from "@/lib/profile-gql-client";
 
-// Komponen untuk menampilkan foto profil dengan error handling
 const ProfileImage = ({ photoUrl, name }) => {
 	const [imgError, setImgError] = useState(false);
 
 	return (
-		<div className="relative w-32 h-32">
+		<div className="relative w-24 h-24 rounded-lg overflow-hidden border-2 border-white shadow bg-slate-50 shrink-0 -mt-12">
 			<Image
 				src={
 					imgError ? "/default-avatar.png" : photoUrl || "/default-avatar.png"
 				}
 				alt={`Foto ${name}`}
 				fill
-				className="rounded-md object-cover"
+				className="object-cover"
 				onError={() => setImgError(true)}
 				sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
 				priority
@@ -48,64 +52,46 @@ const ProfileImage = ({ photoUrl, name }) => {
 	);
 };
 
-const ProfileField = ({ icon: Icon, label, value, isLarge = false }) => (
-	<div
-		className={`bg-white rounded-lg p-4 shadow-sm ${
-			isLarge ? "col-span-2" : ""
-		}`}
-	>
-		<div className="flex items-start gap-3">
-			<div className="rounded-full bg-blue-50 p-2">
-				<Icon className="w-5 h-5 text-blue-600" />
-			</div>
-			<div>
-				<p className="text-sm text-gray-500">{label}</p>
-				<p className="font-medium mt-1">{value || "-"}</p>
-			</div>
+// Compact Info Item with smaller text and icons
+const InfoItem = ({ icon: Icon, label, value }) => (
+	<div className="flex items-center gap-2.5 py-1.5 border-b border-slate-50 last:border-0 min-w-0 w-full">
+		<div className="w-7 h-7 rounded-md bg-[#E6F1FB] text-[#185FA5] flex items-center justify-center shrink-0">
+			<Icon className="w-3.5 h-3.5" />
+		</div>
+		<div className="min-w-0 flex-1">
+			<p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 font-sans">{label}</p>
+			<p className="text-xs font-semibold text-slate-700 mt-0.5 truncate" title={value || "-"}>{value || "-"}</p>
 		</div>
 	</div>
 );
 
-const ProfileSection = ({ title, children }) => (
-	<motion.div
-		initial={{ opacity: 0, y: 20 }}
-		animate={{ opacity: 1, y: 0 }}
-		transition={{ duration: 0.5 }}
-		className="mb-8"
-	>
-		<h2 className="text-lg font-semibold mb-4">{title}</h2>
-		<div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>
-	</motion.div>
-);
-
-// Komponen Modal Konfirmasi Logout
 const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 pb-24 sm:pb-4">
 			<motion.div
-				initial={{ scale: 0.9, opacity: 0 }}
+				initial={{ scale: 0.95, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
-				exit={{ scale: 0.9, opacity: 0 }}
-				className="bg-white rounded-lg p-6 w-full max-w-sm"
+				exit={{ scale: 0.95, opacity: 0 }}
+				className="bg-white rounded-xl p-5 w-full max-w-sm border border-slate-100 shadow-xl"
 			>
-				<h3 className="text-lg font-semibold mb-4">Konfirmasi Logout</h3>
-				<p className="text-gray-600 mb-6">
-					Apakah Anda yakin ingin keluar dari aplikasi?
+				<h3 className="text-base font-bold text-slate-800 font-figtree mb-1.5">Konfirmasi Logout</h3>
+				<p className="text-slate-500 text-xs leading-relaxed mb-5">
+					Apakah Anda yakin ingin keluar dari sistem kepegawaian sdm?
 				</p>
-				<div className="flex justify-end gap-3">
+				<div className="flex justify-end gap-2.5">
 					<button
 						onClick={onClose}
-						className="px-4 py-2 text-gray-600 hover:text-gray-800"
+						className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors"
 					>
 						Batal
 					</button>
 					<button
 						onClick={onConfirm}
-						className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+						className="px-4 py-2 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 active:scale-95 transition-all shadow-sm"
 					>
-						Logout
+						Keluar
 					</button>
 				</div>
 			</motion.div>
@@ -113,7 +99,6 @@ const LogoutConfirmationModal = ({ isOpen, onClose, onConfirm }) => {
 	);
 };
 
-// Komponen Modal Edit Profile
 const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 	const [formData, setFormData] = useState({
 		alamat: "",
@@ -134,18 +119,13 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
 
-	// Fetch data pendidikan dan riwayat pendidikan saat modal dibuka
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				// Fetch data pendidikan
-				const pendidikanResponse = await fetch("/api/pendidikan");
-				const pendidikanData = await pendidikanResponse.json();
-
-				if (pendidikanData.status === 200) {
-					setPendidikanList(pendidikanData.data);
-				}			} catch (error) {
-				console.error("Error fetching data:", error);
+				const list = await fetchPendidikanList();
+				setPendidikanList(list);
+			} catch (error) {
+				console.error("Error fetching pendidikan list:", error);
 			}
 		};
 
@@ -154,7 +134,6 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 		}
 	}, [isOpen]);
 
-	// Set initial form data when modal opens
 	useEffect(() => {
 		if (isOpen && profile) {
 			setFormData({
@@ -168,12 +147,8 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 				npwp: profile.npwp || "",
 				rekening: profile.rekening || "",
 				bidang: profile.bidang || "",
-				mulai_kerja: profile.mulai_kerja
-					? profile.mulai_kerja.split("T")[0]
-					: "",
-				mulai_kontrak: profile.mulai_kontrak
-					? profile.mulai_kontrak.split("T")[0]
-					: "",
+				mulai_kerja: profile.mulai_kerja ? profile.mulai_kerja.split("T")[0] : "",
+				mulai_kontrak: profile.mulai_kontrak ? profile.mulai_kontrak.split("T")[0] : "",
 			});
 		}
 	}, [isOpen, profile]);
@@ -203,7 +178,6 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 		e.preventDefault();
 		setError("");
 
-		// Validasi alamat tidak boleh mengandung baris baru / new line
 		if (formData.alamat && /[\r\n]/.test(formData.alamat)) {
 			setError("Alamat tidak boleh mengandung baris baru (new line)");
 			return;
@@ -212,20 +186,7 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 		setLoading(true);
 
 		try {
-			const response = await fetch("/api/profile", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(formData),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || "Terjadi kesalahan");
-			}
-
+			await mutationUpdateProfile(formData);
 			setSuccess(true);
 			onUpdate(formData);
 
@@ -239,243 +200,211 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 		}
 	};
 
-
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 pb-24 sm:pb-4">
 			<motion.div
-				initial={{ scale: 0.9, opacity: 0 }}
+				initial={{ scale: 0.95, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
-				exit={{ scale: 0.9, opacity: 0 }}
-				className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+				exit={{ scale: 0.95, opacity: 0 }}
+				className="bg-white rounded-xl w-full max-w-3xl max-h-[85vh] flex flex-col border border-slate-100 shadow-xl overflow-hidden"
 			>
-				<h3 className="text-lg font-semibold mb-4">Edit Data Diri Lengkap</h3>
+				<div className="p-4 border-b bg-slate-50/50 shrink-0">
+					<h3 className="text-base font-bold text-slate-800 font-figtree">Ubah Data Diri</h3>
+				</div>
 				{success ? (
-					<div className="text-green-600 text-center py-4">
-						Data berhasil diupdate!
+					<div className="text-green-600 text-center py-6 font-semibold flex flex-col items-center gap-1.5 text-sm flex-1 justify-center">
+						<div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-lg font-bold">✓</div>
+						Perubahan berhasil disimpan!
 					</div>
 				) : (
-					<form onSubmit={handleSubmit}>
-						{error && (
-							<div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-								{error}
-							</div>
-						)}
+					<form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+						<div className="flex-1 overflow-y-auto p-4 space-y-4">
+							{error && (
+								<div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs border border-red-100">
+									{error}
+								</div>
+							)}
 
-						{/* Informasi Pribadi */}
-						<div className="mb-6">
-							<h4 className="text-md font-semibold mb-3 text-gray-800 border-b pb-2">
-								Informasi Pribadi
-							</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Jenis Kelamin
-									</label>
-									<select
-										name="jk"
-										value={formData.jk}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									>
-										<option value="">Pilih Jenis Kelamin</option>
-										<option value="Pria">Laki-laki</option>
-										<option value="Wanita">Perempuan</option>
-									</select>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tempat Lahir
-									</label>
-									<input
-										type="text"
-										name="tmp_lahir"
-										value={formData.tmp_lahir}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan tempat lahir"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Tanggal Lahir
-									</label>
-									<input
-										type="date"
-										name="tgl_lahir"
-										value={formData.tgl_lahir}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Pendidikan
-									</label>
-									<select
-										name="pendidikan"
-										value={formData.pendidikan}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									>
-										<option value="">Pilih Pendidikan</option>
-										{pendidikanList.map((item) => (
-											<option key={item.tingkat} value={item.tingkat}>
-												{item.tingkat}
-											</option>
-										))}
-									</select>
-								</div>
-								<div className="md:col-span-2">
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Alamat
-									</label>
-									<textarea
-										name="alamat"
-										value={formData.alamat}
-										onChange={handleChange}
-										onKeyDown={(e) => {
-											if (e.key === "Enter") {
-												e.preventDefault();
-											}
-										}}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan alamat lengkap (tanpa baris baru)"
-										rows="3"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Kota
-									</label>
-									<input
-										type="text"
-										name="kota"
-										value={formData.kota}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan kota"
-									/>
+							<div>
+								<h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 font-figtree">
+									Informasi Pribadi
+								</h4>
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Jenis Kelamin</label>
+										<select
+											name="jk"
+											value={formData.jk}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+										>
+											<option value="">Pilih Jenis Kelamin</option>
+											<option value="Pria">Laki-laki</option>
+											<option value="Wanita">Perempuan</option>
+										</select>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Tempat Lahir</label>
+										<input
+											type="text"
+											name="tmp_lahir"
+											value={formData.tmp_lahir}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="Tempat lahir"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Tanggal Lahir</label>
+										<input
+											type="date"
+											name="tgl_lahir"
+											value={formData.tgl_lahir}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Pendidikan Terakhir</label>
+										<select
+											name="pendidikan"
+											value={formData.pendidikan}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+										>
+											<option value="">Pilih Pendidikan</option>
+											{pendidikanList.map((item) => (
+												<option key={item.tingkat} value={item.tingkat}>
+													{item.tingkat}
+												</option>
+											))}
+										</select>
+									</div>
+									<div className="md:col-span-2">
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Alamat Lengkap</label>
+										<textarea
+											name="alamat"
+											value={formData.alamat}
+											onChange={handleChange}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") {
+													e.preventDefault();
+												}
+											}}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all resize-none"
+											placeholder="Tulis alamat lengkap tanpa baris baru..."
+											rows="2"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Kota / Kabupaten</label>
+										<input
+											type="text"
+											name="kota"
+											value={formData.kota}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="Kota tempat tinggal"
+										/>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{/* Informasi Identitas */}
-						<div className="mb-6">
-							<h4 className="text-md font-semibold mb-3 text-gray-800 border-b pb-2">
-								Informasi Identitas
-							</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										No. KTP
-									</label>
-									<input
-										type="text"
-										name="no_ktp"
-										value={formData.no_ktp}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan nomor KTP"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										NPWP
-									</label>
-									<input
-										type="text"
-										name="npwp"
-										value={formData.npwp}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan NPWP"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										No. Rekening
-									</label>
-									<input
-										type="text"
-										name="rekening"
-										value={formData.rekening}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan nomor rekening"
-									/>
+							<div className="pt-3 border-t">
+								<h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 font-figtree">
+									Informasi Identitas & Finansial
+								</h4>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Nomor NIK (KTP)</label>
+										<input
+											type="text"
+											name="no_ktp"
+											value={formData.no_ktp}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="16 digit NIK"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Nomor NPWP</label>
+										<input
+											type="text"
+											name="npwp"
+											value={formData.npwp}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="Nomor NPWP"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Nomor Rekening Gaji</label>
+										<input
+											type="text"
+											name="rekening"
+											value={formData.rekening}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="Nomor rekening"
+										/>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{/* Informasi Kepegawaian */}
-						<div className="mb-6">
-							<h4 className="text-md font-semibold mb-3 text-gray-800 border-b pb-2">
-								Informasi Kepegawaian
-							</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Bidang
-									</label>
-									<input
-										type="text"
-										name="bidang"
-										value={formData.bidang}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-										placeholder="Masukkan bidang kerja"
-									/>
-								</div>
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Mulai Kerja
-									</label>
-									<input
-										type="date"
-										name="mulai_kerja"
-										value={formData.mulai_kerja}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
+							<div className="pt-3 border-t">
+								<h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2.5 font-figtree">
+									Informasi Kepegawaian & Kontrak
+								</h4>
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Bidang Pekerjaan</label>
+										<input
+											type="text"
+											name="bidang"
+											value={formData.bidang}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+											placeholder="Bidang unit/kerja"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Tanggal Mulai Kerja</label>
+										<input
+											type="date"
+											name="mulai_kerja"
+											value={formData.mulai_kerja}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+										/>
+									</div>
+									<div>
+										<label className="block text-[10px] font-semibold text-slate-500 mb-1">Tanggal Mulai Kontrak</label>
+										<input
+											type="date"
+											name="mulai_kontrak"
+											value={formData.mulai_kontrak}
+											onChange={handleChange}
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all"
+										/>
+									</div>
 								</div>
 							</div>
 						</div>
 
-						{/* Informasi Kontrak */}
-						<div className="mb-6">
-							<h4 className="text-md font-semibold mb-3 text-gray-800 border-b pb-2">
-								Informasi Kontrak
-							</h4>
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<label className="block text-sm font-medium text-gray-700 mb-1">
-										Mulai Kontrak
-									</label>
-									<input
-										type="date"
-										name="mulai_kontrak"
-										value={formData.mulai_kontrak}
-										onChange={handleChange}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+						<div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
 							<button
 								type="button"
 								onClick={handleClose}
-								className="px-6 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+								className="px-4 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
 								disabled={loading}
 							>
 								Batal
 							</button>
 							<button
 								type="submit"
-								className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300"
+								className="px-4.5 py-2 bg-[#185FA5] text-white rounded-lg text-xs font-semibold hover:bg-[#0c447c] active:scale-95 transition-all"
 								disabled={loading}
 							>
 								{loading ? "Menyimpan..." : "Simpan Perubahan"}
@@ -483,13 +412,11 @@ const EditProfileModal = ({ isOpen, onClose, profile, onUpdate }) => {
 						</div>
 					</form>
 				)}
-
 			</motion.div>
 		</div>
 	);
 };
 
-// Komponen Modal Ubah Password
 const ChangePasswordModal = ({ isOpen, onClose, onLogout }) => {
 	const [oldPassword, setOldPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
@@ -500,6 +427,8 @@ const ChangePasswordModal = ({ isOpen, onClose, onLogout }) => {
 	const [showOldPassword, setShowOldPassword] = useState(false);
 	const [showNewPassword, setShowNewPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+	if (!isOpen) return null;
 
 	const resetForm = () => {
 		setOldPassword("");
@@ -522,42 +451,22 @@ const ChangePasswordModal = ({ isOpen, onClose, onLogout }) => {
 		setError("");
 		setLoading(true);
 
-		// Validasi
 		if (!oldPassword || !newPassword || !confirmPassword) {
-			setError("Semua field harus diisi");
+			setError("Semua inputan wajib diisi");
 			setLoading(false);
 			return;
 		}
 
 		if (newPassword !== confirmPassword) {
-			setError("Password baru dan konfirmasi password tidak sama");
+			setError("Konfirmasi password baru tidak sesuai");
 			setLoading(false);
 			return;
 		}
 
 		try {
-			const response = await fetch("/api/profile/password", {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					oldPassword,
-					newPassword,
-				}),
-			});
-
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error(data.error || "Terjadi kesalahan");
-			}
-
+			await mutationUpdatePassword(oldPassword, newPassword);
 			setSuccess(true);
-
-			// Tunggu 1.5 detik untuk menampilkan pesan sukses
 			setTimeout(() => {
-				// Tutup modal dan lakukan proses logout
 				handleClose();
 				onLogout();
 			}, 1500);
@@ -568,213 +477,102 @@ const ChangePasswordModal = ({ isOpen, onClose, onLogout }) => {
 		}
 	};
 
-	if (!isOpen) return null;
+	const VisibilityButton = ({ isVisible, onClick }) => (
+		<button
+			type="button"
+			onClick={onClick}
+			className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+		>
+			{isVisible ? (
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+					<path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+				</svg>
+			) : (
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+					<path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+					<path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+				</svg>
+			)}
+		</button>
+	);
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 pb-24 sm:pb-4">
 			<motion.div
-				initial={{ scale: 0.9, opacity: 0 }}
+				initial={{ scale: 0.95, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
-				exit={{ scale: 0.9, opacity: 0 }}
-				className="bg-white rounded-lg p-6 w-full max-w-md"
+				exit={{ scale: 0.95, opacity: 0 }}
+				className="bg-white rounded-xl p-5 w-full max-w-sm border border-slate-100 shadow-xl"
 			>
-				<h3 className="text-lg font-semibold mb-4">Ubah Password</h3>
+				<h3 className="text-base font-bold text-slate-800 font-figtree mb-4">Ubah Password Akun</h3>
 				{success ? (
-					<div className="text-green-600 text-center py-4">
-						Password berhasil diubah!
+					<div className="text-green-600 text-center py-5 font-semibold flex flex-col items-center gap-1.5 text-xs">
+						<div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500 text-lg font-bold">✓</div>
+						Password berhasil diubah, silakan masuk kembali!
 					</div>
 				) : (
-					<form onSubmit={handleSubmit}>
+					<form onSubmit={handleSubmit} className="space-y-3.5">
 						{error && (
-							<div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+							<div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs border border-red-100">
 								{error}
 							</div>
 						)}
-						<div className="space-y-4">
+						<div className="space-y-3">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Password Lama
-								</label>
+								<label className="block text-[10px] font-semibold text-slate-500 mb-1">Password Lama</label>
 								<div className="relative">
 									<input
 										type={showOldPassword ? "text" : "password"}
 										value={oldPassword}
 										onChange={(e) => setOldPassword(e.target.value)}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-										placeholder="Masukkan password lama"
+										className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all pr-9"
+										placeholder="Masukkan password saat ini"
 									/>
-									<button
-										type="button"
-										onClick={() => setShowOldPassword(!showOldPassword)}
-										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showOldPassword ? (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
-												/>
-											</svg>
-										) : (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-												/>
-											</svg>
-										)}
-									</button>
+									<VisibilityButton isVisible={showOldPassword} onClick={() => setShowOldPassword(!showOldPassword)} />
 								</div>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Password Baru
-								</label>
+								<label className="block text-[10px] font-semibold text-slate-500 mb-1">Password Baru</label>
 								<div className="relative">
 									<input
 										type={showNewPassword ? "text" : "password"}
 										value={newPassword}
 										onChange={(e) => setNewPassword(e.target.value)}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+										className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all pr-9"
 										placeholder="Masukkan password baru"
 									/>
-									<button
-										type="button"
-										onClick={() => setShowNewPassword(!showNewPassword)}
-										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showNewPassword ? (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
-												/>
-											</svg>
-										) : (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-												/>
-											</svg>
-										)}
-									</button>
+									<VisibilityButton isVisible={showNewPassword} onClick={() => setShowNewPassword(!showNewPassword)} />
 								</div>
 							</div>
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Konfirmasi Password Baru
-								</label>
+								<label className="block text-[10px] font-semibold text-slate-500 mb-1">Konfirmasi Password Baru</label>
 								<div className="relative">
 									<input
 										type={showConfirmPassword ? "text" : "password"}
 										value={confirmPassword}
 										onChange={(e) => setConfirmPassword(e.target.value)}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-										placeholder="Konfirmasi password baru"
+										className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all pr-9"
+										placeholder="Ulangi password baru"
 									/>
-									<button
-										type="button"
-										onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-										className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-									>
-										{showConfirmPassword ? (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
-												/>
-											</svg>
-										) : (
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												strokeWidth={1.5}
-												stroke="currentColor"
-												className="w-5 h-5"
-											>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-												/>
-												<path
-													strokeLinecap="round"
-													strokeLinejoin="round"
-													d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-												/>
-											</svg>
-										)}
-									</button>
+									<VisibilityButton isVisible={showConfirmPassword} onClick={() => setShowConfirmPassword(!showConfirmPassword)} />
 								</div>
 							</div>
 						</div>
-						<div className="flex justify-end gap-3 mt-6">
+						<div className="flex justify-end gap-2.5 pt-4 border-t mt-4">
 							<button
 								type="button"
 								onClick={handleClose}
-								className="px-4 py-2 text-gray-600 hover:text-gray-800"
+								className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition-colors"
 								disabled={loading}
 							>
 								Batal
 							</button>
 							<button
 								type="submit"
-								className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:bg-blue-300"
+								className="px-4.5 py-2 bg-[#185FA5] text-white rounded-lg text-xs font-semibold hover:bg-[#0c447c] active:scale-95 transition-all shadow-sm"
 								disabled={loading}
 							>
-								{loading ? "Menyimpan..." : "Simpan"}
+								{loading ? "Menyimpan..." : "Simpan Password"}
 							</button>
 						</div>
 					</form>
@@ -793,7 +591,6 @@ export default function ProfilePage() {
 	const [showLogoutModal, setShowLogoutModal] = useState(false);
 	const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 	const [showEditProfileModal, setShowEditProfileModal] = useState(false);
-	const [activeTab, setActiveTab] = useState("pribadi");
 	const [isPrintingCV, setIsPrintingCV] = useState(false);
 
 	const handlePrintCV = async () => {
@@ -808,63 +605,26 @@ export default function ProfilePage() {
 		}
 	};
 
-	const TABS = [
-		{ id: "pribadi", label: "Informasi Pribadi", icon: User },
-		{ id: "kepegawaian", label: "Kepegawaian", icon: Briefcase },
-		{ id: "kontrak", label: "Kontrak", icon: MapPin },
-		{ id: "pendidikan", label: "Pendidikan & Sertifikasi", icon: GraduationCap },
-	];
-
 	useEffect(() => {
-		const fetchProfile = async () => {
+		const loadData = async () => {
 			try {
-				const response = await fetch("/api/profile");
-				const data = await response.json();
-
-				if (data.error) {
-					throw new Error(data.error);
-				}
-
-				setProfile(data.data);
+				const [pData, eduData, semData] = await Promise.all([
+					fetchProfileDetail(),
+					fetchEducationHistory(),
+					fetchSeminarHistory(),
+				]);
+				setProfile(pData);
+				setEducationHistory(eduData);
+				setSeminarHistory(semData);
 			} catch (error) {
-				console.error("Error fetching profile:", error);
+				console.error("Error loading profile page data:", error);
 			} finally {
 				setLoading(false);
 			}
 		};
-
-		const fetchEducationHistory = async () => {
-			try {
-				const response = await fetch("/api/profile/education");
-				const data = await response.json();
-
-				if (data.status === 200) {
-					setEducationHistory(data.data);
-				}
-			} catch (error) {
-				console.error("Error fetching education history:", error);
-			}
-		};
-
-		const fetchSeminarHistory = async () => {
-			try {
-				const response = await fetch("/api/profile/seminar");
-				const data = await response.json();
-
-				if (data.status === 200) {
-					setSeminarHistory(data.data);
-				}
-			} catch (error) {
-				console.error("Error fetching seminar history:", error);
-			}
-		};
-
-		fetchProfile();
-		fetchEducationHistory();
-		fetchSeminarHistory();
+		loadData();
 	}, []);
 
-	// Handler untuk update profile setelah edit
 	const handleProfileUpdate = (updatedData) => {
 		setProfile((prev) => ({
 			...prev,
@@ -874,8 +634,8 @@ export default function ProfilePage() {
 
 	if (loading) {
 		return (
-			<div className="flex justify-center items-center min-h-[60vh]">
-				<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+			<div className="flex justify-center items-center min-h-[50vh]">
+				<div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#185FA5]"></div>
 			</div>
 		);
 	}
@@ -883,7 +643,7 @@ export default function ProfilePage() {
 	if (!profile) {
 		return (
 			<div className="text-center py-12">
-				<p className="text-gray-500">Gagal memuat data profil</p>
+				<p className="text-xs text-slate-500">Gagal memuat data profil pegawai.</p>
 			</div>
 		);
 	}
@@ -892,27 +652,20 @@ export default function ProfilePage() {
 		if (!dateString) return "-";
 		return new Date(dateString).toLocaleDateString("id-ID", {
 			day: "numeric",
-			month: "long",
+			month: "short",
 			year: "numeric",
 		});
 	};
 
-	// Fungsi untuk memformat URL gambar
 	const getPhotoUrl = (photoPath) => {
 		if (!photoPath) return null;
-
-		// Jika photoPath sudah berupa URL lengkap
 		if (photoPath.startsWith("http://") || photoPath.startsWith("https://")) {
 			return photoPath;
 		}
-
-		// Jika menggunakan BASE_IMAGE_URL dari environment
 		const baseUrl = process.env.NEXT_PUBLIC_BASE_IMAGE_URL;
 		if (baseUrl) {
 			return `${baseUrl}${photoPath}`;
 		}
-
-		// Jika tidak ada BASE_IMAGE_URL, gunakan path relatif
 		return photoPath;
 	};
 
@@ -935,164 +688,154 @@ export default function ProfilePage() {
 	};
 
 	return (
-		<div className="max-w-4xl mx-auto px-4 py-6">
-			{/* Header Profile with Action Buttons */}
+		<div className="max-w-5xl mx-auto px-3 py-4 font-sans space-y-4">
+			{/* High-density Premium Profile Header Card */}
 			<motion.div
-				initial={{ opacity: 0, y: -20 }}
+				initial={{ opacity: 0, y: -10 }}
 				animate={{ opacity: 1, y: 0 }}
-				className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4"
+				className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden"
 			>
-				<div className="flex items-center gap-6">
+				{/* Stylized Gradient Backdrop in deep medical blue */}
+				<div className="h-24 bg-gradient-to-r from-[#042C53] via-[#0C447C] to-[#185FA5] relative">
+					<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent"></div>
+				</div>
+
+				<div className="px-4 pb-4 pt-0 flex flex-col sm:flex-row items-center sm:items-end gap-4 relative z-10">
 					<ProfileImage
 						photoUrl={getPhotoUrl(profile.photo)}
 						name={profile.nama}
 					/>
-					<div className="text-center md:text-left">
-						<h1 className="text-xl font-bold">{profile.nama}</h1>
-						<div className="flex flex-wrap justify-center md:justify-start gap-2 mt-3">
-							<span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm">
+					
+					<div className="flex-1 text-center sm:text-left mt-2 sm:mt-0">
+						<h1 className="text-xl font-bold text-slate-800 font-figtree">{profile.nama}</h1>
+						<p className="text-[#185FA5] font-semibold text-xs mt-0.5">{profile.jbtn || "Staff Kepegawaian"}</p>
+						
+						<div className="flex flex-wrap justify-center sm:justify-start gap-1.5 mt-2">
+							<span className="px-2.5 py-0.5 bg-[#E6F1FB] text-[#185FA5] rounded-md text-[10px] font-bold font-figtree uppercase tracking-wider">
 								{profile.departemen}
 							</span>
-							<span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-sm">
-								{profile.jbtn}
-							</span>
-							<span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-sm">
-								{profile.stts_aktif}
+							<span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold font-figtree uppercase tracking-wider">
+								{profile.stts_aktif || "Aktif"}
 							</span>
 						</div>
 					</div>
-				</div>
-				<div className="flex gap-2">
-					<button
-						onClick={handlePrintCV}
-						disabled={isPrintingCV}
-						className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-70 disabled:cursor-wait"
-						title="Cetak CV (PDF)"
-					>
-						{isPrintingCV ? (
-							<Loader2 className="w-4 h-4 hidden sm:block animate-spin" />
-						) : (
-							<Printer className="w-4 h-4 hidden sm:block" />
-						)}
-						<span className="text-xs">Cetak CV</span>
-					</button>
-					<button
-						onClick={() => setShowEditProfileModal(true)}
-						className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-						title="Edit Profile"
-					>
-						{/* <Edit className="w-4 h-4" /> */}
-						<span className="text-xs">Ubah Profile</span>
-					</button>
-					<button
-						onClick={() => setShowChangePasswordModal(true)}
-						className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-						title="Ubah Password"
-					>
-						{/* <Lock className="w-4 h-4" /> */}
-						<span className="text-xs">Ubah Password</span>
-					</button>
-					<button
-						onClick={() => setShowLogoutModal(true)}
-						className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-						title="Logout"
-					>
-						{/* <LogOut className="w-4 h-4" /> */}
-						<span className="text-xs">Keluar</span>
-					</button>
+
+					{/* Action Buttons: Ultra-Compact Responsive Layout */}
+					<div className="grid grid-cols-2 sm:flex sm:flex-row gap-1.5 w-full sm:w-auto mt-4 sm:mt-0 shrink-0">
+						<button
+							onClick={handlePrintCV}
+							disabled={isPrintingCV}
+							className="flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-lg transition-all font-semibold text-xs active:scale-95 disabled:opacity-75"
+							title="Cetak CV (PDF)"
+						>
+							{isPrintingCV ? (
+								<Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
+							) : (
+								<Printer className="w-3.5 h-3.5 text-slate-500" />
+							)}
+							<span>Cetak CV</span>
+						</button>
+						<button
+							onClick={() => setShowEditProfileModal(true)}
+							className="flex items-center justify-center gap-1.5 px-3 py-2 bg-[#185FA5] text-white hover:bg-[#0c447c] rounded-lg transition-all font-semibold text-xs active:scale-95 shadow-sm shadow-[#185FA5]/15"
+							title="Edit Profile"
+						>
+							<Edit className="w-3.5 h-3.5" />
+							<span>Ubah Profile</span>
+						</button>
+						<button
+							onClick={() => setShowChangePasswordModal(true)}
+							className="flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500 text-white hover:bg-amber-600 rounded-lg transition-all font-semibold text-xs active:scale-95 shadow-sm shadow-amber-500/15"
+							title="Ubah Password"
+						>
+							<Lock className="w-3.5 h-3.5" />
+							<span>Password</span>
+						</button>
+						<button
+							onClick={() => setShowLogoutModal(true)}
+							className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-all font-semibold text-xs active:scale-95"
+							title="Logout"
+						>
+							<LogOut className="w-3.5 h-3.5" />
+							<span>Keluar</span>
+						</button>
+					</div>
 				</div>
 			</motion.div>
 
-			{/* Tabs Navigation */}
-			<div className="flex flex-nowrap items-center gap-1 border-b border-gray-200 pb-px mb-8 mt-6 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-				{TABS.map((tab) => {
-					const isActive = activeTab === tab.id;
-					const Icon = tab.icon;
-					return (
-						<button
-							key={tab.id}
-							onClick={() => setActiveTab(tab.id)}
-							className={`relative flex items-center gap-2 px-5 py-3 transition-colors text-sm font-semibold rounded-t-xl whitespace-nowrap shrink-0 ${
-								isActive ? "text-[#0093dd]" : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-							}`}
-						>
-							<Icon className="w-4 h-4" />
-							{tab.label}
-							{isActive && (
-								<motion.div
-									layoutId="activeProfileTab"
-									className="absolute left-0 right-0 bottom-0 h-0.5 bg-[#0093dd]"
-									initial={false}
-									transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-								/>
-							)}
-						</button>
-					);
-				})}
-			</div>
-
-			<AnimatePresence mode="wait">
+			{/* Bento Grid Layout - High Density compact */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+				{/* Bento Card 1: Informasi Pribadi */}
 				<motion.div
-					key={activeTab}
 					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
-					exit={{ opacity: 0, y: -10 }}
-					transition={{ duration: 0.3 }}
+					transition={{ duration: 0.3, delay: 0.05 }}
+					className="lg:col-span-1 bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col hover:shadow transition-all duration-300"
 				>
-					{activeTab === "pribadi" && (
-						<ProfileSection title="Informasi Pribadi">
-							<ProfileField icon={User} label="Jenis Kelamin" value={profile.jk} isLarge />
-							<ProfileField icon={GraduationCap} label="Pendidikan Terakhir" value={profile.pendidikan} isLarge />
-							<ProfileField icon={MapPin} label="Alamat Tempat Tinggal" value={profile.alamat} isLarge />
-							<ProfileField icon={MapPin} label="Kota" value={profile.kota} />
-						</ProfileSection>
-					)}
-					{activeTab === "kepegawaian" && (
-						<ProfileSection title="Informasi Kepegawaian">
-							<ProfileField icon={Building2} label="Departemen" value={profile.departemen} />
-							<ProfileField icon={Briefcase} label="Bidang" value={profile.bidang} />
-							<ProfileField icon={Users} label="Kelompok/Golongan" value={profile.kode_kelompok} />
-							<ProfileField icon={Calendar} label="Tanggal Mulai Kerja" value={formatDate(profile.mulai_kerja)} />
-							<ProfileField icon={Briefcase} label="Status Pekerjaan" value={profile.ms_kerja} />
-							<ProfileField icon={CreditCard} label="Nomor Pokok Wajib Pajak (NPWP)" value={profile.npwp} />
-							<ProfileField icon={CreditCard} label="Nomor Induk Kependudukan (KTP)" value={profile.no_ktp} />
-							<ProfileField icon={CreditCard} label="Nomor Rekening Gaji" value={profile.rekening} />
-						</ProfileSection>
-					)}
-					{activeTab === "kontrak" && (
-						<ProfileSection title="Informasi Kontrak Kerja">
-							<ProfileField icon={Calendar} label="Tanggal Mulai Kontrak" value={formatDate(profile.mulai_kontrak)} />
-							<ProfileField icon={CreditCard} label="Status Keaktifan" value={profile.stts_aktif} />
-						</ProfileSection>
-					)}
-					{activeTab === "pendidikan" && (
-						<div className="space-y-8">
-							<EducationHistorySection initialData={educationHistory} />
-							<SeminarHistorySection initialData={seminarHistory} />
-						</div>
-					)}
+					<h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-figtree mb-2.5 pb-2 border-b">
+						Data Pribadi & Kontak
+					</h2>
+					<div className="flex-1 flex flex-col justify-start">
+						<InfoItem icon={User} label="Jenis Kelamin" value={profile.jk} />
+						<InfoItem icon={Calendar} label="Tempat, Tanggal Lahir" value={`${profile.tmp_lahir || "-"}, ${formatDate(profile.tgl_lahir)}`} />
+						<InfoItem icon={GraduationCap} label="Pendidikan Terakhir" value={profile.pendidikan} />
+						<InfoItem icon={MapPin} label="Alamat Tinggal" value={profile.alamat} />
+						<InfoItem icon={MapPin} label="Kota / Kabupaten" value={profile.kota} />
+					</div>
 				</motion.div>
-			</AnimatePresence>
 
-			{/* Tombol untuk membuka modal edit profile */}
-			<div className="flex justify-center mt-10">
+				{/* Bento Card 2: Kepegawaian & Finansial */}
+				<motion.div
+					initial={{ opacity: 0, y: 10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3, delay: 0.1 }}
+					className="lg:col-span-2 bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm flex flex-col hover:shadow transition-all duration-300"
+				>
+					<h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-figtree mb-2.5 pb-2 border-b">
+						Kepegawaian & Finansial
+					</h2>
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5">
+						<InfoItem icon={Building2} label="Departemen / Unit" value={profile.departemen} />
+						<InfoItem icon={Briefcase} label="Bidang Kerja" value={profile.bidang} />
+						<InfoItem icon={Users} label="Kelompok / Golongan" value={profile.kode_kelompok} />
+						<InfoItem icon={Calendar} label="Mulai Bekerja" value={formatDate(profile.mulai_kerja)} />
+						<InfoItem icon={Briefcase} label="Status Pekerjaan" value={profile.ms_kerja} />
+						<InfoItem icon={Calendar} label="Mulai Kontrak" value={formatDate(profile.mulai_kontrak)} />
+						<InfoItem icon={CreditCard} label="Nomor NIK (KTP)" value={profile.no_ktp} />
+						<InfoItem icon={CreditCard} label="Nomor NPWP" value={profile.npwp} />
+						<InfoItem icon={CreditCard} label="Rekening Gaji" value={profile.rekening} />
+					</div>
+				</motion.div>
+			</div>
+
+			{/* Riwayat Pendidikan Bento Card */}
+			<div className="w-full">
+				<EducationHistorySection initialData={educationHistory} />
+			</div>
+
+			{/* Riwayat Seminar Bento Card */}
+			<div className="w-full">
+				<SeminarHistorySection initialData={seminarHistory} />
+			</div>
+
+			{/* Bottom Action bar */}
+			<div className="flex justify-center pt-2">
 				<button
 					onClick={() => setShowEditProfileModal(true)}
-					className="flex items-center gap-2 px-6 py-3.5 bg-[#0093dd] text-white rounded-xl hover:bg-[#007dba] transition-all font-semibold shadow-sm shadow-[#0093dd]/20 hover:shadow hover:-translate-y-0.5"
+					className="flex items-center gap-2 px-5 py-3 bg-[#185FA5] text-white rounded-lg hover:bg-[#0c447c] transition-all font-semibold text-xs shadow-sm hover:-translate-y-0.5 active:scale-95"
 				>
-					<Edit className="w-4 h-4" />
-					Perbarui Keseluruhan Data
+					<Edit className="w-3.5 h-3.5" />
+					<span>Perbarui Keseluruhan Data Pegawai</span>
 				</button>
 			</div>
 
-			{/* Logout Modal */}
+			{/* Modals */}
 			<LogoutConfirmationModal
 				isOpen={showLogoutModal}
 				onClose={() => setShowLogoutModal(false)}
 				onConfirm={handleLogout}
 			/>
 
-			{/* Edit Profile Modal */}
 			<EditProfileModal
 				isOpen={showEditProfileModal}
 				onClose={() => setShowEditProfileModal(false)}

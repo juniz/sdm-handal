@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Edit, Trash2, Plus, X, Calendar, MapPin, CheckCircle2, Bookmark, FolderOpen, Award } from "lucide-react";
+import {
+	mutationCreateSeminar,
+	mutationUpdateSeminar,
+	mutationDeleteSeminar,
+} from "@/lib/profile-gql-client";
 
 export default function SeminarHistorySection({ initialData = [] }) {
 	const [seminarHistory, setSeminarHistory] = useState(initialData);
@@ -35,7 +40,6 @@ export default function SeminarHistorySection({ initialData = [] }) {
 		setError("");
 		if (seminar) {
 			setSelectedSeminar(seminar);
-			// Format date if needed (YYYY-MM-DD for input type="date")
 			const fmtMulai = seminar.mulai ? seminar.mulai.split("T")[0] : "";
 			const fmtSelesai = seminar.selesai ? seminar.selesai.split("T")[0] : "";
 			
@@ -86,40 +90,22 @@ export default function SeminarHistorySection({ initialData = [] }) {
 
 		try {
 			const isEdit = !!selectedSeminar;
-			const method = isEdit ? "PUT" : "POST";
-			
 			const payload = { ...formData };
 			
-			// If editing, include old keys for composite primary key tracking
 			if (isEdit) {
 				payload.old_nama_seminar = selectedSeminar.nama_seminar;
 				payload.old_mulai = selectedSeminar.mulai;
-			}
-
-			const res = await fetch("/api/profile/seminar", {
-				method,
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(payload),
-			});
-
-			const data = await res.json();
-
-			if (!res.ok) {
-				throw new Error(data.error || "Gagal menyimpan data");
-			}
-
-			if (isEdit) {
+				await mutationUpdateSeminar(payload);
 				setSeminarHistory((prev) =>
 					prev.map((item) =>
 						(item.nama_seminar === selectedSeminar.nama_seminar && item.mulai === selectedSeminar.mulai)
-							? data.data
+							? { ...item, ...formData }
 							: item
 					)
 				);
 			} else {
-				setSeminarHistory((prev) => [data.data, ...prev]);
+				const newSem = await mutationCreateSeminar(payload);
+				setSeminarHistory((prev) => [newSem, ...prev]);
 			}
 
 			handleCloseModal();
@@ -140,23 +126,7 @@ export default function SeminarHistorySection({ initialData = [] }) {
 		setError("");
 
 		try {
-			const res = await fetch("/api/profile/seminar", {
-				method: "DELETE",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					nama_seminar: itemToDelete.nama_seminar,
-					mulai: itemToDelete.mulai,
-				}),
-			});
-
-			const data = await res.json();
-
-			if (!res.ok) {
-				throw new Error(data.error || "Gagal menghapus data");
-			}
-
+			await mutationDeleteSeminar(itemToDelete.nama_seminar, itemToDelete.mulai);
 			setSeminarHistory((prev) =>
 				prev.filter(
 					(item) =>
@@ -183,27 +153,24 @@ export default function SeminarHistorySection({ initialData = [] }) {
 	};
 
 	return (
-		<div className="space-y-6">
-			<div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-				<div className="flex items-center gap-3">
-					<div className="bg-orange-50 p-2.5 rounded-lg">
-						<Award className="w-5 h-5 text-orange-600" />
+		<div className="space-y-4">
+			<div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+				<div className="flex items-center gap-2.5">
+					<div className="bg-[#E6F1FB] p-2 rounded-lg border border-[#185FA5]/10">
+						<Award className="w-4.5 h-4.5 text-[#185FA5]" />
 					</div>
 					<div>
-						<h2 className="text-lg font-bold text-gray-900">
+						<h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-figtree">
 							Riwayat Pelatihan & Seminar
 						</h2>
-						<p className="text-sm text-gray-500">
-							{seminarHistory.length} Sertifikat/Pelatihan tercatat
-						</p>
 					</div>
 				</div>
 				<button
 					onClick={() => handleOpenModal()}
-					className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium shadow-sm hover:shadow-md"
+					className="flex items-center gap-1.5 px-3 py-1.5 bg-[#185FA5] text-white rounded-lg hover:bg-[#0c447c] transition-all text-xs font-semibold shadow-sm active:scale-95"
 				>
-					<Plus className="w-4 h-4" />
-					<span className="hidden sm:inline">Tambah Data</span>
+					<Plus className="w-3.5 h-3.5" />
+					<span>Tambah Data</span>
 				</button>
 			</div>
 
@@ -215,65 +182,65 @@ export default function SeminarHistorySection({ initialData = [] }) {
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: index * 0.05 }}
 							key={`${item.nama_seminar}-${item.mulai}`}
-							className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:border-orange-300 transition-colors group relative"
+							className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden hover:border-[#185FA5]/30 hover:shadow transition-all duration-300 group relative"
 						>
-							<div className="absolute top-4 right-4 flex opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-2">
+							<div className="absolute top-3 right-3 flex opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity gap-1.5">
 								<button
 									onClick={() => handleOpenModal(item)}
-									className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
+									className="p-1 bg-[#E6F1FB] text-[#185FA5] rounded-md hover:bg-[#185FA5]/10 transition-colors"
 									title="Ubah Data"
 								>
-									<Edit className="w-4 h-4" />
+									<Edit className="w-3.5 h-3.5" />
 								</button>
 								<button
 									onClick={() => confirmDelete(item)}
-									className="p-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+									className="p-1 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
 									title="Hapus Data"
 								>
-									<Trash2 className="w-4 h-4" />
+									<Trash2 className="w-3.5 h-3.5" />
 								</button>
 							</div>
 
-							<div className="p-5">
-								<div className="flex items-start gap-4">
-									<div className="hidden sm:flex h-12 w-12 rounded-full bg-orange-50 items-center justify-center flex-shrink-0">
-										<Bookmark className="w-6 h-6 text-orange-500" />
+							<div className="p-4.5">
+								<div className="flex items-start gap-3">
+									<div className="hidden sm:flex h-9 w-9 rounded-lg bg-[#E6F1FB] items-center justify-center flex-shrink-0 text-[#185FA5]">
+										<Bookmark className="w-4.5 h-4.5" />
 									</div>
 									<div className="flex-1 min-w-0">
-										<div className="pr-16">
-											<span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 mb-2">
+										<div className="pr-14">
+											<span className="inline-block px-2 py-0.5 rounded-md text-[9px] font-bold bg-[#E6F1FB] text-[#185FA5] mb-1.5 uppercase tracking-wider font-figtree">
 												{item.jenis} - {item.tingkat}
 											</span>
-											<h3 className="text-base font-bold text-gray-900 leading-tight mb-1">
+											<h3 className="text-sm font-bold text-slate-800 leading-tight mb-0.5 font-figtree">
 												{item.nama_seminar}
 											</h3>
-											<p className="text-sm font-medium text-gray-700 mb-3">
+											<p className="text-xs font-semibold text-slate-400">
 												Sebagai: {item.peranan || "Peserta"}
 											</p>
 										</div>
 
-										<div className="space-y-2 mt-3 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-											<div className="flex items-center gap-2">
-												<Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+										<div className="space-y-1.5 mt-2.5 p-2 bg-slate-50 rounded-lg text-[10px] text-slate-500 font-semibold">
+											<div className="flex items-center gap-1.5">
+												<Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 												<span className="line-clamp-1">
 													{formatDateIndo(item.mulai)} s/d {formatDateIndo(item.selesai)}
 												</span>
 											</div>
-											<div className="flex items-center gap-2">
-												<CheckCircle2 className="w-4 h-4 text-gray-400 shrink-0" />
+											<div className="flex items-center gap-1.5">
+												<CheckCircle2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 												<span className="line-clamp-1" title={item.penyelengara}>
 													Penyelenggara: {item.penyelengara || "-"}
 												</span>
 											</div>
-											<div className="flex items-center gap-2">
-												<MapPin className="w-4 h-4 text-gray-400 shrink-0" />
+											<div className="flex items-center gap-1.5">
+												<MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 												<span className="line-clamp-1" title={item.tempat}>
 													Lokasi: {item.tempat || "-"}
 												</span>
 											</div>
 											{item.berkas && item.berkas !== "-" && (
-												<div className="flex items-center gap-2">
-													<FolderOpen className="w-4 h-4 text-gray-400 shrink-0" />
+												<div className="flex items-center gap-1.5">
+													<FolderOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
 													<span className="line-clamp-1">Berkas Tersedia</span>
 												</div>
 											)}
@@ -284,23 +251,11 @@ export default function SeminarHistorySection({ initialData = [] }) {
 						</motion.div>
 					))
 				) : (
-					<div className="col-span-full py-12 flex flex-col items-center justify-center bg-gray-50 border border-dashed border-gray-300 rounded-xl">
-						<div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-							<Award className="h-8 w-8 text-gray-400" />
+					<div className="col-span-full py-8 flex flex-col items-center justify-center bg-slate-50/50 border border-dashed border-slate-200 rounded-lg">
+						<div className="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center mb-2 text-[#185FA5]">
+							<Award className="h-5 w-5" />
 						</div>
-						<h3 className="text-lg font-medium text-gray-900 mb-1">
-							Belum Ada Data Pelatihan
-						</h3>
-						<p className="text-gray-500 text-sm mb-4">
-							Tambahkan riwayat pelatihan, seminar atau workshop.
-						</p>
-						<button
-							onClick={() => handleOpenModal()}
-							className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-						>
-							<Plus className="w-4 h-4" />
-							<span>Tambah Data Pertama</span>
-						</button>
+						<p className="text-slate-400 text-xs font-medium">Belum ada riwayat pelatihan.</p>
 					</div>
 				)}
 			</div>
@@ -308,42 +263,43 @@ export default function SeminarHistorySection({ initialData = [] }) {
 			{/* Modal Form */}
 			<AnimatePresence>
 				{isModalOpen && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-24 sm:pb-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
 						<motion.div
 							initial={{ opacity: 0, scale: 0.95, y: 20 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: 20 }}
-							className="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8 overflow-hidden flex flex-col"
+							className="bg-white rounded-xl shadow-xl w-full max-w-xl my-4 overflow-hidden flex flex-col"
 						>
-							<div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-								<h3 className="text-xl font-bold text-gray-900">
-									{selectedSeminar ? "Ubah" : "Tambah"} Riwayat Pelatihan
-								</h3>
+							<div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+								<div>
+									<h3 className="text-sm font-bold text-slate-800 font-figtree">
+										{selectedSeminar ? "Ubah" : "Tambah"} Riwayat Pelatihan
+									</h3>
+								</div>
 								<button
 									onClick={handleCloseModal}
-									className="text-gray-400 hover:text-gray-500 transition-colors bg-gray-100 hover:bg-gray-200 rounded-full p-2"
+									className="text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-50 border border-slate-100 rounded-lg p-1.5"
 								>
-									<X className="w-5 h-5" />
+									<X className="w-4 h-4" />
 								</button>
 							</div>
 
-							<div className="flex-1 overflow-y-auto p-6 max-h-[70vh]">
-								<form id="seminarForm" onSubmit={handleSave} className="space-y-5">
+							<div className="flex-1 overflow-y-auto p-4 max-h-[70vh]">
+								<form id="seminarForm" onSubmit={handleSave} className="space-y-3.5">
 									{error && (
-										<div className="p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100 flex items-start gap-2">
-											<div className="shrink-0 mt-0.5">•</div>
-											<div className="font-medium">{error}</div>
+										<div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs border border-red-100">
+											{error}
 										</div>
 									)}
 
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-										<div className="space-y-2 relative">
-											<label className="text-sm font-medium text-gray-700">
-												Tingkat <span className="text-red-500">*</span>
+									<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+										<div className="space-y-1">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Tingkat Kegiatan *
 											</label>
 											<select
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.tingkat}
 												onChange={(e) => setFormData({ ...formData, tingkat: e.target.value })}
 											>
@@ -354,13 +310,13 @@ export default function SeminarHistorySection({ initialData = [] }) {
 											</select>
 										</div>
 
-										<div className="space-y-2 relative">
-											<label className="text-sm font-medium text-gray-700">
-												Jenis Kegiatan <span className="text-red-500">*</span>
+										<div className="space-y-1">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Jenis Kegiatan *
 											</label>
 											<select
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all appearance-none"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.jenis}
 												onChange={(e) => setFormData({ ...formData, jenis: e.target.value })}
 											>
@@ -371,14 +327,14 @@ export default function SeminarHistorySection({ initialData = [] }) {
 											</select>
 										</div>
 
-										<div className="space-y-2 md:col-span-2">
-											<label className="text-sm font-medium text-gray-700">
-												Nama Kegiatan / Seminar <span className="text-red-500">*</span>
+										<div className="space-y-1 md:col-span-2">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Nama Kegiatan / Seminar *
 											</label>
 											<input
 												type="text"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.nama_seminar}
 												onChange={(e) => setFormData({ ...formData, nama_seminar: e.target.value })}
 												placeholder="Contoh: Pelatihan Basic Trauma Cardiac Life Support"
@@ -386,14 +342,14 @@ export default function SeminarHistorySection({ initialData = [] }) {
 											/>
 										</div>
 
-										<div className="space-y-2 md:col-span-2">
-											<label className="text-sm font-medium text-gray-700">
-												Peranan (Sebagai) <span className="text-red-500">*</span>
+										<div className="space-y-1 md:col-span-2">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Peranan (Sebagai) *
 											</label>
 											<input
 												type="text"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.peranan}
 												onChange={(e) => setFormData({ ...formData, peranan: e.target.value })}
 												placeholder="Contoh: Peserta, Panitia, Narasumber"
@@ -401,40 +357,40 @@ export default function SeminarHistorySection({ initialData = [] }) {
 											/>
 										</div>
 
-										<div className="space-y-2">
-											<label className="text-sm font-medium text-gray-700">
-												Tanggal Mulai <span className="text-red-500">*</span>
+										<div className="space-y-1">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Tanggal Mulai *
 											</label>
 											<input
 												type="date"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.mulai}
 												onChange={(e) => setFormData({ ...formData, mulai: e.target.value })}
 											/>
 										</div>
 
-										<div className="space-y-2">
-											<label className="text-sm font-medium text-gray-700">
-												Tanggal Selesai <span className="text-red-500">*</span>
+										<div className="space-y-1">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Tanggal Selesai *
 											</label>
 											<input
 												type="date"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.selesai}
 												onChange={(e) => setFormData({ ...formData, selesai: e.target.value })}
 											/>
 										</div>
 
-										<div className="space-y-2 md:col-span-2">
-											<label className="text-sm font-medium text-gray-700">
-												Penyelenggara <span className="text-red-500">*</span>
+										<div className="space-y-1 md:col-span-2">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Penyelenggara *
 											</label>
 											<input
 												type="text"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.penyelengara}
 												onChange={(e) => setFormData({ ...formData, penyelengara: e.target.value })}
 												placeholder="Contoh: Kementerian Kesehatan, RS Bhayangkara"
@@ -442,14 +398,14 @@ export default function SeminarHistorySection({ initialData = [] }) {
 											/>
 										</div>
 
-										<div className="space-y-2 md:col-span-2">
-											<label className="text-sm font-medium text-gray-700">
-												Tempat Pelaksanaan <span className="text-red-500">*</span>
+										<div className="space-y-1 md:col-span-2">
+											<label className="text-[10px] font-semibold text-slate-500">
+												Tempat Pelaksanaan *
 											</label>
 											<input
 												type="text"
 												required
-												className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+												className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 												value={formData.tempat}
 												onChange={(e) => setFormData({ ...formData, tempat: e.target.value })}
 												placeholder="Contoh: Jakarta, Hotel Dafam Nganjuk"
@@ -460,11 +416,11 @@ export default function SeminarHistorySection({ initialData = [] }) {
 								</form>
 							</div>
 
-							<div className="flex bg-gray-50 border-t border-gray-200 p-4 gap-3 justify-end sticky bottom-0">
+							<div className="flex bg-slate-50 border-t border-slate-100 p-4 gap-2.5 justify-end">
 								<button
 									type="button"
 									onClick={handleCloseModal}
-									className="px-5 py-2.5 text-gray-700 font-medium hover:bg-gray-200 rounded-lg transition-colors"
+									className="px-4 py-2 text-xs text-slate-600 font-semibold hover:bg-slate-100 rounded-lg transition-colors"
 								>
 									Batal
 								</button>
@@ -472,9 +428,7 @@ export default function SeminarHistorySection({ initialData = [] }) {
 									type="submit"
 									form="seminarForm"
 									disabled={loading}
-									className={`px-5 py-2.5 bg-orange-600 font-medium text-white rounded-lg hover:bg-orange-700 transition-colors shadow-sm ${
-										loading ? "opacity-70 cursor-not-allowed" : ""
-									}`}
+									className="px-4.5 py-2 text-xs bg-[#185FA5] text-white font-semibold rounded-lg hover:bg-[#0c447c] transition-colors"
 								>
 									{loading ? "Menyimpan..." : "Simpan Data"}
 								</button>
@@ -487,44 +441,35 @@ export default function SeminarHistorySection({ initialData = [] }) {
 			{/* Modal Konfirmasi Hapus */}
 			<AnimatePresence>
 				{deleteModalOpen && itemToDelete && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-24 sm:pb-4 bg-slate-900/60 backdrop-blur-sm">
 						<motion.div
 							initial={{ opacity: 0, scale: 0.95 }}
 							animate={{ opacity: 1, scale: 1 }}
 							exit={{ opacity: 0, scale: 0.95 }}
-							className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden"
+							className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden p-5 border border-slate-100"
 						>
-							<div className="p-6 text-center">
-								<div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-									<Trash2 className="w-8 h-8 text-red-500" />
+							<div className="text-center">
+								<div className="w-12 h-12 bg-red-50 text-red-500 border border-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+									<Trash2 className="w-6 h-6" />
 								</div>
-								<h3 className="text-xl font-bold text-gray-900 mb-2">Hapus Data</h3>
-								<p className="text-gray-500 text-sm">
-									Apakah Anda yakin ingin menghapus <b>{itemToDelete.nama_seminar}</b>? 
-									Tindakan ini tidak dapat dibatalkan.
+								<h3 className="text-base font-bold text-slate-800 font-figtree mb-1.5">Hapus Data Pelatihan?</h3>
+								<p className="text-xs text-slate-500 leading-relaxed mb-5">
+									Apakah Anda yakin ingin menghapus <b>{itemToDelete.nama_seminar}</b>?
 								</p>
 							</div>
 
-							{error && (
-								<div className="px-6 pb-2 text-center text-sm text-red-500 font-medium">
-									{error}
-								</div>
-							)}
-
-							<div className="flex bg-gray-50 p-4 gap-3 justify-end border-t border-gray-200 mt-2">
+							<div className="flex w-full gap-2.5">
 								<button
 									type="button"
 									onClick={handleCloseDeleteModal}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-200 font-medium rounded-lg transition-colors w-full sm:w-auto"
+									className="flex-1 py-2 text-xs text-slate-600 font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
 								>
 									Batal
 								</button>
 								<button
 									onClick={handleDelete}
 									disabled={loading}
-									className={`px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 shadow-sm transition-colors w-full sm:w-auto flex justify-center items-center ${
-										loading ? "opacity-70 cursor-not-allowed" : ""
-									}`}
+									className="flex-1 py-2 text-xs bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm"
 								>
 									{loading ? "Menghapus..." : "Ya, Hapus"}
 								</button>
