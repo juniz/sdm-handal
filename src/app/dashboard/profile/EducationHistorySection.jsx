@@ -3,6 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GraduationCap, Edit, Trash2, Plus, X, Calendar, MapPin, CheckCircle2, Bookmark, AlertTriangle } from "lucide-react";
+import {
+	mutationCreateEducation,
+	mutationUpdateEducation,
+	mutationDeleteEducation,
+} from "@/lib/profile-gql-client";
 
 export default function EducationHistorySection({ initialData = [] }) {
 	const [educationHistory, setEducationHistory] = useState(initialData);
@@ -29,8 +34,6 @@ export default function EducationHistorySection({ initialData = [] }) {
 		'S1', 'S1 Profesi', 'S2', 'S2 Profesi', 'S3', 'Post Doctor'
 	];
 
-
-	// Keep syncing with initialData if profile page refreshes it
 	useEffect(() => {
 		setEducationHistory(initialData);
 	}, [initialData]);
@@ -81,7 +84,6 @@ export default function EducationHistorySection({ initialData = [] }) {
 
 		try {
 			const isEdit = !!selectedEducation;
-			let response;
 
 			if (isEdit) {
 				const payload = {
@@ -89,34 +91,17 @@ export default function EducationHistorySection({ initialData = [] }) {
 					old_pendidikan: selectedEducation.pendidikan,
 					old_sekolah: selectedEducation.sekolah,
 				};
-				response = await fetch("/api/profile/education", {
-					method: "PUT",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(payload),
-				});
-			} else {
-				response = await fetch("/api/profile/education", {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(formData),
-				});
-			}
-
-			const data = await response.json();
-			if (!response.ok) throw new Error(data.error || "Gagal menyimpan riwayat pendidikan");
-
-			if (isEdit) {
-				// Update in place
+				await mutationUpdateEducation(payload);
 				setEducationHistory((prev) =>
 					prev.map((edu) =>
 						edu.pendidikan === selectedEducation.pendidikan && edu.sekolah === selectedEducation.sekolah
-							? data.data
+							? { ...edu, ...formData }
 							: edu
 					)
 				);
 			} else {
-				// Prevent duplicate append issues, fetching the list again conceptually is cleaner, but doing state is fine
-				setEducationHistory((prev) => [data.data, ...prev]);
+				const newEdu = await mutationCreateEducation(formData);
+				setEducationHistory((prev) => [newEdu, ...prev]);
 			}
 			handleCloseModal();
 		} catch (err) {
@@ -136,17 +121,10 @@ export default function EducationHistorySection({ initialData = [] }) {
 		setLoading(true);
 		
 		try {
-			const response = await fetch(
-				`/api/profile/education?pendidikan=${encodeURIComponent(itemToDelete.pendidikan)}&sekolah=${encodeURIComponent(itemToDelete.sekolah)}`, 
-				{ method: "DELETE" }
-			);
-			const data = await response.json();
-			if (!response.ok) throw new Error(data.error || "Gagal menghapus data");
-
+			await mutationDeleteEducation(itemToDelete.pendidikan, itemToDelete.sekolah);
 			setEducationHistory((prev) =>
 				prev.filter((edu) => !(edu.pendidikan === itemToDelete.pendidikan && edu.sekolah === itemToDelete.sekolah))
 			);
-			
 			setDeleteModalOpen(false);
 			setItemToDelete(null);
 		} catch (err) {
@@ -158,95 +136,93 @@ export default function EducationHistorySection({ initialData = [] }) {
 	};
 
 	return (
-		<div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8 mt-6">
+		<div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 mb-4">
 			{/* Header area */}
-			<div className="flex flex-row items-center justify-between mb-6 pb-4 border-b border-gray-100">
-				<div className="flex items-center gap-3">
-					<div className="bg-[#0093dd]/10 p-2.5 rounded-lg border border-[#0093dd]/20">
-						<GraduationCap className="w-5 h-5 text-[#0093dd]" strokeWidth={2.5} />
+			<div className="flex flex-row items-center justify-between mb-4 pb-2 border-b border-slate-100">
+				<div className="flex items-center gap-2.5">
+					<div className="bg-[#E6F1FB] p-2 rounded-lg border border-[#185FA5]/10">
+						<GraduationCap className="w-4.5 h-4.5 text-[#185FA5]" strokeWidth={2.5} />
 					</div>
 					<div>
-						<h3 className="text-xl font-bold text-gray-800 tracking-tight">Riwayat Pendidikan</h3>
-						<p className="text-sm text-gray-500">Informasi akademis dan jenjang studi</p>
+						<h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-figtree">Riwayat Pendidikan</h3>
 					</div>
 				</div>
 				<button
 					onClick={() => handleOpenModal()}
-					className="flex items-center gap-2 p-2.5 sm:px-4 sm:py-2 bg-[#0093dd] text-white rounded-lg hover:bg-[#007dba] transition-all shadow-sm hover:shadow-md text-sm font-medium"
+					className="flex items-center gap-1.5 px-3 py-1.5 bg-[#185FA5] text-white rounded-lg hover:bg-[#0c447c] transition-all shadow-sm text-xs font-semibold active:scale-95"
 				>
-					<Plus className="w-5 h-5 sm:w-4 sm:h-4" />
-					<span className="hidden sm:inline">Tambah Data</span>
+					<Plus className="w-3.5 h-3.5" />
+					<span>Tambah Data</span>
 				</button>
 			</div>
 
 			{/* List Content */}
 			{educationHistory.length === 0 ? (
-				<div className="py-12 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-					<div className="bg-gray-100/50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-						<Bookmark className="w-6 h-6 text-gray-400" />
+				<div className="py-8 text-center bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+					<div className="bg-slate-100 w-9 h-9 rounded-full flex items-center justify-center mx-auto mb-2">
+						<Bookmark className="w-4 h-4 text-slate-400" />
 					</div>
-					<p className="text-gray-500 font-medium">Belum ada riwayat pendidikan yang ditambahkan.</p>
-
+					<p className="text-slate-400 text-xs font-medium">Belum ada riwayat pendidikan.</p>
 				</div>
 			) : (
-				<div className="space-y-4">
+				<div className="space-y-2.5">
 					{educationHistory.map((edu, idx) => (
 						<motion.div
 							initial={{ opacity: 0, y: 10 }}
 							animate={{ opacity: 1, y: 0 }}
 							transition={{ delay: idx * 0.05 }}
 							key={`${edu.pendidikan}-${edu.sekolah}`}
-							className="group flex flex-col sm:flex-row bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-md transition-all duration-300 hover:border-[#0093dd]/30"
+							className="group flex flex-col sm:flex-row bg-white border border-slate-100 rounded-lg overflow-hidden hover:shadow hover:border-[#185FA5]/30 transition-all duration-300"
 						>
 							{/* Indicator left */}
-							<div className="sm:w-2 bg-[#0093dd] w-full h-1 sm:h-auto" />
+							<div className="sm:w-1 bg-[#185FA5] w-full h-0.5 sm:h-auto" />
 							
-							<div className="p-5 flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-								<div className="space-y-2 flex-1">
-									<div className="flex flex-wrap items-center gap-2">
-										<span className="px-2.5 py-0.5 bg-[#0093dd]/10 text-[#0093dd] text-xs font-bold rounded uppercase tracking-wider">
+							<div className="p-3.5 flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+								<div className="space-y-1.5 flex-1">
+									<div className="flex flex-wrap items-center gap-1.5">
+										<span className="px-2 py-0.5 bg-[#E6F1FB] text-[#185FA5] text-[10px] font-bold rounded uppercase tracking-wider font-figtree">
 											{edu.pendidikan}
 										</span>
 										{edu.status && (
-											<span className="px-2 py-0.5 border border-emerald-500/20 bg-emerald-50 text-emerald-700 text-xs font-medium rounded-full flex items-center gap-1">
+											<span className="px-1.5 py-0.5 border border-emerald-500/20 bg-emerald-50 text-emerald-700 text-[10px] font-medium rounded-full flex items-center gap-0.5">
 												<CheckCircle2 className="w-3 h-3" /> {edu.status}
 											</span>
 										)}
 									</div>
-									<h4 className="text-lg font-bold text-gray-800 leading-snug">{edu.sekolah}</h4>
+									<h4 className="text-sm font-bold text-slate-800 leading-snug">{edu.sekolah}</h4>
 									{edu.jurusan && (
-										<p className="text-gray-600 font-medium text-sm flex items-center gap-1.5">
-											<Bookmark className="w-3.5 h-3.5 text-gray-400" />
+										<p className="text-slate-500 font-medium text-xs flex items-center gap-1">
+											<Bookmark className="w-3 h-3 text-slate-400" />
 											{edu.jurusan}
 										</p>
 									)}
-									<div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-xs text-gray-500 font-medium pt-1">
-										<p className="flex items-center gap-1.5">
-											<Calendar className="w-3.5 h-3.5" /> Lulus: {edu.thn_lulus}
+									<div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] text-slate-400 font-semibold pt-0.5">
+										<p className="flex items-center gap-1">
+											<Calendar className="w-3 h-3" /> Lulus: {edu.thn_lulus}
 										</p>
 										{edu.pendanaan && (
-											<p className="flex items-center gap-1.5">
-												<MapPin className="w-3.5 h-3.5" /> {edu.pendanaan}
+											<p className="flex items-center gap-1">
+												<MapPin className="w-3 h-3" /> {edu.pendanaan}
 											</p>
 										)}
 									</div>
 								</div>
 								
 								{/* Actions */}
-								<div className="flex items-center gap-2 sm:opacity-0 sm:-translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none justify-end">
+								<div className="flex items-center gap-1.5 sm:opacity-0 group-hover:opacity-100 transition-all duration-300 bg-slate-50 sm:bg-transparent p-1.5 sm:p-0 rounded-lg sm:rounded-none justify-end shrink-0">
 									<button
 										onClick={() => handleOpenModal(edu)}
-										className="p-2 text-gray-400 hover:text-[#0093dd] hover:bg-[#0093dd]/10 rounded-lg transition-colors"
+										className="p-1.5 text-slate-400 hover:text-[#185FA5] hover:bg-[#E6F1FB] rounded-lg transition-colors"
 										title="Edit"
 									>
-										<Edit className="w-4 h-4" />
+										<Edit className="w-3.5 h-3.5" />
 									</button>
 									<button
 										onClick={() => confirmDelete(edu)}
-										className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+										className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
 										title="Hapus"
 									>
-										<Trash2 className="w-4 h-4" />
+										<Trash2 className="w-3.5 h-3.5" />
 									</button>
 								</div>
 							</div>
@@ -255,100 +231,88 @@ export default function EducationHistorySection({ initialData = [] }) {
 				</div>
 			)}
 			
-			<div className="sm:hidden mt-4">
-				<button
-					onClick={() => handleOpenModal()}
-					className="w-full justify-center flex items-center gap-2 px-4 py-3 bg-[#0093dd] text-white rounded-lg hover:bg-[#007dba] transition-all shadow-sm font-semibold"
-				>
-					<Plus className="w-4 h-4" strokeWidth={3} />
-					<span>Tambah Baru</span>
-				</button>
-			</div>
-
 			{/* Form Modal */}
 			<AnimatePresence>
 				{isModalOpen && (
-					<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+					<div className="fixed inset-0 z-50 flex items-center justify-center p-4 pb-24 sm:pb-4">
 						<motion.div
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							onClick={handleCloseModal}
-							className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+							className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
 						/>
 						<motion.div
 							initial={{ opacity: 0, scale: 0.95, y: 10 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: 10 }}
-							className="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]"
+							className="relative w-full max-w-xl bg-white rounded-xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]"
 						>
-							<div className="flex items-center justify-between p-5 border-b border-gray-100 bg-gray-50/50">
+							<div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
 								<div>
-									<h2 className="text-xl font-bold tracking-tight text-gray-800">
-										{selectedEducation ? "Perbarui Riwayat" : "Tambah Riwayat Baru"}
+									<h2 className="text-sm font-bold tracking-tight text-slate-800 font-figtree">
+										{selectedEducation ? "Perbarui Riwayat Pendidikan" : "Tambah Riwayat Baru"}
 									</h2>
-									<p className="text-xs text-gray-500 font-medium mt-0.5">Isi rincian pendidikan dengan akurat</p>
 								</div>
 								<button
 									onClick={handleCloseModal}
-									className="p-2 text-gray-400 hover:text-gray-600 bg-white hover:bg-gray-100 rounded-lg border border-gray-100 transition-colors"
+									className="p-1.5 text-slate-400 hover:text-slate-600 bg-white hover:bg-slate-50 rounded-lg border border-slate-100 transition-colors"
 								>
-									<X className="w-5 h-5" />
+									<X className="w-4 h-4" />
 								</button>
 							</div>
 
-							<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+							<form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3.5">
 								{error && (
-									<div className="mb-6 p-4 bg-red-50/50 border border-red-100 text-red-600 rounded-xl text-sm font-medium flex items-center gap-2">
-										<span className="w-2 h-2 rounded-full bg-red-500" /> {error}
+									<div className="p-3 bg-red-50 border border-red-100 text-red-600 rounded-lg text-xs font-medium">
+										{error}
 									</div>
 								)}
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Tingkat Pendidikan *</label>
+										<label className="text-[10px] font-semibold text-slate-500">Tingkat Pendidikan *</label>
 										<select
 											name="pendidikan"
 											value={formData.pendidikan}
 											onChange={handleChange}
 											required
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 										>
 											<option value="">Pilih Tingkat</option>
 											{PENDIDIKAN_ENUM.map((val) => (
 												<option key={val} value={val}>{val}</option>
 											))}
 										</select>
-
 									</div>
 
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Nama Instansi/Sekolah *</label>
+										<label className="text-[10px] font-semibold text-slate-500">Nama Instansi/Sekolah *</label>
 										<input
 											type="text"
 											name="sekolah"
 											value={formData.sekolah}
 											onChange={handleChange}
 											required
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 											placeholder="Contoh: Universitas Gadjah Mada"
 										/>
 									</div>
 
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Jurusan/Program Studi</label>
+										<label className="text-[10px] font-semibold text-slate-500">Jurusan / Program Studi</label>
 										<input
 											type="text"
 											name="jurusan"
 											value={formData.jurusan}
 											onChange={handleChange}
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 											placeholder="Masukkan program studi"
 										/>
 									</div>
 
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Tahun Lulus *</label>
+										<label className="text-[10px] font-semibold text-slate-500">Tahun Lulus *</label>
 										<input
 											type="number"
 											name="thn_lulus"
@@ -357,18 +321,18 @@ export default function EducationHistorySection({ initialData = [] }) {
 											required
 											min="1950"
 											max={new Date().getFullYear() + 1}
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 											placeholder="2020"
 										/>
 									</div>
 
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Status</label>
+										<label className="text-[10px] font-semibold text-slate-500">Status Kelulusan</label>
 										<select
 											name="status"
 											value={formData.status}
 											onChange={handleChange}
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 										>
 											<option value="">Pilih Status</option>
 											<option value="Lulus">Lulus</option>
@@ -379,12 +343,12 @@ export default function EducationHistorySection({ initialData = [] }) {
 									</div>
 
 									<div className="space-y-1">
-										<label className="text-sm font-bold text-gray-700">Pendanaan</label>
+										<label className="text-[10px] font-semibold text-slate-500">Sumber Pendanaan</label>
 										<select
 											name="pendanaan"
 											value={formData.pendanaan}
 											onChange={handleChange}
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 										>
 											<option value="">Pilihan Pendanaan</option>
 											<option value="Biaya Sendiri">Biaya Sendiri</option>
@@ -398,36 +362,36 @@ export default function EducationHistorySection({ initialData = [] }) {
 									</div>
 
 									<div className="md:col-span-2 space-y-1">
-										<label className="text-sm font-bold text-gray-700">Kepala Sekolah / Rektor</label>
+										<label className="text-[10px] font-semibold text-slate-500">Kepala Sekolah / Dekan / Rektor</label>
 										<input
 											type="text"
 											name="kepala"
 											value={formData.kepala}
 											onChange={handleChange}
-											className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all font-medium"
 											placeholder="Nama rektor/pimpinan (Opsional)"
 										/>
 									</div>
                                     
 									<div className="md:col-span-2 space-y-1">
-										<label className="text-sm font-bold text-gray-700">Keterangan</label>
+										<label className="text-[10px] font-semibold text-slate-500">Keterangan Tambahan</label>
 										<textarea
 											name="keterangan"
 											value={formData.keterangan}
 											onChange={handleChange}
-											className="w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-800 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0093dd]/30 focus:border-[#0093dd] transition-all font-medium resize-y"
-											placeholder="Tambahkan detail relevan jika diperlukan"
+											className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 text-slate-800 rounded-lg focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#185FA5] transition-all resize-none font-medium"
+											placeholder="Catatan tambahan..."
 											rows="2"
 										/>
 									</div>
 								</div>
 							</form>
 
-							<div className="p-5 bg-gray-50/50 border-t border-gray-100 flex justify-end gap-3">
+							<div className="p-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2.5">
 								<button
 									type="button"
 									onClick={handleCloseModal}
-									className="px-6 py-2.5 text-gray-600 font-semibold hover:text-gray-900 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+									className="px-4 py-2 text-xs text-slate-600 font-semibold hover:text-slate-800 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
 									disabled={loading}
 								>
 									Batal
@@ -435,7 +399,7 @@ export default function EducationHistorySection({ initialData = [] }) {
 								<button
 									onClick={handleSubmit}
 									disabled={loading}
-									className="px-6 py-2.5 bg-[#0093dd] text-white font-semibold rounded-xl hover:bg-[#007dba] transition-colors disabled:bg-blue-300 shadow-sm shadow-[#0093dd]/20"
+									className="px-4.5 py-2 text-xs bg-[#185FA5] text-white font-semibold rounded-lg hover:bg-[#0c447c] transition-colors disabled:bg-blue-300"
 								>
 									{loading ? "Menyimpan..." : selectedEducation ? "Simpan Perubahan" : "Simpan Data"}
 								</button>
@@ -448,43 +412,42 @@ export default function EducationHistorySection({ initialData = [] }) {
 			{/* Delete Confirmation Modal */}
 			<AnimatePresence>
 				{deleteModalOpen && itemToDelete && (
-					<div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+					<div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pb-24 sm:pb-4">
 						<motion.div
 							initial={{ opacity: 0 }}
 							animate={{ opacity: 1 }}
 							exit={{ opacity: 0 }}
 							onClick={() => !loading && setDeleteModalOpen(false)}
-							className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+							className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
 						/>
 						<motion.div
 							initial={{ opacity: 0, scale: 0.95, y: 10 }}
 							animate={{ opacity: 1, scale: 1, y: 0 }}
 							exit={{ opacity: 0, scale: 0.95, y: 10 }}
-							className="relative w-full max-w-sm bg-white rounded-2xl shadow-xl overflow-hidden p-6"
+							className="relative w-full max-w-sm bg-white rounded-xl shadow-xl overflow-hidden p-5"
 						>
 							<div className="flex flex-col items-center text-center">
-								<div className="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4 border border-red-100">
-									<AlertTriangle className="w-7 h-7" strokeWidth={2.5} />
+								<div className="w-12 h-12 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-3 border border-red-100">
+									<AlertTriangle className="w-6 h-6" strokeWidth={2.5} />
 								</div>
-								<h3 className="text-xl font-bold text-gray-800 tracking-tight mb-2">Hapus Riwayat Pendidikan?</h3>
-								<p className="text-sm text-gray-500 font-medium mb-1">
-									Data untuk jenjang <span className="text-gray-800 font-bold">{itemToDelete.pendidikan}</span> di <span className="text-gray-800 font-bold">{itemToDelete.sekolah}</span> akan dihapus permanen.
+								<h3 className="text-base font-bold text-slate-800 font-figtree mb-1.5">Hapus Riwayat Pendidikan?</h3>
+								<p className="text-xs text-slate-500 mb-5 leading-relaxed">
+									Data untuk jenjang <span className="text-slate-800 font-bold">{itemToDelete.pendidikan}</span> di <span className="text-slate-800 font-bold">{itemToDelete.sekolah}</span> akan dihapus permanen.
 								</p>
-								<p className="text-xs text-red-500 font-semibold mb-6">Tindakan ini tidak dapat dibatalkan.</p>
 								
-								<div className="flex w-full gap-3">
+								<div className="flex w-full gap-2.5">
 									<button
 										type="button"
 										onClick={() => setDeleteModalOpen(false)}
 										disabled={loading}
-										className="flex-1 py-2.5 text-gray-600 font-semibold bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl transition-colors disabled:opacity-50"
+										className="flex-1 py-2 text-xs text-slate-600 font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors disabled:opacity-50"
 									>
 										Batal
 									</button>
 									<button
 										onClick={executeDelete}
 										disabled={loading}
-										className="flex-1 py-2.5 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-colors shadow-sm shadow-red-500/20 disabled:opacity-50"
+										className="flex-1 py-2 text-xs bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-colors shadow-sm disabled:opacity-50"
 									>
 										{loading ? "Menghapus..." : "Ya, Hapus"}
 									</button>

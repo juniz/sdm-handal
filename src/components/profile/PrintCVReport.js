@@ -1,5 +1,7 @@
 "use client";
 
+import { fetchPrintCvData } from "@/lib/profile-gql-client";
+
 const formatDate = (dateString) => {
 	if (!dateString) return "-";
 	const d = new Date(dateString);
@@ -23,12 +25,7 @@ export const printCVReport = async () => {
 		const { jsPDF } = await import("jspdf");
 		const { default: autoTable } = await import("jspdf-autotable");
 
-		const response = await fetch(`/api/profile/print-cv`);
-		const result = await response.json();
-
-		if (result.status !== "success") {
-			throw new Error(result.error || "Gagal mengambil data profil");
-		}
+		const result = await fetchPrintCvData();
 
 		const {
 			pegawai,
@@ -37,7 +34,7 @@ export const printCVReport = async () => {
 			seminar,
 			penghargaan,
 			gaji,
-		} = result.data;
+		} = result;
 
 		// Create PDF (portrait A4)
 		const pdf = new jsPDF({
