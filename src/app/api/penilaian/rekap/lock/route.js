@@ -26,7 +26,7 @@ async function fetchGraphQL(query, variables, token) {
 	return json.data;
 }
 
-export async function POST(request, { params }) {
+export async function POST(request) {
 	try {
 		const cookieStore = await cookies();
 		const token = cookieStore.get("auth_token")?.value;
@@ -35,18 +35,21 @@ export async function POST(request, { params }) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		const { id } = await params;
 		const body = await request.json();
-		const { action = "lock" } = body;
+		const { ids, action = "lock" } = body;
+
+		if (!ids || !Array.isArray(ids) || ids.length === 0) {
+			return NextResponse.json({ error: "IDs rekap bulanan diperlukan" }, { status: 400 });
+		}
 
 		const query = `
-			mutation LockUnlockRekapBulanan($id: Int!, $action: String!) {
-				lockUnlockRekapBulanan(id: $id, action: $action)
+			mutation LockUnlockManyRekapBulanan($ids: [Int!]!, $action: String!) {
+				lockUnlockManyRekapBulanan(ids: $ids, action: $action)
 			}
 		`;
 		
 		const variables = {
-			id: Number(id),
+			ids: ids.map(Number),
 			action
 		};
 
@@ -54,11 +57,11 @@ export async function POST(request, { params }) {
 		
 		return NextResponse.json({
 			success: true,
-			message: action === "lock" ? "Rekap bulanan berhasil dikunci" : "Kunci rekap bulanan berhasil dibuka",
+			message: action === "lock" ? `${ids.length} rekap bulanan berhasil dikunci` : `Kunci ${ids.length} rekap bulanan berhasil dibuka`,
 			data: { status_rekap: action === "lock" ? "final" : "draft" }
 		});
 	} catch (error) {
-		console.error("Error in POST /api/penilaian/rekap/[id]/lock:", error);
+		console.error("Error in POST /api/penilaian/rekap/lock:", error);
 		return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
 	}
 }

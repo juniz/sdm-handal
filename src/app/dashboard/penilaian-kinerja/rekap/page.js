@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { 
 	Search, 
 	Lock, 
@@ -34,10 +35,42 @@ export default function AdminRekapBulananPage() {
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
 	const [meta, setMeta] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 0 });
-	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaFinal: 0, avgMonthlyScore: 0 });
+	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaFinal: 0, avgMonthlyScore: 0, totalLocked: 0, totalEmployees: 0 });
+	const [selectedIds, setSelectedIds] = useState([]);
+	const [selectedStatusFilter, setSelectedStatusFilter] = useState("ALL");
+	
+	const [confirmState, setConfirmState] = useState({
+		isOpen: false,
+		title: "",
+		description: "",
+		confirmText: "",
+		cancelText: "",
+		variant: "primary",
+		onConfirm: () => {}
+	});
+
+	const triggerConfirm = ({ title, description, confirmText, cancelText, variant, onConfirm }) => {
+		setConfirmState({
+			isOpen: true,
+			title,
+			description,
+			confirmText,
+			cancelText,
+			variant,
+			onConfirm: () => {
+				onConfirm();
+				setConfirmState(prev => ({ ...prev, isOpen: false }));
+			}
+		});
+	};
 
 	const [searchName, setSearchName] = useState("");
 	const [debouncedSearchName, setDebouncedSearchName] = useState("");
+
+	// Reset selection when filter parameters change
+	useEffect(() => {
+		setSelectedIds([]);
+	}, [currentMonth, currentYear, selectedDept, debouncedSearchName, selectedStatusFilter, page]);
 
 	// Debounce search input to prevent overloading backend database queries
 	useEffect(() => {
@@ -70,7 +103,7 @@ export default function AdminRekapBulananPage() {
 		setErrorMsg("");
 		setSuccessMsg("");
 		try {
-			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&nama=${encodeURIComponent(debouncedSearchName)}&page=${page}&limit=${limit}`);
+			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&nama=${encodeURIComponent(debouncedSearchName)}&status=${selectedStatusFilter}&page=${page}&limit=${limit}`);
 			const data = await res.json();
 			if (!res.ok) throw new Error(data.error || "Gagal memuat rekap bulanan");
 			setRekapList(data.data || []);
@@ -85,34 +118,83 @@ export default function AdminRekapBulananPage() {
 
 	useEffect(() => {
 		loadRekap();
-	}, [currentMonth, currentYear, selectedDept, page, limit, debouncedSearchName]);
+	}, [currentMonth, currentYear, selectedDept, page, limit, debouncedSearchName, selectedStatusFilter]);
 
-	const handleLockAction = async (id, actionType) => {
-		setActionLoadingId(id);
-		setErrorMsg("");
-		setSuccessMsg("");
-		try {
-			const res = await fetch(`/api/penilaian/rekap/${id}/lock`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: actionType })
-			});
-			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || "Gagal memproses penguncian");
+	const handleLockAction = (id, actionType) => {
+		triggerConfirm({
+			title: actionType === "lock" ? "Kunci Rekap Bulanan" : "Buka Kunci Rekap Bulanan",
+			description: actionType === "lock" 
+				? "Apakah Anda yakin ingin mengunci rekap bulanan ini? Data yang dikunci tidak dapat diubah lagi."
+				: "Apakah Anda yakin ingin membuka kunci rekap bulanan ini?",
+			confirmText: actionType === "lock" ? "Kunci" : "Buka Kunci",
+			cancelText: "Batal",
+			variant: actionType === "lock" ? "warning" : "primary",
+			onConfirm: async () => {
+				setActionLoadingId(id);
+				setErrorMsg("");
+				setSuccessMsg("");
+				try {
+					const res = await fetch(`/api/penilaian/rekap/${id}/lock`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ action: actionType })
+					});
+					const data = await res.json();
+					if (!res.ok) throw new Error(data.error || "Gagal memproses penguncian");
 
-			setSuccessMsg(
-				actionType === "lock" 
-					? "Rekap bulanan pegawai berhasil dikunci (Final)!" 
-					: "Kunci rekap bulanan pegawai berhasil dibuka!"
-			);
-			
-			// Refresh list
-			await loadRekap();
-		} catch (err) {
-			setErrorMsg(err.message);
-		} finally {
-			setActionLoadingId(null);
-		}
+					setSuccessMsg(
+						actionType === "lock" 
+							? "Rekap bulanan pegawai berhasil dikunci (Final)!" 
+							: "Kunci rekap bulanan pegawai berhasil dibuka!"
+					);
+					
+					// Refresh list
+					await loadRekap();
+				} catch (err) {
+					setErrorMsg(err.message);
+				} finally {
+					setActionLoadingId(null);
+				}
+			}
+		});
+	};
+
+	const handleBulkLockAction = (actionType) => {
+		if (selectedIds.length === 0) return;
+		triggerConfirm({
+			title: actionType === "lock" ? "Kunci Rekap Terpilih" : "Buka Kunci Rekap Terpilih",
+			description: actionType === "lock"
+				? `Apakah Anda yakin ingin mengunci ${selectedIds.length} rekap bulanan terpilih? Data yang dikunci tidak dapat diubah lagi.`
+				: `Apakah Anda yakin ingin membuka kunci ${selectedIds.length} rekap bulanan terpilih?`,
+			confirmText: actionType === "lock" ? "Kunci Terpilih" : "Buka Kunci Terpilih",
+			cancelText: "Batal",
+			variant: actionType === "lock" ? "warning" : "primary",
+			onConfirm: async () => {
+				setLoading(true);
+				setErrorMsg("");
+				setSuccessMsg("");
+				try {
+					const res = await fetch("/api/penilaian/rekap/lock", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ ids: selectedIds, action: actionType })
+					});
+					const data = await res.json();
+					if (!res.ok) throw new Error(data.error || "Gagal memproses penguncian");
+
+					setSuccessMsg(
+						actionType === "lock" 
+							? `${selectedIds.length} rekap bulanan berhasil dikunci!` 
+							: `Kunci ${selectedIds.length} rekap bulanan berhasil dibuka!`
+					);
+					setSelectedIds([]);
+					await loadRekap();
+				} catch (err) {
+					setErrorMsg(err.message);
+					setLoading(false);
+				}
+			}
+		});
 	};
 
 	const exportToCSV = () => {
@@ -173,6 +255,24 @@ export default function AdminRekapBulananPage() {
 						</p>
 					</div>
 					<div className="flex gap-2 shrink-0">
+						{selectedIds.length > 0 && (
+							<>
+								<button 
+									onClick={() => handleBulkLockAction("lock")}
+									className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-800 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+								>
+									<Lock className="h-4 w-4" />
+									Kunci Terpilih ({selectedIds.length})
+								</button>
+								<button 
+									onClick={() => handleBulkLockAction("unlock")}
+									className="px-4 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+								>
+									<Unlock className="h-4 w-4" />
+									Buka Kunci Terpilih ({selectedIds.length})
+								</button>
+							</>
+						)}
 						<button 
 							onClick={exportToCSV}
 							disabled={rekapList.length === 0}
@@ -227,7 +327,7 @@ export default function AdminRekapBulananPage() {
 					</select>
 				</div>
 
-				<div className="space-y-1.5 md:col-span-3">
+				<div className="space-y-1.5 md:col-span-2">
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Unit / Departemen</label>
 					<SearchableSelect 
 						options={deptOptions}
@@ -240,7 +340,23 @@ export default function AdminRekapBulananPage() {
 					/>
 				</div>
 
-				<div className="space-y-1.5 md:col-span-3">
+				<div className="space-y-1.5 md:col-span-2">
+					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Status Lock</label>
+					<select 
+						value={selectedStatusFilter}
+						onChange={(e) => {
+							setSelectedStatusFilter(e.target.value);
+							setPage(1);
+						}}
+						className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 focus:bg-white text-sm font-semibold text-slate-700 cursor-pointer transition-all"
+					>
+						<option value="ALL">Semua Status</option>
+						<option value="LOCKED">Terkunci (Final)</option>
+						<option value="DRAFT">Belum Terkunci (Draft)</option>
+					</select>
+				</div>
+
+				<div className="space-y-1.5 md:col-span-2">
 					<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Cari Pegawai</label>
 					<div className="relative">
 						<Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
@@ -287,7 +403,7 @@ export default function AdminRekapBulananPage() {
 			) : (
 				<>
 					{/* Aggregate statistics */}
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
 						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
 							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Total Jasa Dasar</span>
 							<span className="text-xl font-black text-slate-800 font-figtree">Rp {totalJasaDasar.toLocaleString("id-ID")}</span>
@@ -306,6 +422,12 @@ export default function AdminRekapBulananPage() {
 							<span className="text-[10px] text-slate-650 font-bold uppercase tracking-widest font-mono block relative z-10">Rerata Nilai Kinerja</span>
 							<span className="text-xl font-black text-primary-400 font-figtree relative z-10">{avgMonthlyScore} / 100</span>
 						</div>
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Status Penguncian</span>
+							<span className="text-xl font-black text-slate-800 font-figtree">
+								{summary.totalLocked} <span className="text-slate-450 text-xs font-bold">/ {summary.totalEmployees} Locked</span>
+							</span>
+						</div>
 					</div>
 
 					{/* Rekapitulasi Table */}
@@ -318,6 +440,20 @@ export default function AdminRekapBulananPage() {
 							<table className="w-full text-left border-collapse">
 								<thead>
 									<tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase font-bold text-slate-400 tracking-widest font-mono">
+										<th className="px-5 py-3.5 w-10 print:hidden">
+											<input 
+												type="checkbox"
+												checked={rekapList.length > 0 && selectedIds.length === rekapList.length}
+												onChange={(e) => {
+													if (e.target.checked) {
+														setSelectedIds(rekapList.map(item => item.id));
+													} else {
+														setSelectedIds([]);
+													}
+												}}
+												className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+											/>
+										</th>
 										<th className="px-5 py-3.5">Pegawai</th>
 										<th className="px-5 py-3.5 text-center">Jadwal</th>
 										<th className="px-5 py-3.5 text-center">Approved</th>
@@ -333,13 +469,27 @@ export default function AdminRekapBulananPage() {
 								<tbody className="divide-y divide-slate-100 text-xs">
 									{rekapList.length === 0 ? (
 										<tr>
-											<td colSpan="10" className="px-5 py-10 text-center text-slate-400 font-medium">
+											<td colSpan="11" className="px-5 py-10 text-center text-slate-400 font-medium">
 												Tidak ada data rekapitulasi untuk bulan/tahun terpilih.
 											</td>
 										</tr>
 									) : (
 										rekapList.map((row) => (
-											<tr key={row.id} className="hover:bg-[#E0F7FE]/20 transition-colors duration-150">
+											<tr key={row.id} className={`hover:bg-[#E0F7FE]/20 transition-colors duration-150 ${selectedIds.includes(row.id) ? 'bg-[#E0F7FE]/10' : ''}`}>
+												<td className="px-5 py-4 w-10 print:hidden">
+													<input 
+														type="checkbox"
+														checked={selectedIds.includes(row.id)}
+														onChange={(e) => {
+															if (e.target.checked) {
+																setSelectedIds([...selectedIds, row.id]);
+															} else {
+																setSelectedIds(selectedIds.filter(id => id !== row.id));
+															}
+														}}
+														className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+													/>
+												</td>
 												<td className="px-5 py-4">
 													<span className="font-bold text-slate-800 block text-sm font-figtree">{row.nama}</span>
 													<span className="text-[10px] text-slate-400 block mt-0.5 font-medium">NIK: {row.nik} — {row.nama_departemen}</span>
@@ -475,6 +625,18 @@ export default function AdminRekapBulananPage() {
 					</div>
 				</>
 			)}
+
+			{/* Confirmation Dialog */}
+			<ConfirmationDialog 
+				isOpen={confirmState.isOpen}
+				onClose={() => setConfirmState(prev => ({ ...prev, isOpen: false }))}
+				onConfirm={confirmState.onConfirm}
+				title={confirmState.title}
+				description={confirmState.description}
+				confirmText={confirmState.confirmText}
+				cancelText={confirmState.cancelText}
+				variant={confirmState.variant}
+			/>
 		</div>
 	);
 }
