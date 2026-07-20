@@ -1,53 +1,29 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-import { selectFirst, rawQuery, select } from "@/lib/db-helper";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
 
-// Helper check authorization
-async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
-	if (Number(loggedInUser.id) === Number(targetEmployeeId)) return true;
-
-	// Check if IT department (admin)
-	if (loggedInUser.departemen?.toUpperCase() === "IT") return true;
-
-	// Check if logged-in user is supervisor of targetEmployeeId (direct personal mapping)
-	const personalMapping = await selectFirst({
-		table: "supervisor_mapping",
-		where: {
-			supervisor_id: loggedInUser.id,
-			pegawai_id: targetEmployeeId,
-			tipe_relasi: "personal",
-			is_aktif: 1
-		}
+async function fetchGraphQL(query, variables, token) {
+	const res = await fetch(GQL_ENDPOINT, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": `Bearer ${token}`,
+		},
+		body: JSON.stringify({ query, variables }),
 	});
-	if (personalMapping) return true;
-
-	// Check if logged-in user is supervisor of targetEmployeeId's unit
-	const target = await selectFirst({
-		table: "pegawai",
-		where: { id: targetEmployeeId },
-		select: ["departemen", "bidang"]
-	});
-
-	if (target) {
-		const unitMapping = await rawQuery(`
-			SELECT id FROM supervisor_mapping
-			WHERE supervisor_id = ?
-			  AND tipe_relasi = 'unit'
-			  AND is_aktif = 1
-			  AND (
-			    (tipe_unit = 'departemen' AND kode_unit = ?) OR
-			    (tipe_unit = 'bidang' AND kode_unit = ?)
-			  )
-			LIMIT 1
-		`, [loggedInUser.id, target.departemen, target.bidang]);
-
-		if (unitMapping && unitMapping.length > 0) return true;
+	
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(text || `HTTP error ${res.status}`);
 	}
-
-	return false;
+	
+	const json = await res.json();
+	if (json.errors) {
+		throw new Error(json.errors[0]?.message || "GraphQL Error");
+	}
+	return json.data;
 }
 
 export async function GET(request) {
@@ -59,17 +35,8 @@ export async function GET(request) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
 
-		let verified;
-		try {
-			verified = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
-		} catch (error) {
-			return NextResponse.json({ error: "Unauthorized / Session Expired" }, { status: 401 });
-		}
-
-		const loggedInUser = verified.payload;
-
 		const { searchParams } = new URL(request.url);
-		const pegawaiId = searchParams.get("pegawai_id") || loggedInUser.id;
+		const pegawaiId = searchParams.get("pegawai_id") ? Number(searchParams.get("pegawai_id")) : null;
 		const bulan = searchParams.get("bulan"); // format: 1-12 or 01-12
 		const tahun = searchParams.get("tahun"); // format: YYYY
 
@@ -77,79 +44,72 @@ export async function GET(request) {
 			return NextResponse.json({ error: "Bulan dan tahun diperlukan" }, { status: 400 });
 		}
 
-		// Auth gate
-		const isAuthorized = await isAuthorizedForEmployee(loggedInUser, pegawaiId);
-		if (!isAuthorized) {
-			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-		}
-
-		const formattedBulan = String(bulan).padStart(2, "0");
-		const formattedTahun = String(tahun);
-
-		// Get schedule reguler
-		const schedule = await selectFirst({
-			table: "jadwal_pegawai",
-			where: {
-				id: pegawaiId,
-				bulan: formattedBulan,
-				tahun: formattedTahun
+		const query = `
+			query GetPenilaianJadwal($pegawaiId: Int, $bulan: String!, $tahun: String!) {
+				penilaianJadwal(pegawaiId: $pegawaiId, bulan: $bulan, tahun: $tahun) {
+					hasSchedule
+					schedule {
+						day
+						shift
+						isTambahan
+					}
+					shiftDetails {
+						shift
+						jamMasuk
+						jamPulang
+					}
+					message
+				}
 			}
-		});
+		`;
 
-		// Get schedule tambahan (bonus shifts)
-		const scheduleTambahan = await selectFirst({
-			table: "jadwal_tambahan",
-			where: {
-				id: pegawaiId,
-				bulan: formattedBulan,
-				tahun: formattedTahun
-			}
-		});
+		const variables = {
+			pegawaiId,
+			bulan: String(bulan),
+			tahun: String(tahun)
+		};
 
-		if (!schedule && !scheduleTambahan) {
+		const data = await fetchGraphQL(query, variables, token);
+		const result = data.penilaianJadwal;
+
+		if (!result.hasSchedule) {
 			return NextResponse.json({
 				success: true,
 				hasSchedule: false,
 				schedule: null,
 				isTambahan: null,
-				message: "Jadwal tidak ditemukan untuk bulan/tahun ini"
+				message: result.message || "Jadwal tidak ditemukan untuk bulan/tahun ini"
 			});
 		}
 
-		// Parse h1 - h31 days
-		const days = {};
+		// Re-construct frontend expected key-value maps
+		const scheduleMap = {};
 		const isTambahanMap = {};
-		
-		for (let i = 1; i <= 31; i++) {
-			let shift = schedule ? (schedule[`h${i}`] || "") : "";
-			let fromTambahan = false;
 
-			// If no regular shift, check jadwal_tambahan
-			if (shift === "") {
-				shift = scheduleTambahan ? (scheduleTambahan[`h${i}`] || "") : "";
-				if (shift !== "") {
-					fromTambahan = true;
-				}
-			}
-
-			days[`h${i}`] = shift;
-			isTambahanMap[`h${i}`] = fromTambahan;
+		if (result.schedule) {
+			result.schedule.forEach((item) => {
+				scheduleMap[`h${item.day}`] = item.shift;
+				isTambahanMap[`h${item.day}`] = item.isTambahan;
+			});
 		}
 
-		// Ambil seluruh data master shift dari jam_masuk
-		const shiftDetails = await select({
-			table: "jam_masuk"
-		});
+		// Re-map shiftDetails keys to lower snake_case
+		const mappedShiftDetails = (result.shiftDetails || []).map((s) => ({
+			shift: s.shift,
+			jam_masuk: s.jamMasuk,
+			jam_pulang: s.jamPulang
+		}));
 
 		return NextResponse.json({
 			success: true,
 			hasSchedule: true,
-			schedule: days,
+			schedule: scheduleMap,
 			isTambahan: isTambahanMap,
-			shiftDetails: shiftDetails
+			shiftDetails: mappedShiftDetails
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/jadwal:", error);
-		return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+		const status = error.message?.includes("Forbidden") ? 403 : 500;
+		return NextResponse.json({ error: error.message || "Internal Server Error" }, { status });
 	}
 }

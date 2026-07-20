@@ -183,6 +183,31 @@ async function resolveAbsensi(pegawaiId, nikPegawai, tanggal, isTambahan = false
 	};
 }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
+
+async function fetchGraphQL(query, variables, token) {
+	const res = await fetch(GQL_ENDPOINT, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"Authorization": `Bearer ${token}`,
+		},
+		body: JSON.stringify({ query, variables }),
+	});
+	
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(text || `HTTP error ${res.status}`);
+	}
+	
+	const json = await res.json();
+	if (json.errors) {
+		throw new Error(json.errors[0]?.message || "GraphQL Error");
+	}
+	return json.data;
+}
+
 export async function GET(request) {
 	try {
 		const cookieStore = await cookies();
@@ -211,104 +236,93 @@ export async function GET(request) {
 			return NextResponse.json({ error: "Tanggal atau (Bulan dan Tahun) diperlukan" }, { status: 400 });
 		}
 
-		// Auth gate
-		const isAuthorized = await isAuthorizedForEmployee(loggedInUser, pegawaiId);
-		if (!isAuthorized) {
-			return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-		}
-
 		// Mode 1: Fetch list of daily evaluations for a month
 		if (bulan && tahun) {
-			const list = await rawQuery(`
-				SELECT id, pegawai_id, tanggal, shift_jadwal, sumber_absensi, nilai_kondisi, skor_kegiatan, skor_absensi, skor_total, status, catatan_supervisor, alasan_terlambat
-				FROM penilaian_harian
-				WHERE pegawai_id = ? 
-				  AND MONTH(tanggal) = ? 
-				  AND YEAR(tanggal) = ?
-				ORDER BY tanggal ASC
-			`, [pegawaiId, Number(bulan), Number(tahun)]);
-
+			const query = `
+				query GetPenilaianHarianBulan($pegawaiId: Int, $bulan: Int!, $tahun: Int!) {
+					penilaianHarianBulan(pegawaiId: $pegawaiId, bulan: $bulan, tahun: $tahun) {
+						id
+						pegawai_id
+						tanggal
+						shift_jadwal
+						sumber_absensi
+						nilai_kondisi
+						skor_kegiatan
+						skor_absensi
+						skor_total
+						status
+						catatan_supervisor
+						alasan_terlambat
+					}
+				}
+			`;
+			const variables = {
+				pegawaiId: Number(pegawaiId),
+				bulan: Number(bulan),
+				tahun: Number(tahun)
+			};
+			
+			const data = await fetchGraphQL(query, variables, token);
 			return NextResponse.json({
 				success: true,
-				data: list
+				data: data.penilaianHarianBulan
 			});
 		}
 
 		// Mode 2: Fetch single daily evaluation with activities
-		const harian = await selectFirst({
-			table: "penilaian_harian",
-			where: {
-				pegawai_id: pegawaiId,
-				tanggal: tanggal
-			}
-		});
-
-		let kegiatan = [];
-		let presensi = null;
-		if (harian) {
-			kegiatan = await select({
-				table: "kegiatan_harian",
-				where: { penilaian_id: harian.id },
-				orderBy: "urutan",
-				order: "ASC"
-			});
-
-			// Fetch checkin photo from rekap_presensi
-			const rekap = await selectFirst({
-				table: "rekap_presensi",
-				where: {
-					id: pegawaiId,
-					jam_datang: {
-						operator: "LIKE",
-						value: `${tanggal}%`
+		const query = `
+			query GetPenilaianHarianTanggal($pegawaiId: Int, $tanggal: String!) {
+				penilaianHarianTanggal(pegawaiId: $pegawaiId, tanggal: $tanggal) {
+					harian {
+						id
+						pegawai_id
+						tanggal
+						shift_jadwal
+						sumber_absensi
+						nilai_kondisi
+						skor_kegiatan
+						skor_absensi
+						skor_total
+						status
+						catatan_supervisor
+						alasan_terlambat
 					}
-				},
-				fields: ["photo"]
-			});
-
-			let photo = rekap?.photo || null;
-
-			// Fallback to temporary_presensi if not checked out yet
-			if (!photo) {
-				const temp = await selectFirst({
-					table: "temporary_presensi",
-					where: {
-						id: pegawaiId,
-						jam_datang: {
-							operator: "LIKE",
-							value: `${tanggal}%`
-						}
-					},
-					fields: ["photo"]
-				});
-				photo = temp?.photo || null;
+					kegiatan {
+						id
+						penilaian_id
+						judul_kegiatan
+						penjabaran
+						status_selesai
+						alasan_belum_selesai
+						urutan
+					}
+					presensi {
+						photo
+						latitude
+						longitude
+					}
+				}
 			}
-
-			// Fetch coordinates from security_logs
-			const secLog = await selectFirst({
-				table: "security_logs",
-				where: {
-					id_pegawai: pegawaiId,
-					tanggal: tanggal,
-					action_type: "CHECKIN"
-				},
-				fields: ["latitude", "longitude"]
-			});
-
-			presensi = {
-				photo: photo,
-				latitude: secLog ? parseFloat(secLog.latitude) : null,
-				longitude: secLog ? parseFloat(secLog.longitude) : null,
-			};
-		}
+		`;
+		const variables = {
+			pegawaiId: Number(pegawaiId),
+			tanggal: String(tanggal)
+		};
+		const data = await fetchGraphQL(query, variables, token);
+		const result = data.penilaianHarianTanggal;
 
 		return NextResponse.json({
 			success: true,
-			data: harian ? { ...harian, kegiatan, presensi } : null
+			data: result.harian ? {
+				...result.harian,
+				kegiatan: result.kegiatan || [],
+				presensi: result.presensi || null
+			} : null
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/harian:", error);
-		return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+		const status = error.message?.includes("Forbidden") ? 403 : 500;
+		return NextResponse.json({ error: error.message || "Internal Server Error" }, { status });
 	}
 }
 
