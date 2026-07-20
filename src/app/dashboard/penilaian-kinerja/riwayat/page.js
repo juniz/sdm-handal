@@ -143,17 +143,17 @@ export default function RiwayatPenilaianPage() {
 
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
-			<div className="bg-gradient-to-r from-primary-900 to-primary-800 border border-primary-800/20 rounded-2xl p-6 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+			<div className="bg-gradient-to-r from-primary-900 to-primary-800 border border-primary-800/20 rounded-2xl p-4 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
 				<div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
 				<div className="relative z-10">
-					<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-800">Riwayat Penilaian Saya</h1>
-					<p className="text-slate-550 text-sm mt-1">Lacak pencapaian skor harian dan rekap bulanan Anda.</p>
+					<h1 className="text-xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-800">Riwayat Penilaian Saya</h1>
+					<p className="text-slate-550 text-xs md:text-sm mt-1">Lacak pencapaian skor harian dan rekap bulanan Anda.</p>
 				</div>
-				<div className="relative z-10 flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs">
+				<div className="relative z-10 flex items-center justify-between w-full md:w-auto gap-3 bg-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-200 shadow-xs">
 					<button onClick={handlePrevMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-all duration-200 text-slate-700 hover:scale-105 active:scale-95 cursor-pointer">
 						<ChevronLeft className="h-5 w-5" />
 					</button>
-					<span className="font-bold text-slate-800 min-w-[120px] text-center font-figtree text-sm">
+					<span className="font-bold text-slate-800 min-w-[120px] text-center font-figtree text-xs md:text-sm">
 						{moment(`${currentYear}-${currentMonth}-01`, "YYYY-MM-DD").locale("id").format("MMMM YYYY")}
 					</span>
 					<button onClick={handleNextMonth} className="p-1 hover:bg-slate-100 rounded-lg transition-all duration-200 text-slate-700 hover:scale-105 active:scale-95 cursor-pointer">
@@ -176,30 +176,30 @@ export default function RiwayatPenilaianPage() {
 			) : (
 				<>
 					{/* Monthly Summary Cards */}
-					<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-						<div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md">
-							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Hari Wajib Kerja</span>
-							<span className="text-3xl font-extrabold text-slate-800 font-figtree">{totalWorkDays} Hari</span>
-							<span className="text-[10px] text-slate-500 block mt-1 font-medium">Sesuai jadwal dinas shift</span>
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+						<div className="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md">
+							<span className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Hari Wajib Kerja</span>
+							<span className="text-xl md:text-3xl font-extrabold text-slate-800 font-figtree">{totalWorkDays} Hari</span>
+							<span className="text-[8px] md:text-[10px] text-slate-500 block mt-1 font-medium">Sesuai jadwal dinas</span>
 						</div>
-						<div className="bg-emerald-50/20 border border-emerald-200 rounded-2xl p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md">
-							<span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block font-figtree">Disetujui Supervisor</span>
-							<span className="text-3xl font-extrabold text-emerald-600 font-figtree">{approvedDays} Hari</span>
-							<span className="text-[10px] text-emerald-700 block mt-1 font-medium">{pendingDays} pending, {draftOrRevisiDays} draf/revisi</span>
+						<div className="bg-emerald-50/20 border border-emerald-200 rounded-2xl p-4 md:p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md">
+							<span className="text-[9px] md:text-[10px] text-emerald-800 font-bold uppercase tracking-wider block font-figtree">Disetujui Spv</span>
+							<span className="text-xl md:text-3xl font-extrabold text-emerald-600 font-figtree">{approvedDays} Hari</span>
+							<span className="text-[8px] md:text-[10px] text-emerald-700 block mt-1 font-medium">{pendingDays} pending, {draftOrRevisiDays} draf</span>
 						</div>
-						<div className={`${gapDays > 0 ? "bg-rose-50/20 border-rose-200" : "bg-white border-slate-200/80"} border rounded-2xl p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md`}>
-							<span className={`text-[10px] ${gapDays > 0 ? "text-rose-800" : "text-slate-400"} font-bold uppercase tracking-wider block font-figtree`}>Gap Hari (Deduction)</span>
-							<span className={`text-3xl font-extrabold font-figtree ${gapDays > 0 ? "text-rose-600" : "text-slate-800"}`}>
+						<div className={`${gapDays > 0 ? "bg-rose-50/20 border-rose-200" : "bg-white border-slate-200/80"} border rounded-2xl p-4 md:p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md`}>
+							<span className={`text-[9px] md:text-[10px] ${gapDays > 0 ? "text-rose-800" : "text-slate-400"} font-bold uppercase tracking-wider block font-figtree`}>Gap Hari (Deduction)</span>
+							<span className={`text-xl md:text-3xl font-extrabold font-figtree ${gapDays > 0 ? "text-rose-600" : "text-slate-800"}`}>
 								{gapDays} Hari
 							</span>
-							<span className={`text-[10px] ${gapDays > 0 ? "text-rose-700" : "text-slate-500"} block mt-1 font-medium`}>Hari kerja belum disetujui</span>
+							<span className={`text-[8px] md:text-[10px] ${gapDays > 0 ? "text-rose-700" : "text-slate-500"} block mt-1 font-medium`}>Belum disetujui</span>
 						</div>
-						<div className="bg-gradient-to-br from-white to-primary-50/10 border border-primary-100 rounded-2xl p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md relative overflow-hidden">
+						<div className="bg-gradient-to-br from-white to-primary-50/10 border border-primary-100 rounded-2xl p-4 md:p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md relative overflow-hidden">
 							{/* Accent strip */}
 							<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-400 via-primary-600 to-primary-400" />
-							<span className="text-[10px] text-primary-800 font-bold uppercase tracking-wider block font-figtree">Rata-Rata Nilai</span>
-							<span className="text-3xl font-black text-primary-600 font-figtree">{avgScore}</span>
-							<span className="text-[10px] text-primary-500 block mt-1 font-medium">Dari hari yang disetujui</span>
+							<span className="text-[9px] md:text-[10px] text-primary-800 font-bold uppercase tracking-wider block font-figtree">Rata-Rata Nilai</span>
+							<span className="text-xl md:text-3xl font-black text-primary-600 font-figtree">{avgScore}</span>
+							<span className="text-[8px] md:text-[10px] text-primary-500 block mt-1 font-medium">Dari hari disetujui</span>
 						</div>
 					</div>
 
@@ -207,29 +207,29 @@ export default function RiwayatPenilaianPage() {
 					<div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
 						<div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-3 bg-slate-50/50">
 							<h3 className="font-bold text-slate-800 text-sm font-figtree">Rincian Hari per Bulan</h3>
-							<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] font-bold text-slate-500 font-figtree uppercase tracking-wider">
-								<div className="flex items-center gap-1.5">
-									<div className="w-3 h-3 bg-slate-100 border border-slate-200 rounded"></div>
+							<div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[9px] md:text-[10px] font-bold text-slate-500 font-figtree uppercase tracking-wider">
+								<div className="flex items-center gap-1">
+									<div className="w-2.5 h-2.5 bg-slate-100 border border-slate-200 rounded"></div>
 									<span>Libur/Off</span>
 								</div>
-								<div className="flex items-center gap-1.5">
-									<div className="w-3 h-3 bg-rose-50 border border-rose-200 rounded"></div>
+								<div className="flex items-center gap-1">
+									<div className="w-2.5 h-2.5 bg-rose-50 border border-rose-200 rounded"></div>
 									<span>Belum Diisi</span>
 								</div>
-								<div className="flex items-center gap-1.5">
-									<div className="w-3 h-3 bg-emerald-50/20 border border-emerald-200 rounded"></div>
+								<div className="flex items-center gap-1">
+									<div className="w-2.5 h-2.5 bg-emerald-50/20 border border-emerald-200 rounded"></div>
 									<span>Disetujui</span>
 								</div>
-								<div className="flex items-center gap-1.5">
-									<div className="w-3 h-3 bg-amber-50/20 border border-amber-200 rounded"></div>
+								<div className="flex items-center gap-1">
+									<div className="w-2.5 h-2.5 bg-amber-50/20 border border-amber-200 rounded"></div>
 									<span>Pending</span>
 								</div>
 							</div>
 						</div>
 
-						<div className="p-4 md:p-6">
+						<div className="p-3 md:p-6">
 							{/* Day names row */}
-							<div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 border-b border-slate-100 mb-3">
+							<div className="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 border-b border-slate-100 mb-3">
 								<div>Sen</div>
 								<div>Sel</div>
 								<div>Rab</div>
@@ -240,7 +240,7 @@ export default function RiwayatPenilaianPage() {
 							</div>
 
 							{/* Grid cells */}
-							<div className="grid grid-cols-7 gap-2 md:gap-3">
+							<div className="grid grid-cols-7 gap-1.5 md:gap-3">
 								{/* Placeholder cells for alignment */}
 								{Array.from({ length: adjustedStartDay }).map((_, idx) => (
 									<div 
@@ -261,21 +261,24 @@ export default function RiwayatPenilaianPage() {
 										borderClass = "border-slate-200";
 										textClass = "text-slate-400";
 										statusBadge = (
-											<span className="text-[8px] md:text-[9px] font-bold text-slate-400 font-mono">
+											<span className="text-[7px] md:text-[9px] font-bold text-slate-400 font-mono">
 												OFF
 											</span>
 										);
 									} else if (!dayItem.evaluation) {
 										if (dayItem.isFuture) {
-											boxBgClass = "bg-white text-slate-350";
+											boxBgClass = "bg-white text-slate-300";
 											borderClass = "border-slate-200 border-dashed";
-											textClass = "text-slate-355";
+											textClass = "text-slate-300";
+											statusBadge = (
+												<span className="text-[8px] md:text-[9px] font-bold text-slate-300 font-mono">-</span>
+											);
 										} else {
 											boxBgClass = "bg-rose-50/30 text-rose-800";
 											borderClass = "border-rose-200";
 											textClass = "text-rose-800";
 											statusBadge = (
-												<span className="px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold bg-rose-100 text-rose-700 rounded uppercase tracking-wider font-mono">
+												<span className="px-1 py-0.5 text-[7px] md:text-[9px] font-extrabold bg-rose-100 text-rose-700 rounded uppercase tracking-wider font-mono">
 													KOSONG
 												</span>
 											);
@@ -289,10 +292,10 @@ export default function RiwayatPenilaianPage() {
 											textClass = "text-emerald-900";
 											statusBadge = (
 												<div className="flex flex-col items-center">
-													<span className="px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold bg-emerald-100 text-emerald-700 rounded uppercase tracking-wider font-mono">
+													<span className="hidden md:inline-block px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold bg-emerald-100 text-emerald-700 rounded uppercase tracking-wider font-mono">
 														OK
 													</span>
-													<span className="text-xs md:text-sm font-black mt-1 text-emerald-800">
+													<span className="text-xs md:text-sm font-black md:mt-1 text-emerald-800 font-figtree leading-none">
 														{Math.round(dayItem.evaluation.skor_total)}
 													</span>
 												</div>
@@ -303,10 +306,10 @@ export default function RiwayatPenilaianPage() {
 											textClass = "text-amber-900";
 											statusBadge = (
 												<div className="flex flex-col items-center">
-													<span className="px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold bg-amber-100 text-amber-700 rounded uppercase tracking-wider font-mono animate-pulse">
+													<span className="hidden md:inline-block px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold bg-amber-100 text-amber-700 rounded uppercase tracking-wider font-mono animate-pulse">
 														PENDING
 													</span>
-													<span className="text-xs md:text-sm font-black mt-1 text-amber-800">
+													<span className="text-xs md:text-sm font-black md:mt-1 text-amber-800 font-figtree leading-none">
 														{Math.round(dayItem.evaluation.skor_total)}
 													</span>
 												</div>
@@ -318,12 +321,12 @@ export default function RiwayatPenilaianPage() {
 											textClass = isRevisi ? "text-rose-900" : "text-slate-700";
 											statusBadge = (
 												<div className="flex flex-col items-center">
-													<span className={`px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold rounded uppercase tracking-wider font-mono ${
+													<span className={`hidden md:inline-block px-1.5 py-0.5 text-[8px] md:text-[9px] font-extrabold rounded uppercase tracking-wider font-mono ${
 														isRevisi ? "bg-rose-100 text-rose-700" : "bg-slate-200 text-slate-600"
 													}`}>
 														{isRevisi ? "REVISI" : "DRAF"}
 													</span>
-													<span className="text-xs md:text-sm font-black mt-1 text-slate-800">
+													<span className={`text-xs md:text-sm font-black md:mt-1 font-figtree leading-none ${isRevisi ? "text-rose-800" : "text-slate-700"}`}>
 														{Math.round(dayItem.evaluation.skor_total)}
 													</span>
 												</div>
@@ -335,26 +338,26 @@ export default function RiwayatPenilaianPage() {
 										<div
 											key={dayItem.day}
 											onClick={() => isClickable && viewDetail(dayItem.evaluation)}
-											className={`aspect-square rounded-2xl border p-1.5 md:p-3 flex flex-col justify-between transition-all duration-200 ${boxBgClass} ${borderClass} ${
+											className={`aspect-square rounded-xl md:rounded-2xl border p-1 md:p-3 flex flex-col justify-between transition-all duration-200 ${boxBgClass} ${borderClass} ${
 												isClickable 
 													? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95" 
 													: "pointer-events-none"
 											}`}
 										>
 											{/* Header of box: number and shift */}
-											<div className="flex justify-between items-center w-full">
-												<span className={`text-xs md:text-sm font-extrabold font-figtree ${textClass}`}>
+											<div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-0.5 leading-none">
+												<span className={`text-[10px] md:text-sm font-extrabold font-figtree ${textClass}`}>
 													{dayItem.day}
 												</span>
 												{dayItem.isWorkDay && (
-													<span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase font-mono">
+													<span className="text-[6px] md:text-[9px] font-bold text-slate-400 uppercase font-mono tracking-tighter md:tracking-normal">
 														{dayItem.shift}
 													</span>
 												)}
 											</div>
 
 											{/* Center/bottom status & score */}
-											<div className="flex-1 flex items-center justify-center pt-1 md:pt-2">
+											<div className="flex-1 flex items-center justify-center pt-0.5 md:pt-2">
 												{statusBadge}
 											</div>
 
@@ -375,13 +378,13 @@ export default function RiwayatPenilaianPage() {
 
 			{/* Modal Detail */}
 			{isModalOpen && selectedEval && (
-				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 pb-28 md:p-4">
 					<div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-200 relative">
-						<div className="bg-gradient-to-r from-primary-900 to-primary-800 px-6 py-4 text-slate-800 flex justify-between items-center relative overflow-hidden border-b border-slate-200">
+						<div className="bg-gradient-to-r from-primary-900 to-primary-800 px-4 py-3 md:px-6 md:py-4 text-slate-800 flex justify-between items-center relative overflow-hidden border-b border-slate-200">
 							<div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full blur-2xl pointer-events-none"></div>
 							<div className="relative z-10">
-								<h3 className="font-extrabold text-lg font-figtree text-slate-800">Detail Kegiatan Kerja</h3>
-								<p className="text-xs text-slate-550 mt-0.5 font-medium">
+								<h3 className="font-extrabold text-base md:text-lg font-figtree text-slate-800">Detail Kegiatan Kerja</h3>
+								<p className="text-[10px] md:text-xs text-slate-550 mt-0.5 font-medium">
 									{moment(selectedEval.tanggal).locale("id").format("dddd, D MMMM YYYY")} — Shift {selectedEval.shift_jadwal}
 								</p>
 							</div>
@@ -391,39 +394,39 @@ export default function RiwayatPenilaianPage() {
 						</div>
 
 						{/* Modal Content */}
-						<div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+						<div className="p-4 md:p-6 space-y-4 md:space-y-5 max-h-[70vh] overflow-y-auto">
 							{/* Performance values grid */}
-							<div className="grid grid-cols-3 gap-3 bg-primary-50/30 border border-primary-100/50 p-4 rounded-xl">
-								<div className="text-center">
-									<span className="text-[9px] text-primary-800 font-bold block uppercase tracking-wider font-figtree">Skor Kegiatan</span>
-									<span className="text-lg font-extrabold text-slate-800 mt-1 block font-figtree">{Math.round(selectedEval.skor_kegiatan)}</span>
+							<div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
+								<div className="text-center p-1.5 bg-white border border-slate-100/80 rounded-lg shadow-xs">
+									<span className="text-[8px] md:text-[9px] text-slate-400 font-bold block uppercase tracking-wider font-figtree">Skor Kegiatan</span>
+									<span className="text-sm md:text-base font-extrabold text-slate-850 mt-0.5 block font-figtree">{Math.round(selectedEval.skor_kegiatan)}</span>
 								</div>
-								<div className="text-center">
-									<span className="text-[9px] text-primary-800 font-bold block uppercase tracking-wider font-figtree">Skor Absensi</span>
-									<span className="text-lg font-extrabold text-slate-800 mt-1 block font-figtree">{Math.round(selectedEval.skor_absensi)}</span>
+								<div className="text-center p-1.5 bg-white border border-slate-100/80 rounded-lg shadow-xs">
+									<span className="text-[8px] md:text-[9px] text-slate-400 font-bold block uppercase tracking-wider font-figtree">Skor Absensi</span>
+									<span className="text-sm md:text-base font-extrabold text-slate-850 mt-0.5 block font-figtree">{Math.round(selectedEval.skor_absensi)}</span>
 								</div>
-								<div className="text-center bg-primary-50 border border-primary-100 rounded-lg p-1.5">
-									<span className="text-[9px] text-primary-800 font-bold block uppercase tracking-wider font-figtree">Skor Akhir</span>
-									<span className="text-lg font-black text-primary-900 mt-1 block font-figtree">{Math.round(selectedEval.skor_total)}</span>
+								<div className="text-center p-1.5 bg-emerald-50 border border-emerald-100 rounded-lg shadow-xs">
+									<span className="text-[8px] md:text-[9px] text-emerald-700 font-bold block uppercase tracking-wider font-figtree">Skor Akhir</span>
+									<span className="text-sm md:text-base font-black text-emerald-900 mt-0.5 block font-figtree">{Math.round(selectedEval.skor_total)}</span>
 								</div>
 							</div>
 
 							{/* Resolved condition */}
-							<div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 border border-slate-100 p-4 rounded-xl">
+							<div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm bg-slate-50 border border-slate-100 p-3 md:p-4 rounded-xl">
 								<div>
-									<span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Sumber Kehadiran</span>
+									<span className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Sumber Kehadiran</span>
 									<span className="font-semibold text-slate-800 block uppercase mt-0.5">{selectedEval.sumber_absensi}</span>
 								</div>
 								<div>
-									<span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Kondisi Absensi</span>
+									<span className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Kondisi Absensi</span>
 									<span className="font-semibold text-slate-800 block capitalize mt-0.5">{selectedEval.nilai_kondisi.replace(/_/g, " ")}</span>
 								</div>
 							</div>
 
 							{/* Late Reason Display */}
 							{selectedEval.alasan_terlambat && (
-								<div className="p-4 bg-rose-50/60 border border-rose-100/50 rounded-xl space-y-1">
-									<span className="text-[9px] text-rose-600 font-bold block uppercase tracking-wider font-figtree">Alasan Terlambat</span>
+								<div className="p-3 md:p-4 bg-rose-50/60 border border-rose-100/50 rounded-xl space-y-1">
+									<span className="text-[8px] md:text-[9px] text-rose-600 font-bold block uppercase tracking-wider font-figtree">Alasan Terlambat</span>
 									<p className="text-xs text-rose-955 leading-relaxed font-semibold break-words">
 										{selectedEval.alasan_terlambat}
 									</p>
@@ -432,7 +435,7 @@ export default function RiwayatPenilaianPage() {
 
 							{/* Supervisor comments */}
 							{selectedEval.catatan_supervisor && (
-								<div className="p-4 bg-rose-50/50 border border-rose-100 text-rose-800 rounded-xl space-y-1 animate-fadeIn">
+								<div className="p-3 md:p-4 bg-rose-50/50 border border-rose-100 text-rose-800 rounded-xl space-y-1 animate-fadeIn">
 									<div className="flex items-center gap-1.5 font-bold text-xs font-figtree uppercase tracking-wider">
 										<Info className="h-4 w-4 text-rose-600" />
 										Catatan Supervisor
@@ -454,11 +457,11 @@ export default function RiwayatPenilaianPage() {
 										Tidak ada data kegiatan.
 									</p>
 								) : (
-									<div className="space-y-2.5">
+									<div className="space-y-2">
 										{modalActivities.map((act) => (
 											<div 
 												key={act.id} 
-												className={`p-3.5 border rounded-xl flex items-start gap-3 transition-colors ${
+												className={`p-3 border rounded-xl flex items-start gap-2.5 transition-colors ${
 													act.status_selesai === "selesai" 
 														? "border-emerald-100 bg-emerald-50/10" 
 														: "border-slate-200/60 bg-slate-50/30"
@@ -471,9 +474,9 @@ export default function RiwayatPenilaianPage() {
 												)}
 												<div className="flex-1 min-w-0">
 													<span className={`text-sm font-semibold text-slate-800 block break-words ${act.status_selesai === "selesai" ? "line-through text-slate-400" : ""}`}>{act.judul_kegiatan}</span>
-													{act.penjabaran && <p className="text-xs text-slate-500 mt-1 leading-relaxed break-words">{act.penjabaran}</p>}
+													{act.penjabaran && <p className="text-xs text-slate-550 mt-1 leading-relaxed break-words">{act.penjabaran}</p>}
 													{act.status_selesai === "belum" && act.alasan_belum_selesai && (
-														<div className="mt-2 p-2.5 bg-amber-50/60 border border-amber-100/40 rounded-lg">
+														<div className="mt-2 p-2 bg-amber-50/60 border border-amber-100/40 rounded-lg">
 															<span className="text-[9px] font-bold text-amber-700 uppercase tracking-wider block font-figtree">Alasan Belum Selesai</span>
 															<p className="text-xs font-semibold text-amber-900 mt-0.5 break-words leading-relaxed">{act.alasan_belum_selesai}</p>
 														</div>
@@ -487,10 +490,10 @@ export default function RiwayatPenilaianPage() {
 						</div>
 
 						{/* Modal Footer */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+						<div className="px-4 py-3 md:px-6 md:py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
 							<button 
 								onClick={() => setIsModalOpen(false)}
-								className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 transition-all text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95 shadow-sm"
+								className="px-5 py-2 md:py-2.5 bg-slate-800 hover:bg-slate-900 transition-all text-white font-bold rounded-xl text-xs cursor-pointer active:scale-95 shadow-sm"
 							>
 								Tutup
 							</button>
