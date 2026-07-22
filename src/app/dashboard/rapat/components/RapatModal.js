@@ -48,17 +48,17 @@ const RapatModal = ({
 	if (!showModal) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
 			<motion.div
 				initial={{ scale: 0.9, opacity: 0 }}
 				animate={{ scale: 1, opacity: 1 }}
-				className="bg-white rounded-lg p-6 w-full max-w-lg"
+				className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] flex flex-col"
 			>
-				<h3 className="text-lg font-semibold mb-4">
+				<h3 className="text-lg font-semibold mb-4 flex-shrink-0">
 					{modalMode === "add" ? "Tambah Rapat" : "Edit Rapat"}
 				</h3>
-				<form onSubmit={handleModalSubmit}>
-					<div className="space-y-4">
+				<form onSubmit={handleModalSubmit} className="flex-1 flex flex-col min-h-0">
+					<div className="flex-1 overflow-y-auto pr-1 space-y-4">
 						<div>
 							<label className="block text-sm font-medium text-gray-700 mb-1">
 								Tanggal
@@ -144,7 +144,7 @@ const RapatModal = ({
 							</div>
 						</div>
 					</div>
-					<div className="flex justify-end space-x-2 mt-6">
+					<div className="flex justify-end space-x-2 mt-6 pt-4 border-t flex-shrink-0">
 						<button
 							type="button"
 							onClick={handleClose}
