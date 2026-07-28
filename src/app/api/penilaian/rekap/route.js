@@ -74,10 +74,12 @@ export async function GET(request) {
 						tahun
 						total_hari_jadwal
 						hari_approved
+						hari_approved_bonus
 						gap_hari
 						rata_skor_total
 						nominal_jasa_dasar
 						pengurang_jasa
+						nominal_jasa_tambahan
 						nominal_jasa_final
 						status_rekap
 						nama
@@ -93,6 +95,7 @@ export async function GET(request) {
 					summary {
 						totalJasaDasar
 						totalPengurang
+						totalJasaTambahan
 						totalJasaFinal
 						avgMonthlyScore
 						totalLocked

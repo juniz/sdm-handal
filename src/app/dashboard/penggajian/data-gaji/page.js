@@ -76,7 +76,7 @@ export default function DataGajiPage() {
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
     // Handle Print
-    const handlePrint = async () => {
+    const handlePrint = async (groupByContract = false) => {
         // Validate filters for print - need specific month and year
         if (month === "all") {
             toast.error("Pilih bulan tertentu untuk mencetak");
@@ -93,7 +93,8 @@ export default function DataGajiPage() {
                 parseInt(month),
                 parseInt(year),
                 jenis === "all" ? "Gaji" : jenis,
-                departemen === "all" ? undefined : departemen
+                departemen === "all" ? undefined : departemen,
+                groupByContract
             );
             toast.success("Laporan berhasil dibuka");
         } catch (error) {
@@ -239,7 +240,7 @@ export default function DataGajiPage() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handlePrint}
+                                onClick={() => handlePrint(false)}
                                 disabled={printing || loading}
                                 className="gap-2"
                             >
@@ -248,7 +249,21 @@ export default function DataGajiPage() {
                                 ) : (
                                     <Printer className="h-4 w-4" />
                                 )}
-                                Print
+                                Print Standard
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePrint(true)}
+                                disabled={printing || loading}
+                                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                            >
+                                {printing ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Printer className="h-4 w-4" />
+                                )}
+                                Print per Kelompok Kontrak
                             </Button>
                             <Button
                                 variant="outline"

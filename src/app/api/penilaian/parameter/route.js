@@ -54,10 +54,6 @@ export async function POST(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const body = await request.json();
 		const { kode, nama_parameter, kategori, bobot_persen, nilai_kondisi, nilai_skor, deskripsi } = body;
@@ -117,10 +113,6 @@ export async function PUT(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const body = await request.json();
 		const { id, nama_parameter, bobot_persen, nilai_kondisi, nilai_skor, deskripsi, is_aktif } = body;
@@ -169,10 +161,6 @@ export async function DELETE(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
-		if (!isIT) {
-			return NextResponse.json({ error: "Forbidden - IT department access required" }, { status: 403 });
-		}
 
 		const { searchParams } = new URL(request.url);
 		const id = searchParams.get("id");

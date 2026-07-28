@@ -42,6 +42,7 @@ export async function GET(request) {
                 gp.nik,
                 p.nama,
                 p.jbtn as jabatan,
+                p.mulai_kontrak,
                 gp.gaji,
                 gp.periode_bulan,
                 gp.periode_tahun,
@@ -50,9 +51,17 @@ export async function GET(request) {
                 gv.signed_at
             FROM gaji_pegawai gp
             JOIN pegawai p ON gp.nik = p.nik
-            LEFT JOIN gaji_validasi gv ON gp.id = gv.gaji_id
+            LEFT JOIN gaji_validasi gv ON (
+                gv.gaji_id = gp.id 
+                OR (
+                    gv.nik = gp.nik 
+                    AND gv.periode_bulan = gp.periode_bulan 
+                    AND gv.periode_tahun = gp.periode_tahun 
+                    AND UPPER(TRIM(gv.jenis)) = UPPER(TRIM(gp.jenis))
+                )
+            )
             ${whereClause}
-            ORDER BY p.nik ASC
+            ORDER BY p.mulai_kontrak ASC, p.nik ASC
         `;
 
         const data = await rawQuery(dataQuery, queryParams);

@@ -15,7 +15,9 @@ import {
 	CheckCircle,
 	Coins,
 	FileBarChart,
-	TrendingUp
+	TrendingUp,
+	SlidersHorizontal,
+	X
 } from "lucide-react";
 
 export default function AdminRekapBulananPage() {
@@ -31,11 +33,17 @@ export default function AdminRekapBulananPage() {
 	const [successMsg, setSuccessMsg] = useState("");
 	const [actionLoadingId, setActionLoadingId] = useState(null);
 
+	// Parameter shift tambahan state
+	const [paramShiftTambahan, setParamShiftTambahan] = useState(null);
+	const [isSettingModalOpen, setIsSettingModalOpen] = useState(false);
+	const [inputNominalTambahan, setInputNominalTambahan] = useState("");
+	const [savingParam, setSavingParam] = useState(false);
+
 	// Pagination states
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
 	const [meta, setMeta] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 0 });
-	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaFinal: 0, avgMonthlyScore: 0, totalLocked: 0, totalEmployees: 0 });
+	const [summary, setSummary] = useState({ totalJasaDasar: 0, totalPengurang: 0, totalJasaTambahan: 0, totalJasaFinal: 0, avgMonthlyScore: 0, totalLocked: 0, totalEmployees: 0 });
 	const [selectedIds, setSelectedIds] = useState([]);
 	const [selectedStatusFilter, setSelectedStatusFilter] = useState("ALL");
 	
@@ -81,7 +89,23 @@ export default function AdminRekapBulananPage() {
 		return () => clearTimeout(handler);
 	}, [searchName]);
 
-	// Load departments
+	// Load departments & parameter shift tambahan
+	const loadParamTambahan = async () => {
+		try {
+			const res = await fetch("/api/penilaian/parameter");
+			if (res.ok) {
+				const data = await res.json();
+				const found = (data.data || []).find(p => p.kode === "JASA_SHIFT_TAMBAHAN");
+				if (found) {
+					setParamShiftTambahan(found);
+					setInputNominalTambahan(String(found.nilai_skor !== null ? found.nilai_skor : 50000));
+				}
+			}
+		} catch (err) {
+			console.error("Gagal memuat parameter shift tambahan:", err);
+		}
+	};
+
 	useEffect(() => {
 		const loadDepts = async () => {
 			try {
@@ -95,7 +119,55 @@ export default function AdminRekapBulananPage() {
 			}
 		};
 		loadDepts();
+		loadParamTambahan();
 	}, []);
+
+	const handleSaveParam = async (e) => {
+		e.preventDefault();
+		setSavingParam(true);
+		setErrorMsg("");
+		setSuccessMsg("");
+		try {
+			const isExisting = Boolean(paramShiftTambahan?.id);
+			const method = isExisting ? "PUT" : "POST";
+			const payload = isExisting 
+				? {
+					id: paramShiftTambahan.id,
+					nama_parameter: paramShiftTambahan.nama_parameter || "Jasa Shift Tambahan Pegawai",
+					bobot_persen: paramShiftTambahan.bobot_persen || 0,
+					nilai_kondisi: paramShiftTambahan.nilai_kondisi || null,
+					nilai_skor: Number(inputNominalTambahan),
+					deskripsi: paramShiftTambahan.deskripsi || "Nominal insentif per shift tambahan pegawai",
+					is_aktif: paramShiftTambahan.is_aktif ?? 1
+				}
+				: {
+					kode: "JASA_SHIFT_TAMBAHAN",
+					nama_parameter: "Jasa Shift Tambahan Pegawai",
+					kategori: "absensi",
+					bobot_persen: 0,
+					nilai_kondisi: null,
+					nilai_skor: Number(inputNominalTambahan),
+					deskripsi: "Nominal insentif per shift tambahan pegawai"
+				};
+
+			const res = await fetch("/api/penilaian/parameter", {
+				method,
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload)
+			});
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Gagal menyimpan tarif shift tambahan");
+
+			setSuccessMsg("Tarif shift tambahan berhasil disimpan!");
+			setIsSettingModalOpen(false);
+			await loadParamTambahan();
+			await loadRekap();
+		} catch (err) {
+			setErrorMsg(err.message);
+		} finally {
+			setSavingParam(false);
+		}
+	};
 
 	// Load Rekap List
 	const loadRekap = async () => {
@@ -201,10 +273,11 @@ export default function AdminRekapBulananPage() {
 		if (rekapList.length === 0) return;
 		
 		let csvContent = "data:text/csv;charset=utf-8,";
-		csvContent += "NIK,Nama,Departemen,Hari Jadwal,Hari Approved,Gap Hari,Rata-rata Skor,Jasa Dasar,Pengurang Jasa,Jasa Final,Status\n";
+		csvContent += "NIK,Nama,Departemen,Hari Jadwal,Hari Approved (Reguler),Shift Tambahan,Gap Hari,Rata-rata Skor,Jasa Dasar,Pengurang Jasa,Insentif Tambahan,Jasa Final,Status\n";
 		
 		rekapList.forEach(row => {
-			csvContent += `"${row.nik}","${row.nama}","${row.nama_departemen}",${row.total_hari_jadwal},${row.hari_approved},${row.gap_hari},${Math.round(row.rata_skor_total)},${row.nominal_jasa_dasar},${row.pengurang_jasa},${row.nominal_jasa_final},"${row.status_rekap}"\n`;
+			const hariReguler = row.hari_approved - (row.hari_approved_bonus || 0);
+			csvContent += `"${row.nik}","${row.nama}","${row.nama_departemen}",${row.total_hari_jadwal},${hariReguler},${row.hari_approved_bonus || 0},${row.gap_hari},${Math.round(row.rata_skor_total)},${row.nominal_jasa_dasar},${row.pengurang_jasa},${row.nominal_jasa_tambahan || 0},${row.nominal_jasa_final},"${row.status_rekap}"\n`;
 		});
 
 		const encodedUri = encodeURI(csvContent);
@@ -223,6 +296,7 @@ export default function AdminRekapBulananPage() {
 	// Aggregate metrics from summary payload
 	const totalJasaDasar = summary.totalJasaDasar;
 	const totalPengurang = summary.totalPengurang;
+	const totalJasaTambahan = summary.totalJasaTambahan || 0;
 	const totalJasaFinal = summary.totalJasaFinal;
 	const avgMonthlyScore = summary.avgMonthlyScore;
 
@@ -244,17 +318,30 @@ export default function AdminRekapBulananPage() {
 				
 				<div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-6 md:p-8">
 					<div>
-						<div className="flex items-center gap-2 mb-2">
+						<div className="flex items-center gap-2 mb-2 flex-wrap">
 							<span className="text-[10px] font-bold text-primary-400 uppercase tracking-widest font-mono">Rekapitulasi Kinerja</span>
+							{paramShiftTambahan && (
+								<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200/80 font-mono">
+									<Coins className="h-3 w-3 text-amber-600" />
+									Tarif Shift Tambahan: Rp {Number(paramShiftTambahan.nilai_skor || 50000).toLocaleString("id-ID")} / shift
+								</span>
+							)}
 						</div>
 						<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-800 leading-tight">
 							Rekap Kinerja Bulanan
 						</h1>
 						<p className="text-slate-500 text-sm mt-1.5 font-medium">
-							Rekapitulasi to-do list harian, gap hari approved, dan pengurang jasa pegawai.
+							Rekapitulasi to-do list harian, gap hari approved, shift tambahan, dan pengurang jasa pegawai.
 						</p>
 					</div>
-					<div className="flex gap-2 shrink-0">
+					<div className="flex gap-2 shrink-0 flex-wrap">
+						<button 
+							onClick={() => setIsSettingModalOpen(true)}
+							className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-sm"
+						>
+							<SlidersHorizontal className="h-4 w-4" />
+							Setting Tarif Shift
+						</button>
 						{selectedIds.length > 0 && (
 							<>
 								<button 
@@ -403,29 +490,33 @@ export default function AdminRekapBulananPage() {
 			) : (
 				<>
 					{/* Aggregate statistics */}
-					<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+					<div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
 							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Total Jasa Dasar</span>
-							<span className="text-xl font-black text-slate-800 font-figtree">Rp {totalJasaDasar.toLocaleString("id-ID")}</span>
+							<span className="text-lg md:text-xl font-black text-slate-800 font-figtree">Rp {totalJasaDasar.toLocaleString("id-ID")}</span>
 						</div>
-						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
-							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Total Pengurang Jasa</span>
-							<span className="text-xl font-black text-red-600 font-figtree">Rp {totalPengurang.toLocaleString("id-ID")}</span>
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Pengurang Jasa</span>
+							<span className="text-lg md:text-xl font-black text-red-600 font-figtree">Rp {totalPengurang.toLocaleString("id-ID")}</span>
 						</div>
-						<div className="bg-primary-900 border border-primary-800/40 rounded-2xl p-5 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-amber-600 font-bold uppercase tracking-widest font-mono block">Insentif Tambahan</span>
+							<span className="text-lg md:text-xl font-black text-amber-600 font-figtree">Rp {totalJasaTambahan.toLocaleString("id-ID")}</span>
+						</div>
+						<div className="bg-primary-900 border border-primary-800/40 rounded-2xl p-4 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
 							<div className="absolute -top-10 -right-10 w-24 h-24 bg-primary-700/10 rounded-full blur-xl pointer-events-none" />
-							<span className="text-[10px] text-primary-400 font-bold uppercase tracking-widest font-mono block relative z-10">Total Jasa Terbayar</span>
-							<span className="text-xl font-black text-primary-400 font-figtree relative z-10">Rp {totalJasaFinal.toLocaleString("id-ID")}</span>
+							<span className="text-[10px] text-primary-400 font-bold uppercase tracking-widest font-mono block relative z-10">Jasa Terbayar</span>
+							<span className="text-lg md:text-xl font-black text-primary-400 font-figtree relative z-10">Rp {totalJasaFinal.toLocaleString("id-ID")}</span>
 						</div>
-						<div className="bg-primary-800 border border-primary-800 rounded-2xl p-5 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
+						<div className="bg-primary-800 border border-primary-800 rounded-2xl p-4 text-slate-800 shadow-sm space-y-1 relative overflow-hidden">
 							<div className="absolute -top-10 -right-10 w-24 h-24 bg-primary-700/10 rounded-full blur-xl pointer-events-none" />
-							<span className="text-[10px] text-slate-650 font-bold uppercase tracking-widest font-mono block relative z-10">Rerata Nilai Kinerja</span>
-							<span className="text-xl font-black text-primary-400 font-figtree relative z-10">{avgMonthlyScore} / 100</span>
+							<span className="text-[10px] text-slate-650 font-bold uppercase tracking-widest font-mono block relative z-10">Rerata Skor</span>
+							<span className="text-lg md:text-xl font-black text-primary-400 font-figtree relative z-10">{avgMonthlyScore} / 100</span>
 						</div>
-						<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
-							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Status Penguncian</span>
-							<span className="text-xl font-black text-slate-800 font-figtree">
-								{summary.totalLocked} <span className="text-slate-450 text-xs font-bold">/ {summary.totalEmployees} Locked</span>
+						<div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm space-y-1 hover:shadow-md transition-shadow duration-200">
+							<span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono block">Status Lock</span>
+							<span className="text-lg md:text-xl font-black text-slate-800 font-figtree">
+								{summary.totalLocked} <span className="text-slate-450 text-xs font-bold">/ {summary.totalEmployees}</span>
 							</span>
 						</div>
 					</div>
@@ -456,11 +547,13 @@ export default function AdminRekapBulananPage() {
 										</th>
 										<th className="px-5 py-3.5">Pegawai</th>
 										<th className="px-5 py-3.5 text-center">Jadwal</th>
-										<th className="px-5 py-3.5 text-center">Approved</th>
+										<th className="px-5 py-3.5 text-center">Approved (Reguler)</th>
+										<th className="px-5 py-3.5 text-center text-amber-600">Shift Tambahan</th>
 										<th className="px-5 py-3.5 text-center">Gap Hari</th>
 										<th className="px-5 py-3.5 text-center">Rerata Skor</th>
 										<th className="px-5 py-3.5 text-right">Jasa Dasar</th>
 										<th className="px-5 py-3.5 text-right">Pengurang</th>
+										<th className="px-5 py-3.5 text-right text-amber-600">Insentif Tambahan</th>
 										<th className="px-5 py-3.5 text-right">Jasa Final</th>
 										<th className="px-5 py-3.5 text-center print:hidden">Status</th>
 										<th className="px-5 py-3.5 text-right print:hidden">Aksi</th>
@@ -469,12 +562,14 @@ export default function AdminRekapBulananPage() {
 								<tbody className="divide-y divide-slate-100 text-xs">
 									{rekapList.length === 0 ? (
 										<tr>
-											<td colSpan="11" className="px-5 py-10 text-center text-slate-400 font-medium">
+											<td colSpan="12" className="px-5 py-10 text-center text-slate-400 font-medium">
 												Tidak ada data rekapitulasi untuk bulan/tahun terpilih.
 											</td>
 										</tr>
 									) : (
-										rekapList.map((row) => (
+										rekapList.map((row) => {
+											const hariReguler = row.hari_approved - (row.hari_approved_bonus || 0);
+											return (
 											<tr key={row.id} className={`hover:bg-[#E0F7FE]/20 transition-colors duration-150 ${selectedIds.includes(row.id) ? 'bg-[#E0F7FE]/10' : ''}`}>
 												<td className="px-5 py-4 w-10 print:hidden">
 													<input 
@@ -498,7 +593,10 @@ export default function AdminRekapBulananPage() {
 													{row.total_hari_jadwal} hari
 												</td>
 												<td className="px-5 py-4 text-center font-bold text-emerald-600 font-figtree">
-													{row.hari_approved} hari
+													{hariReguler} hari
+												</td>
+												<td className="px-5 py-4 text-center font-bold text-amber-600 font-figtree">
+													{row.hari_approved_bonus || 0} shift
 												</td>
 												<td className={`px-5 py-4 text-center font-bold font-figtree ${row.gap_hari > 0 ? "text-rose-600" : "text-slate-500"}`}>
 													{row.gap_hari} hari
@@ -511,6 +609,9 @@ export default function AdminRekapBulananPage() {
 												</td>
 												<td className={`px-5 py-4 text-right font-bold font-mono ${row.pengurang_jasa > 0 ? "text-red-600" : "text-slate-400"}`}>
 													Rp {Number(row.pengurang_jasa).toLocaleString("id-ID")}
+												</td>
+												<td className="px-5 py-4 text-right font-bold text-amber-600 font-mono">
+													Rp {Number(row.nominal_jasa_tambahan || 0).toLocaleString("id-ID")}
 												</td>
 												<td className="px-5 py-4 text-right font-extrabold text-[#0090CC] text-sm font-mono">
 													Rp {Number(row.nominal_jasa_final).toLocaleString("id-ID")}
@@ -548,7 +649,8 @@ export default function AdminRekapBulananPage() {
 													)}
 												</td>
 											</tr>
-										))
+										);
+										})
 									)}
 								</tbody>
 							</table>
@@ -637,6 +739,82 @@ export default function AdminRekapBulananPage() {
 				cancelText={confirmState.cancelText}
 				variant={confirmState.variant}
 			/>
+
+			{/* Modal Setting Tarif Shift Tambahan */}
+			{isSettingModalOpen && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+					<div className="bg-white border border-slate-200/80 rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+						<div className="flex items-center justify-between border-b border-slate-100 pb-4">
+							<div className="flex items-center gap-2.5">
+								<div className="p-2 bg-amber-50 rounded-xl border border-amber-200/60 text-amber-700">
+									<SlidersHorizontal className="h-5 w-5" />
+								</div>
+								<div>
+									<h3 className="font-extrabold text-slate-800 text-base font-figtree">Setting Tarif Shift Tambahan</h3>
+									<p className="text-xs text-slate-400 font-medium">Atur nominal insentif per shift tambahan pegawai</p>
+								</div>
+							</div>
+							<button 
+								onClick={() => setIsSettingModalOpen(false)}
+								className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+							>
+								<X className="h-4 w-4" />
+							</button>
+						</div>
+
+						<form onSubmit={handleSaveParam} className="space-y-4">
+							<div className="space-y-1.5">
+								<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Kode Parameter</label>
+								<input 
+									type="text" 
+									value={paramShiftTambahan?.kode || "JASA_SHIFT_TAMBAHAN"} 
+									disabled 
+									className="w-full px-3.5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-500 cursor-not-allowed"
+								/>
+							</div>
+
+							<div className="space-y-1.5">
+								<label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">Nominal per Shift (Rp)</label>
+								<div className="relative">
+									<span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 font-mono">Rp</span>
+									<input 
+										type="number" 
+										required 
+										min="0"
+										step="1000"
+										value={inputNominalTambahan}
+										onChange={(e) => setInputNominalTambahan(e.target.value)}
+										placeholder="50000"
+										className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 focus:bg-white text-sm font-bold text-slate-800 font-mono"
+									/>
+								</div>
+								<p className="text-[11px] text-slate-400 font-medium">
+									Nominal ini dikalikan dengan total shift tambahan yang di-approve pada bulan berjalan (khusus rekap status Draft).
+								</p>
+							</div>
+
+							<div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+								<button 
+									type="button"
+									onClick={() => setIsSettingModalOpen(false)}
+									disabled={savingParam}
+									className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer"
+								>
+									Batal
+								</button>
+								<button 
+									type="submit"
+									disabled={savingParam}
+									className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+								>
+									{savingParam ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+									Simpan Tarif
+								</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
