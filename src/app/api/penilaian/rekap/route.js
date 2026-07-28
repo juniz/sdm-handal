@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
+import { rawQuery } from "@/lib/db-helper";
 
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
 
@@ -34,6 +37,16 @@ export async function GET(request) {
 		if (!token) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 		}
+
+		let verified;
+		try {
+			verified = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
+		} catch (error) {
+			return NextResponse.json({ error: "Unauthorized / Session Expired" }, { status: 401 });
+		}
+
+		const loggedInUser = verified.payload;
+		const isAdmin = loggedInUser?.departemen?.toUpperCase() === "IT";
 
 		const { searchParams } = new URL(request.url);
 		const bulan = searchParams.get("bulan");
@@ -105,23 +118,116 @@ export async function GET(request) {
 			}
 		`;
 
+		// If Admin (IT Department), return full dataset without supervisor filtering
+		if (isAdmin) {
+			const variables = {
+				bulan: Number(bulan),
+				tahun: Number(tahun),
+				departemen,
+				nama,
+				status,
+				page,
+				limit
+			};
+
+			const data = await fetchGraphQL(query, variables, token);
+			return NextResponse.json({
+				success: true,
+				data: data.rekapBulananList.data,
+				meta: data.rekapBulananList.meta,
+				summary: data.rekapBulananList.summary
+			});
+		}
+
+		// Non-Admin: Fetch supervisor mappings to determine allowed supervised employees
+		const supervisorMappings = await rawQuery(`
+			SELECT tipe_relasi, pegawai_id, tipe_unit, kode_unit
+			FROM supervisor_mapping
+			WHERE supervisor_id = ?
+			  AND is_aktif = 1
+			  AND berlaku_mulai <= CURDATE()
+			  AND (berlaku_sampai IS NULL OR berlaku_sampai >= CURDATE())
+		`, [loggedInUser.id]);
+
+		const allowedPegawaiIds = new Set();
+
+		if (supervisorMappings && supervisorMappings.length > 0) {
+			// Get all active employees to match unit mappings
+			const activeEmployees = await rawQuery(`
+				SELECT id, departemen, bidang FROM pegawai WHERE stts_aktif = 'AKTIF'
+			`);
+
+			supervisorMappings.forEach((map) => {
+				if (map.tipe_relasi === "personal" && map.pegawai_id) {
+					allowedPegawaiIds.add(Number(map.pegawai_id));
+				} else if (map.tipe_relasi === "unit" && map.kode_unit) {
+					activeEmployees.forEach((emp) => {
+						if (map.tipe_unit === "departemen" && emp.departemen === map.kode_unit) {
+							allowedPegawaiIds.add(Number(emp.id));
+						} else if (map.tipe_unit === "bidang" && emp.bidang === map.kode_unit) {
+							allowedPegawaiIds.add(Number(emp.id));
+						}
+					});
+				}
+			});
+		}
+
+		// Also allow supervisor to view their own record
+		if (loggedInUser.id) {
+			allowedPegawaiIds.add(Number(loggedInUser.id));
+		}
+
+		// Fetch all records for filtering
 		const variables = {
 			bulan: Number(bulan),
 			tahun: Number(tahun),
 			departemen,
 			nama,
 			status,
-			page,
-			limit
+			page: 1,
+			limit: 1000
 		};
 
 		const data = await fetchGraphQL(query, variables, token);
-		
+		const rawData = data.rekapBulananList?.data || [];
+
+		// Filter dataset for allowed supervised employees only
+		const filteredData = rawData.filter((item) => allowedPegawaiIds.has(Number(item.pegawai_id)));
+
+		// Calculate stats summary
+		const totalEmployees = filteredData.length;
+		const totalJasaDasar = filteredData.reduce((sum, item) => sum + (Number(item.nominal_jasa_dasar) || 0), 0);
+		const totalPengurang = filteredData.reduce((sum, item) => sum + (Number(item.pengurang_jasa) || 0), 0);
+		const totalJasaTambahan = filteredData.reduce((sum, item) => sum + (Number(item.nominal_jasa_tambahan) || 0), 0);
+		const totalJasaFinal = filteredData.reduce((sum, item) => sum + (Number(item.nominal_jasa_final) || 0), 0);
+		const totalLocked = filteredData.filter((item) => item.status_rekap === "LOCKED").length;
+		const avgMonthlyScore = totalEmployees > 0
+			? Math.round(filteredData.reduce((sum, item) => sum + (Number(item.rata_skor_total) || 0), 0) / totalEmployees)
+			: 0;
+
+		// Paginate filtered data
+		const totalPages = Math.ceil(totalEmployees / limit) || 1;
+		const startIndex = (page - 1) * limit;
+		const paginatedData = filteredData.slice(startIndex, startIndex + limit);
+
 		return NextResponse.json({
 			success: true,
-			data: data.rekapBulananList.data,
-			meta: data.rekapBulananList.meta,
-			summary: data.rekapBulananList.summary
+			data: paginatedData,
+			meta: {
+				page,
+				limit,
+				totalItems: totalEmployees,
+				totalPages
+			},
+			summary: {
+				totalJasaDasar,
+				totalPengurang,
+				totalJasaTambahan,
+				totalJasaFinal,
+				avgMonthlyScore,
+				totalLocked,
+				totalEmployees
+			}
 		});
 	} catch (error) {
 		console.error("Error in GET /api/penilaian/rekap:", error);

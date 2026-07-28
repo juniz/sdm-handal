@@ -126,21 +126,6 @@ export default function RiwayatPenilaianPage() {
 	const startDayOfWeek = moment(`${currentYear}-${currentMonth}-01`, "YYYY-MM-DD").day(); // 0 (Sun) to 6 (Sat)
 	const adjustedStartDay = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
 
-	const getStatusBadge = (status) => {
-		switch (status) {
-			case "draft":
-				return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-slate-100 text-slate-700 border border-slate-200 font-figtree tracking-wider">DRAF</span>;
-			case "submitted":
-				return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-amber-50 text-amber-800 border border-amber-200 font-figtree tracking-wider animate-pulse">PENDING</span>;
-			case "approved":
-				return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-figtree tracking-wider">DISETUJUI</span>;
-			case "revisi":
-				return <span className="px-2 py-0.5 text-[10px] font-extrabold rounded bg-rose-50 text-rose-800 border border-rose-200 font-figtree tracking-wider">REVISI</span>;
-			default:
-				return null;
-		}
-	};
-
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
 			<div className="bg-gradient-to-r from-primary-900 to-primary-800 border border-primary-800/20 rounded-2xl p-4 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
@@ -195,7 +180,6 @@ export default function RiwayatPenilaianPage() {
 							<span className={`text-[8px] md:text-[10px] ${gapDays > 0 ? "text-rose-700" : "text-slate-500"} block mt-1 font-medium`}>Belum disetujui</span>
 						</div>
 						<div className="bg-gradient-to-br from-white to-primary-50/10 border border-primary-100 rounded-2xl p-4 md:p-5 shadow-sm space-y-1 transition-all duration-200 hover:shadow-md relative overflow-hidden">
-							{/* Accent strip */}
 							<div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-400 via-primary-600 to-primary-400" />
 							<span className="text-[9px] md:text-[10px] text-primary-800 font-bold uppercase tracking-wider block font-figtree">Rata-Rata Nilai</span>
 							<span className="text-xl md:text-3xl font-black text-primary-600 font-figtree">{avgScore}</span>
@@ -229,7 +213,7 @@ export default function RiwayatPenilaianPage() {
 
 						<div className="p-3 md:p-6">
 							{/* Day names row */}
-							<div className="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 border-b border-slate-100 mb-3">
+							<div className="grid grid-cols-7 gap-1 md:gap-2 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest pb-3 border-b border-slate-100 mb-3 font-figtree">
 								<div>Sen</div>
 								<div>Sel</div>
 								<div>Rab</div>
@@ -344,7 +328,6 @@ export default function RiwayatPenilaianPage() {
 													: "pointer-events-none"
 											}`}
 										>
-											{/* Header of box: number and shift */}
 											<div className="flex flex-col md:flex-row justify-between items-start md:items-center w-full gap-0.5 leading-none">
 												<span className={`text-[10px] md:text-sm font-extrabold font-figtree ${textClass}`}>
 													{dayItem.day}
@@ -356,12 +339,10 @@ export default function RiwayatPenilaianPage() {
 												)}
 											</div>
 
-											{/* Center/bottom status & score */}
 											<div className="flex-1 flex items-center justify-center pt-0.5 md:pt-2">
 												{statusBadge}
 											</div>
 
-											{/* Footer flag for tambahan */}
 											{dayItem.isWorkDay && dayItem.isTambahan && (
 												<div className="w-full flex justify-end">
 													<span className="w-1.5 h-1.5 bg-amber-500 rounded-full" title="Shift Tambahan" />
@@ -378,7 +359,7 @@ export default function RiwayatPenilaianPage() {
 
 			{/* Modal Detail */}
 			{isModalOpen && selectedEval && (
-				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 pb-28 md:p-4">
+				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 pb-28 md:p-4">
 					<div className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200 border border-slate-200 relative">
 						<div className="bg-gradient-to-r from-primary-900 to-primary-800 px-4 py-3 md:px-6 md:py-4 text-slate-800 flex justify-between items-center relative overflow-hidden border-b border-slate-200">
 							<div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full blur-2xl pointer-events-none"></div>
@@ -393,9 +374,7 @@ export default function RiwayatPenilaianPage() {
 							</button>
 						</div>
 
-						{/* Modal Content */}
 						<div className="p-4 md:p-6 space-y-4 md:space-y-5 max-h-[70vh] overflow-y-auto">
-							{/* Performance values grid */}
 							<div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 p-2.5 rounded-xl">
 								<div className="text-center p-1.5 bg-white border border-slate-100/80 rounded-lg shadow-xs">
 									<span className="text-[8px] md:text-[9px] text-slate-400 font-bold block uppercase tracking-wider font-figtree">Skor Kegiatan</span>
@@ -411,7 +390,6 @@ export default function RiwayatPenilaianPage() {
 								</div>
 							</div>
 
-							{/* Resolved condition */}
 							<div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm bg-slate-50 border border-slate-100 p-3 md:p-4 rounded-xl">
 								<div>
 									<span className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-wider block font-figtree">Sumber Kehadiran</span>
@@ -423,7 +401,6 @@ export default function RiwayatPenilaianPage() {
 								</div>
 							</div>
 
-							{/* Late Reason Display */}
 							{selectedEval.alasan_terlambat && (
 								<div className="p-3 md:p-4 bg-rose-50/60 border border-rose-100/50 rounded-xl space-y-1">
 									<span className="text-[8px] md:text-[9px] text-rose-600 font-bold block uppercase tracking-wider font-figtree">Alasan Terlambat</span>
@@ -433,7 +410,6 @@ export default function RiwayatPenilaianPage() {
 								</div>
 							)}
 
-							{/* Supervisor comments */}
 							{selectedEval.catatan_supervisor && (
 								<div className="p-3 md:p-4 bg-rose-50/50 border border-rose-100 text-rose-800 rounded-xl space-y-1 animate-fadeIn">
 									<div className="flex items-center gap-1.5 font-bold text-xs font-figtree uppercase tracking-wider">
@@ -444,7 +420,6 @@ export default function RiwayatPenilaianPage() {
 								</div>
 							)}
 
-							{/* Activities section */}
 							<div className="space-y-3">
 								<h4 className="font-bold text-slate-800 text-sm font-figtree">Daftar Item Kegiatan</h4>
 								
@@ -489,7 +464,6 @@ export default function RiwayatPenilaianPage() {
 							</div>
 						</div>
 
-						{/* Modal Footer */}
 						<div className="px-4 py-3 md:px-6 md:py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
 							<button 
 								onClick={() => setIsModalOpen(false)}
