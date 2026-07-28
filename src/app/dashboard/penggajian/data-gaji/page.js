@@ -222,133 +222,157 @@ export default function DataGajiPage() {
 
     return (
         <div className="container mx-auto p-4 md:p-6 space-y-6">
-            <div className="flex flex-col space-y-2">
-                <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
-                    <FileText className="w-8 h-8 text-blue-600" />
-                    Data Gaji Pegawai
-                </h1>
-                <p className="text-gray-500">
-                    Rekapitulasi data gaji yang telah digenerate per periode.
-                </p>
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-1">
+                    <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2 tracking-tight text-slate-900">
+                        <FileText className="w-8 h-8 text-blue-600" />
+                        Data Gaji Pegawai
+                    </h1>
+                    <p className="text-sm text-slate-500">
+                        Rekapitulasi data gaji yang telah digenerate per periode.
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrint(false)}
+                        disabled={printing || loading}
+                        className="gap-2 border-slate-200 hover:bg-slate-50"
+                    >
+                        {printing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Printer className="h-4 w-4 text-slate-500" />
+                        )}
+                        Print Standard
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrint(true)}
+                        disabled={printing || loading}
+                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                    >
+                        {printing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <Printer className="h-4 w-4 text-indigo-500" />
+                        )}
+                        Print per Kelompok Kontrak
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSettingsModalOpen(true)}
+                        className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                        <Settings className="h-4 w-4 text-blue-500" />
+                        Pengaturan
+                    </Button>
+                </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <CardTitle>Daftar Gaji</CardTitle>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePrint(false)}
-                                disabled={printing || loading}
-                                className="gap-2"
-                            >
-                                {printing ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Printer className="h-4 w-4" />
-                                )}
-                                Print Standard
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePrint(true)}
-                                disabled={printing || loading}
-                                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-                            >
-                                {printing ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Printer className="h-4 w-4" />
-                                )}
-                                Print per Kelompok Kontrak
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsSettingsModalOpen(true)}
-                                className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
-                            >
-                                <Settings className="h-4 w-4" />
-                                Pengaturan
-                            </Button>
+            {/* Main Card */}
+            <Card className="overflow-hidden border-slate-200 shadow-sm relative">
+                {/* Brand Accent Bar on Top */}
+                <div className="h-[3px] w-full bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400" />
+                
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-lg font-semibold text-slate-900">Daftar Rekapitulasi Gaji</CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                    {/* Symmetrical Filter Panel */}
+                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-4">
+                        {/* Search Bar - Full Width */}
+                        <div className="relative w-full">
+                            <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Cari NIK atau Nama Pegawai..."
+                                value={search}
+                                onChange={(e) => { setSearch(e.target.value); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}
+                                className="pl-9 pr-4 h-10 border-slate-200 bg-white focus-visible:ring-blue-500 w-full"
+                            />
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-4">
+
+                        {/* Dropdown Filters - 4-Column Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Month Filter */}
-                            <Select value={month} onValueChange={(val) => { setMonth(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Bulan" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Semua Bulan</SelectItem>
-                                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                                        <SelectItem key={m} value={m.toString()}>
-                                            {new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-500">Bulan</label>
+                                <Select value={month} onValueChange={(val) => { setMonth(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
+                                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
+                                        <SelectValue placeholder="Bulan" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Bulan</SelectItem>
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                            <SelectItem key={m} value={m.toString()}>
+                                                {new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             {/* Year Filter */}
-                            <Input 
-                                type="number" 
-                                placeholder="Tahun" 
-                                value={year} 
-                                onChange={(e) => { setYear(e.target.value); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}
-                                className="w-[100px]"
-                            />
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-500">Tahun</label>
+                                <Input 
+                                    type="number" 
+                                    placeholder="Tahun" 
+                                    value={year} 
+                                    onChange={(e) => { setYear(e.target.value); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}
+                                    className="w-full bg-white border-slate-200 h-10"
+                                />
+                            </div>
 
                             {/* Jenis Filter */}
-                            <Select value={jenis} onValueChange={(val) => { setJenis(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
-                                <SelectTrigger className="w-[120px]">
-                                    <SelectValue placeholder="Jenis" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Semua</SelectItem>
-                                    <SelectItem value="Gaji">Gaji</SelectItem>
-                                    <SelectItem value="Jasa">Jasa</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-500">Jenis</label>
+                                <Select value={jenis} onValueChange={(val) => { setJenis(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
+                                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
+                                        <SelectValue placeholder="Jenis" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua</SelectItem>
+                                        <SelectItem value="Gaji">Gaji</SelectItem>
+                                        <SelectItem value="Jasa">Jasa</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             {/* Departemen Filter */}
-                            <Select value={departemen} onValueChange={(val) => { setDepartemen(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
-                                <SelectTrigger className="w-[180px]">
-                                    <SelectValue placeholder="Departemen" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Semua Departemen</SelectItem>
-                                    {departemenList.map((dep) => (
-                                        <SelectItem key={dep.dep_id} value={dep.dep_id}>
-                                            {dep.nama}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-
-                            {/* Search */}
-                            <div className="relative w-full sm:w-64">
-                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Cari NIK atau Nama..."
-                                    value={search}
-                                    onChange={(e) => { setSearch(e.target.value); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}
-                                    className="pl-8"
-                                />
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-500">Departemen</label>
+                                <Select value={departemen} onValueChange={(val) => { setDepartemen(val); setPagination(prev => ({ ...prev, pageIndex: 0 })); }}>
+                                    <SelectTrigger className="w-full bg-white border-slate-200 h-10">
+                                        <SelectValue placeholder="Departemen" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Semua Departemen</SelectItem>
+                                        {departemenList.map((dep) => (
+                                            <SelectItem key={dep.dep_id} value={dep.dep_id}>
+                                                {dep.nama}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
+
+                    {/* Table View */}
+                    <div className="rounded-xl border border-slate-200 overflow-hidden shadow-sm bg-white">
                         <Table>
-                            <TableHeader>
+                            <TableHeader className="bg-slate-50/75 border-b border-slate-200">
                                 {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id}>
+                                    <TableRow key={headerGroup.id} className="hover:bg-transparent">
                                         {headerGroup.headers.map((header) => {
                                             return (
-                                                <TableHead key={header.id}>
+                                                <TableHead key={header.id} className="text-slate-600 font-semibold text-xs uppercase tracking-wider py-3 h-auto">
                                                     {header.isPlaceholder
                                                         ? null
                                                         : flexRender(
@@ -364,10 +388,10 @@ export default function DataGajiPage() {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        <TableCell colSpan={columns.length} className="h-32 text-center">
                                             <div className="flex justify-center items-center gap-2">
-                                                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                                <span>Memuat data...</span>
+                                                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                                <span className="text-slate-500 font-medium">Memuat data...</span>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -376,9 +400,10 @@ export default function DataGajiPage() {
                                         <TableRow
                                             key={row.id}
                                             data-state={row.getIsSelected() && "selected"}
+                                            className="hover:bg-blue-50/20 transition-colors border-b border-slate-100 last:border-0"
                                         >
                                             {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id}>
+                                                <TableCell key={cell.id} className="py-3">
                                                     {flexRender(
                                                         cell.column.columnDef.cell,
                                                         cell.getContext()
@@ -389,7 +414,7 @@ export default function DataGajiPage() {
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={columns.length} className="h-32 text-center text-slate-400">
                                             Tidak ada data ditemukan.
                                         </TableCell>
                                     </TableRow>
@@ -399,28 +424,32 @@ export default function DataGajiPage() {
                     </div>
 
                     {/* Pagination */}
-                    <div className="flex items-center justify-end space-x-2 py-4">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.previousPage()}
-                            disabled={!table.getCanPreviousPage() || loading}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                            Previous
-                        </Button>
-                        <div className="text-sm font-medium">
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                        <div className="text-sm text-slate-500 font-medium">
                             Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount()}
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => table.nextPage()}
-                            disabled={!table.getCanNextPage() || loading}
-                        >
-                            Next
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => table.previousPage()}
+                                disabled={!table.getCanPreviousPage() || loading}
+                                className="h-9 px-3 border-slate-200 hover:bg-slate-50 gap-1 text-slate-700"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => table.nextPage()}
+                                disabled={!table.getCanNextPage() || loading}
+                                className="h-9 px-3 border-slate-200 hover:bg-slate-50 gap-1 text-slate-700"
+                            >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
