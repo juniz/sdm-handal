@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
 	Table,
@@ -14,15 +14,16 @@ import { Button } from "@/components/ui/button";
 import {
 	FileText,
 	Clock,
-	Search,
 	X,
 	ChevronLeft,
 	ChevronRight,
+	CalendarDays,
 	Trash2,
 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DatePicker } from "@/components/DatePicker";
 import {
 	AlertDialog,
@@ -35,11 +36,14 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const fadeIn = {
@@ -98,7 +102,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 	}
 
 	return (
-		<div className="flex items-center justify-between px-2 py-4">
+		<div className="hidden items-center justify-between px-2 py-4 min-[780px]:flex">
 			<div className="flex items-center gap-2">
 				<Button
 					variant="outline"
@@ -159,6 +163,37 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 	);
 };
 
+const MobilePagination = ({ currentPage, totalPages, onPageChange }) => (
+	<nav
+		aria-label="Navigasi halaman izin"
+		className="flex w-full items-center justify-between rounded-2xl bg-white p-2 min-[780px]:hidden"
+	>
+		<Button
+			variant="ghost"
+			size="icon"
+			className="min-h-11 min-w-11 rounded-xl text-[#007aff]"
+			onClick={() => onPageChange(currentPage - 1)}
+			disabled={currentPage === 1}
+			aria-label="Halaman sebelumnya"
+		>
+			<ChevronLeft className="size-5" />
+		</Button>
+		<span className="text-[13px] font-medium text-[#6e6e73]">
+			Halaman {currentPage} dari {totalPages}
+		</span>
+		<Button
+			variant="ghost"
+			size="icon"
+			className="min-h-11 min-w-11 rounded-xl text-[#007aff]"
+			onClick={() => onPageChange(currentPage + 1)}
+			disabled={currentPage === totalPages}
+			aria-label="Halaman berikutnya"
+		>
+			<ChevronRight className="size-5" />
+		</Button>
+	</nav>
+);
+
 const getStatusBadge = (status) => {
 	switch (status) {
 		case "Proses Pengajuan":
@@ -200,75 +235,133 @@ const getStatusBadge = (status) => {
 	}
 };
 
-const IzinCard = ({ item, onDelete }) => {
-	return (
-		<Accordion type="single" collapsible className="w-full">
-			<AccordionItem
-				value={item.no_pengajuan}
-				className="border rounded-lg mb-2"
+const MobileIzinRow = ({ item, onOpen }) => (
+	<button
+		type="button"
+		onClick={(event) => onOpen(item, event.currentTarget)}
+		aria-label={`Buka detail pengajuan ${item.no_pengajuan}`}
+		className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007aff]"
+	>
+		<div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e5f1ff] text-[#007aff]">
+			<CalendarDays className="size-5" aria-hidden="true" />
+		</div>
+		<div className="min-w-0 flex-1">
+			<p className="truncate font-semibold text-[#1c1c1e]">{item.no_pengajuan}</p>
+			<p className="mt-0.5 text-[13px] text-[#6e6e73]">
+				{formatDateSafe(item.tanggal_awal)} – {formatDateSafe(item.tanggal_akhir)}
+				<span className="ml-2">{item.jumlah} hari</span>
+			</p>
+		</div>
+		<div className="shrink-0">{getStatusBadge(item.status)}</div>
+		<ChevronRight className="size-5 shrink-0 text-[#c7c7cc]" aria-hidden="true" />
+	</button>
+);
+
+const MobileHistorySkeleton = () => (
+	<div className="overflow-hidden rounded-2xl bg-white">
+		{Array.from({ length: 3 }, (_, index) => (
+			<div
+				key={index}
+				className="flex min-h-16 items-center gap-3 px-4 py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#c6c6c8]/30"
 			>
-				<AccordionTrigger className="px-4 py-2 hover:no-underline">
-					<div className="flex flex-col items-start text-left">
-						<div className="font-medium">{item.no_pengajuan}</div>
-						<div className="text-sm text-gray-500">
-							{formatDateSafe(item.tanggal)}
+				<Skeleton className="size-10 shrink-0 rounded-xl" />
+				<div className="min-w-0 flex-1 space-y-2">
+					<Skeleton className="h-4 w-32" />
+					<Skeleton className="h-3 w-48 max-w-full" />
+				</div>
+				<Skeleton className="h-6 w-16 rounded-full" />
+				<Skeleton className="size-5 rounded-full" />
+			</div>
+		))}
+	</div>
+);
+
+const MobileIzinDetailSheet = ({
+	item,
+	open,
+	onOpenChange,
+	onDelete,
+	onCloseAutoFocus,
+}) => {
+	if (!item) return null;
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent
+				className="!top-auto !right-0 !bottom-0 !left-0 !max-h-[85dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none border-0 bg-[#f2f2f7] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 min-[780px]:hidden [&>button]:!top-2 [&>button]:!right-2 [&>button]:!size-11 [&>button]:!p-0"
+				onCloseAutoFocus={onCloseAutoFocus}
+			>
+				<div className="mx-auto h-1.5 w-10 rounded-full bg-[#c7c7cc]" aria-hidden="true" />
+				<DialogHeader className="gap-1 text-left">
+					<DialogTitle className="text-xl text-[#1c1c1e]">
+						Detail pengajuan izin
+					</DialogTitle>
+					<DialogDescription className="text-[#6e6e73]">
+						Informasi lengkap pengajuan {item.no_pengajuan}.
+					</DialogDescription>
+				</DialogHeader>
+
+				<div className="overflow-hidden rounded-2xl bg-white">
+					<div className="flex items-center justify-between gap-3 border-b border-[#c6c6c8]/30 px-4 py-3">
+						<div>
+							<p className="text-xs font-medium text-[#6e6e73]">No. Pengajuan</p>
+							<p className="font-semibold text-[#1c1c1e]">{item.no_pengajuan}</p>
 						</div>
+						{getStatusBadge(item.status)}
 					</div>
-				</AccordionTrigger>
-				<AccordionContent className="px-4 pb-4">
-					<div className="space-y-3">
-						<div>
-							<div className="text-sm font-medium text-gray-500">Periode</div>
-							<div className="flex items-center mt-1">
-								<Clock className="w-4 h-4 mr-1 text-blue-600" />
-								<div className="text-sm">
-									{formatDateSafe(item.tanggal_awal)}{" "}
-									-{" "}
-									{formatDateSafe(item.tanggal_akhir)}
-								</div>
-							</div>
-							<Badge variant="outline" className="mt-1">
-								{item.jumlah} hari
-							</Badge>
+					<dl className="divide-y divide-[#c6c6c8]/30 px-4">
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Tanggal pengajuan</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{formatDateSafe(item.tanggal)}</dd>
 						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Periode izin</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">
+								{formatDateSafe(item.tanggal_awal)} – {formatDateSafe(item.tanggal_akhir)}
+							</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Durasi</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{item.jumlah} hari</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Urgensi</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{item.urgensi || "-"}</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Kepentingan</dt>
+							<dd className="mt-1 whitespace-pre-wrap text-sm text-[#1c1c1e]">
+								{item.kepentingan || "-"}
+							</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Penanggung jawab</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">
+								{item.nama_pj || item.nik_pj || "-"}
+							</dd>
+						</div>
+					</dl>
+				</div>
 
-						<div>
-							<div className="text-sm font-medium text-gray-500">Urgensi</div>
-							<div className="text-sm mt-1">{item.urgensi}</div>
-						</div>
-
-						<div>
-							<div className="text-sm font-medium text-gray-500">
-								Kepentingan
-							</div>
-							<div className="text-sm mt-1">{item.kepentingan}</div>
-						</div>
-
-						<div>
-							<div className="text-sm font-medium text-gray-500">
-								Penanggung Jawab
-							</div>
-							<div className="text-sm mt-1">{item.nama_pj}</div>
-						</div>
-
-						<div className="flex items-center justify-between">
-							<div>{getStatusBadge(item.status)}</div>
-							{item.status !== "Disetujui" && (
-								<Button
-									variant="ghost"
-									size="sm"
-									className="text-red-500 hover:text-red-600 hover:bg-red-50"
-									onClick={() => onDelete(item.no_pengajuan)}
-								>
-									<Trash2 className="w-4 h-4 mr-2" />
-									Hapus
-								</Button>
-							)}
-						</div>
-					</div>
-				</AccordionContent>
-			</AccordionItem>
-		</Accordion>
+				<DialogFooter className="gap-2 sm:flex-col sm:justify-stretch">
+					{item.status !== "Disetujui" && (
+						<Button
+							variant="outline"
+							className="min-h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+							onClick={() => onDelete(item.no_pengajuan)}
+						>
+							<Trash2 className="mr-2 size-4" />
+							Hapus pengajuan
+						</Button>
+					)}
+					<DialogClose asChild>
+						<Button variant="outline" className="min-h-11">
+							Tutup
+						</Button>
+					</DialogClose>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 };
 
@@ -289,6 +382,28 @@ export default function DaftarIzin() {
 		isOpen: false,
 		noPengajuan: null,
 	});
+	const [selectedIzin, setSelectedIzin] = useState(null);
+	const selectedIzinTriggerRef = useRef(null);
+	const mobileHistoryRef = useRef(null);
+	const deleteOpenedFromSheetRef = useRef(false);
+	const deleteConfirmedRef = useRef(false);
+
+	useEffect(() => {
+		if (!selectedIzin) return;
+
+		const mediaQuery = window.matchMedia("(min-width: 780px)");
+		const closeOnDesktop = (event) => {
+			if (!event.matches) return;
+			selectedIzinTriggerRef.current = null;
+			deleteOpenedFromSheetRef.current = false;
+			deleteConfirmedRef.current = false;
+			setSelectedIzin(null);
+		};
+
+		closeOnDesktop(mediaQuery);
+		mediaQuery.addEventListener("change", closeOnDesktop);
+		return () => mediaQuery.removeEventListener("change", closeOnDesktop);
+	}, [selectedIzin]);
 
 	const fetchIzin = async (filters = {}, page = 1) => {
 		try {
@@ -353,6 +468,10 @@ export default function DaftarIzin() {
 	};
 
 	const handleDelete = async () => {
+		if (deleteOpenedFromSheetRef.current) {
+			deleteConfirmedRef.current = true;
+		}
+
 		try {
 			const response = await fetch(
 				`/api/izin?no_pengajuan=${deleteDialog.noPengajuan}`,
@@ -378,62 +497,92 @@ export default function DaftarIzin() {
 		}
 	};
 
-	const showDeleteDialog = (noPengajuan) => {
+	const showDeleteDialog = (noPengajuan, openedFromSheet = false) => {
+		deleteOpenedFromSheetRef.current = openedFromSheet;
+		deleteConfirmedRef.current = false;
 		setDeleteDialog({
 			isOpen: true,
 			noPengajuan,
 		});
 	};
 
+	const handleSheetDelete = (noPengajuan) => {
+		setSelectedIzin(null);
+		showDeleteDialog(noPengajuan, true);
+	};
+
+	const handleMobileIzinOpen = (item, trigger) => {
+		selectedIzinTriggerRef.current = trigger;
+		setSelectedIzin(item);
+	};
+
+	const restoreMobileHistoryFocus = (preferOpener) => {
+		const opener = selectedIzinTriggerRef.current;
+		const target =
+			preferOpener && opener?.isConnected ? opener : mobileHistoryRef.current;
+		target?.focus();
+		selectedIzinTriggerRef.current = null;
+	};
+
+	const handleDeleteDialogCloseAutoFocus = (event) => {
+		if (!deleteOpenedFromSheetRef.current) return;
+
+		event.preventDefault();
+		restoreMobileHistoryFocus(!deleteConfirmedRef.current);
+		deleteOpenedFromSheetRef.current = false;
+		deleteConfirmedRef.current = false;
+	};
+
 	return (
 		<div>
-			{/* Filter Section */}
-			<Accordion type="single" collapsible className="w-full md:hidden mb-4">
-				<AccordionItem value="filter">
-					<AccordionTrigger className="hover:no-underline">
-						<div className="flex items-center">
-							<Search className="w-4 h-4 mr-2" />
-							Filter Data
-						</div>
-					</AccordionTrigger>
-					<AccordionContent>
-						<div className="space-y-4">
-							<div>
-								<label className="text-sm font-medium text-gray-700 mb-2 block">
-									Tanggal Awal
-								</label>
-								<DatePicker
-									value={filterDate.start}
-									onChange={(value) => handleDateChange(value, "start")}
-									placeholder="Pilih tanggal awal"
-								/>
-							</div>
-							<div>
-								<label className="text-sm font-medium text-gray-700 mb-2 block">
-									Tanggal Akhir
-								</label>
-								<DatePicker
-									value={filterDate.end}
-									onChange={(value) => handleDateChange(value, "end")}
-									placeholder="Pilih tanggal akhir"
-									minDate={filterDate.start}
-								/>
-							</div>
-							<Button
-								variant="outline"
-								onClick={clearFilters}
-								className="w-full"
-							>
-								<X className="w-4 h-4 mr-2" />
-								Reset Filter
-							</Button>
-						</div>
-					</AccordionContent>
-				</AccordionItem>
-			</Accordion>
+			{/* Mobile summary and filters */}
+			<div className="mb-4 rounded-2xl bg-white p-4 min-[780px]:hidden">
+				<div className="mb-4 flex items-start justify-between gap-3">
+					<div>
+						<p className="text-[13px] text-[#6e6e73]">Riwayat pengajuan</p>
+						<p className="text-xl font-semibold text-[#1c1c1e]">
+							{pagination.total} izin
+						</p>
+					</div>
+					{(filterDate.start || filterDate.end) && (
+						<Button
+							variant="ghost"
+							onClick={clearFilters}
+							className="min-h-11 rounded-xl px-3 text-[#007aff] hover:bg-[#e5f1ff] hover:text-[#007aff]"
+						>
+							Hapus filter
+						</Button>
+					)}
+				</div>
+				<div className="grid grid-cols-2 gap-3">
+					<div>
+						<label className="mb-2 block text-xs font-medium text-[#1c1c1e]">
+							Tanggal Awal
+						</label>
+						<DatePicker
+							value={filterDate.start}
+							onChange={(value) => handleDateChange(value, "start")}
+							placeholder="Tanggal awal"
+							className="min-h-11 px-3 text-sm"
+						/>
+					</div>
+					<div>
+						<label className="mb-2 block text-xs font-medium text-[#1c1c1e]">
+							Tanggal Akhir
+						</label>
+						<DatePicker
+							value={filterDate.end}
+							onChange={(value) => handleDateChange(value, "end")}
+							placeholder="Tanggal akhir"
+							minDate={filterDate.start}
+							className="min-h-11 px-3 text-sm"
+						/>
+					</div>
+				</div>
+			</div>
 
 			{/* Desktop Filter */}
-			<div className="hidden md:block mb-6">
+			<div className="mb-6 hidden min-[780px]:block">
 				<div className="flex flex-col md:flex-row gap-4 items-end">
 					<div className="w-full md:w-1/3">
 						<label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -466,32 +615,56 @@ export default function DaftarIzin() {
 			</div>
 
 			{/* Mobile View */}
-			<div className="md:hidden">
+			<div
+				ref={mobileHistoryRef}
+				tabIndex={-1}
+				aria-label="Riwayat pengajuan izin"
+				className="min-[780px]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007aff]"
+			>
 				{loading ? (
-					<div className="flex items-center justify-center py-10">
-						<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-						<span className="ml-2">Memuat data...</span>
-					</div>
+					<MobileHistorySkeleton />
 				) : izin.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-10 text-gray-500">
-						<FileText className="w-12 h-12 mb-2" />
-						<p>Belum ada pengajuan izin</p>
+					<div className="flex flex-col items-center justify-center rounded-2xl bg-white px-6 py-12 text-center">
+						<div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[#e5f1ff] text-[#007aff]">
+							<FileText className="size-6" />
+						</div>
+						<p className="font-semibold text-[#1c1c1e]">
+							Belum ada pengajuan izin
+						</p>
+						<p className="mt-1 text-sm text-[#6e6e73]">
+							Pengajuan yang Anda buat akan tampil di sini.
+						</p>
 					</div>
 				) : (
-					<div className="space-y-2">
+					<div className="overflow-hidden rounded-2xl bg-white">
 						{izin.map((item) => (
-							<IzinCard
+							<div
 								key={item.no_pengajuan}
-								item={item}
-								onDelete={showDeleteDialog}
-							/>
+								className="[&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#c6c6c8]/30"
+							>
+								<MobileIzinRow item={item} onOpen={handleMobileIzinOpen} />
+							</div>
 						))}
 					</div>
 				)}
 			</div>
 
+			<MobileIzinDetailSheet
+				item={selectedIzin}
+				open={Boolean(selectedIzin)}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) setSelectedIzin(null);
+				}}
+				onDelete={handleSheetDelete}
+				onCloseAutoFocus={(event) => {
+					event.preventDefault();
+					if (deleteOpenedFromSheetRef.current) return;
+					restoreMobileHistoryFocus(true);
+				}}
+			/>
+
 			{/* Desktop View */}
-			<div className="hidden md:block">
+			<div className="hidden min-[780px]:block">
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -572,6 +745,11 @@ export default function DaftarIzin() {
 			{/* Pagination */}
 			{!loading && izin.length > 0 && (
 				<div className="mt-4 flex justify-center">
+					<MobilePagination
+						currentPage={pagination.currentPage}
+						totalPages={pagination.totalPages}
+						onPageChange={handlePageChange}
+					/>
 					<Pagination
 						currentPage={pagination.currentPage}
 						totalPages={pagination.totalPages}
@@ -587,7 +765,9 @@ export default function DaftarIzin() {
 					setDeleteDialog({ isOpen, noPengajuan: null })
 				}
 			>
-				<AlertDialogContent>
+				<AlertDialogContent
+					onCloseAutoFocus={handleDeleteDialogCloseAutoFocus}
+				>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
 						<AlertDialogDescription>
