@@ -500,10 +500,10 @@ export default function DaftarIzin() {
 				) : (
 					<div>
 						{izin.map((item) => (
-							<IzinCard
+							<MobileIzinRow
 								key={item.no_pengajuan}
 								item={item}
-								onDelete={showDeleteDialog}
+								onOpen={() => undefined}
 							/>
 						))}
 					</div>
