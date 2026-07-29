@@ -42,6 +42,15 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 const fadeIn = {
@@ -274,6 +283,86 @@ const MobileHistorySkeleton = () => (
 	</div>
 );
 
+const MobileIzinDetailSheet = ({ item, open, onOpenChange, onDelete }) => {
+	if (!item) return null;
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent className="!top-auto !right-0 !bottom-0 !left-0 !max-h-[85dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none border-0 bg-[#f2f2f7] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 min-[780px]:hidden">
+				<div className="mx-auto h-1.5 w-10 rounded-full bg-[#c7c7cc]" aria-hidden="true" />
+				<DialogHeader className="gap-1 text-left">
+					<DialogTitle className="text-xl text-[#1c1c1e]">
+						Detail pengajuan izin
+					</DialogTitle>
+					<DialogDescription className="text-[#6e6e73]">
+						Informasi lengkap pengajuan {item.no_pengajuan}.
+					</DialogDescription>
+				</DialogHeader>
+
+				<div className="overflow-hidden rounded-2xl bg-white">
+					<div className="flex items-center justify-between gap-3 border-b border-[#c6c6c8]/30 px-4 py-3">
+						<div>
+							<p className="text-xs font-medium text-[#6e6e73]">No. Pengajuan</p>
+							<p className="font-semibold text-[#1c1c1e]">{item.no_pengajuan}</p>
+						</div>
+						{getStatusBadge(item.status)}
+					</div>
+					<dl className="divide-y divide-[#c6c6c8]/30 px-4">
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Tanggal pengajuan</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{formatDateSafe(item.tanggal)}</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Periode izin</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">
+								{formatDateSafe(item.tanggal_awal)} – {formatDateSafe(item.tanggal_akhir)}
+							</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Durasi</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{item.jumlah} hari</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Urgensi</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">{item.urgensi || "-"}</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Kepentingan</dt>
+							<dd className="mt-1 whitespace-pre-wrap text-sm text-[#1c1c1e]">
+								{item.kepentingan || "-"}
+							</dd>
+						</div>
+						<div className="py-3">
+							<dt className="text-xs font-medium text-[#6e6e73]">Penanggung jawab</dt>
+							<dd className="mt-1 text-sm text-[#1c1c1e]">
+								{item.nama_pj || item.nik_pj || "-"}
+							</dd>
+						</div>
+					</dl>
+				</div>
+
+				<DialogFooter className="gap-2 sm:flex-col sm:justify-stretch">
+					{item.status !== "Disetujui" && (
+						<Button
+							variant="outline"
+							className="min-h-11 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+							onClick={() => onDelete(item.no_pengajuan)}
+						>
+							<Trash2 className="mr-2 size-4" />
+							Hapus pengajuan
+						</Button>
+					)}
+					<DialogClose asChild>
+						<Button variant="outline" className="min-h-11">
+							Tutup
+						</Button>
+					</DialogClose>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+};
+
 export default function DaftarIzin() {
 	const [izin, setIzin] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -291,6 +380,7 @@ export default function DaftarIzin() {
 		isOpen: false,
 		noPengajuan: null,
 	});
+	const [selectedIzin, setSelectedIzin] = useState(null);
 
 	const fetchIzin = async (filters = {}, page = 1) => {
 		try {
@@ -385,6 +475,11 @@ export default function DaftarIzin() {
 			isOpen: true,
 			noPengajuan,
 		});
+	};
+
+	const handleSheetDelete = (noPengajuan) => {
+		setSelectedIzin(null);
+		showDeleteDialog(noPengajuan);
 	};
 
 	return (
@@ -503,12 +598,21 @@ export default function DaftarIzin() {
 							<MobileIzinRow
 								key={item.no_pengajuan}
 								item={item}
-								onOpen={() => undefined}
+								onOpen={setSelectedIzin}
 							/>
 						))}
 					</div>
 				)}
 			</div>
+
+			<MobileIzinDetailSheet
+				item={selectedIzin}
+				open={Boolean(selectedIzin)}
+				onOpenChange={(isOpen) => {
+					if (!isOpen) setSelectedIzin(null);
+				}}
+				onDelete={handleSheetDelete}
+			/>
 
 			{/* Desktop View */}
 			<div className="hidden min-[780px]:block">
