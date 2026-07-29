@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import {
 	FileText,
 	Clock,
-	Search,
 	X,
 	ChevronLeft,
 	ChevronRight,
@@ -36,12 +35,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
 import {
 	Dialog,
 	DialogClose,
@@ -514,59 +507,51 @@ export default function DaftarIzin() {
 
 	return (
 		<div>
-			{/* Filter Section */}
-			<Accordion
-				type="single"
-				collapsible
-				className="mb-4 w-full min-[780px]:hidden"
-			>
-				<AccordionItem
-					value="filter"
-					className="overflow-hidden rounded-2xl border-0 bg-white"
-				>
-					<AccordionTrigger className="min-h-12 px-4 py-2 hover:no-underline">
-						<div className="flex items-center">
-							<Search className="mr-2 size-4 text-[#007aff]" />
-							Filter Data
-						</div>
-					</AccordionTrigger>
-					<AccordionContent className="border-t border-[#c6c6c8]/30 px-4 pb-4 pt-3">
-						<div className="space-y-4">
-							<div>
-								<label className="mb-2 block text-sm font-medium text-[#1c1c1e]">
-									Tanggal Awal
-								</label>
-								<DatePicker
-									value={filterDate.start}
-									onChange={(value) => handleDateChange(value, "start")}
-									placeholder="Pilih tanggal awal"
-								/>
-							</div>
-							<div>
-								<label className="mb-2 block text-sm font-medium text-[#1c1c1e]">
-									Tanggal Akhir
-								</label>
-								<DatePicker
-									value={filterDate.end}
-									onChange={(value) => handleDateChange(value, "end")}
-									placeholder="Pilih tanggal akhir"
-									minDate={filterDate.start}
-								/>
-							</div>
-							{(filterDate.start || filterDate.end) && (
-								<Button
-									variant="outline"
-									onClick={clearFilters}
-									className="min-h-11 w-full rounded-xl"
-								>
-									<X className="mr-2 size-4" />
-									Reset Filter
-								</Button>
-							)}
-						</div>
-					</AccordionContent>
-				</AccordionItem>
-			</Accordion>
+			{/* Mobile summary and filters */}
+			<div className="mb-4 rounded-2xl bg-white p-4 min-[780px]:hidden">
+				<div className="mb-4 flex items-start justify-between gap-3">
+					<div>
+						<p className="text-[13px] text-[#6e6e73]">Riwayat pengajuan</p>
+						<p className="text-xl font-semibold text-[#1c1c1e]">
+							{pagination.total} izin
+						</p>
+					</div>
+					{(filterDate.start || filterDate.end) && (
+						<Button
+							variant="ghost"
+							onClick={clearFilters}
+							className="min-h-11 rounded-xl px-3 text-[#007aff] hover:bg-[#e5f1ff] hover:text-[#007aff]"
+						>
+							Hapus filter
+						</Button>
+					)}
+				</div>
+				<div className="grid grid-cols-2 gap-3">
+					<div>
+						<label className="mb-2 block text-xs font-medium text-[#1c1c1e]">
+							Tanggal Awal
+						</label>
+						<DatePicker
+							value={filterDate.start}
+							onChange={(value) => handleDateChange(value, "start")}
+							placeholder="Tanggal awal"
+							className="min-h-11 px-3 text-sm"
+						/>
+					</div>
+					<div>
+						<label className="mb-2 block text-xs font-medium text-[#1c1c1e]">
+							Tanggal Akhir
+						</label>
+						<DatePicker
+							value={filterDate.end}
+							onChange={(value) => handleDateChange(value, "end")}
+							placeholder="Tanggal akhir"
+							minDate={filterDate.start}
+							className="min-h-11 px-3 text-sm"
+						/>
+					</div>
+				</div>
+			</div>
 
 			{/* Desktop Filter */}
 			<div className="mb-6 hidden min-[780px]:block">
@@ -604,12 +589,7 @@ export default function DaftarIzin() {
 			{/* Mobile View */}
 			<div className="min-[780px]:hidden">
 				{loading ? (
-					<div className="flex items-center justify-center rounded-2xl bg-white py-10">
-						<div className="size-6 animate-spin rounded-full border-2 border-[#007aff] border-t-transparent" />
-						<span className="ml-2 text-sm text-[#6e6e73]">
-							Memuat data...
-						</span>
-					</div>
+					<MobileHistorySkeleton />
 				) : izin.length === 0 ? (
 					<div className="flex flex-col items-center justify-center rounded-2xl bg-white px-6 py-12 text-center">
 						<div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[#e5f1ff] text-[#007aff]">
@@ -623,13 +603,14 @@ export default function DaftarIzin() {
 						</p>
 					</div>
 				) : (
-					<div>
+					<div className="overflow-hidden rounded-2xl bg-white">
 						{izin.map((item) => (
-							<MobileIzinRow
+							<div
 								key={item.no_pengajuan}
-								item={item}
-								onOpen={handleMobileIzinOpen}
-							/>
+								className="[&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#c6c6c8]/30"
+							>
+								<MobileIzinRow item={item} onOpen={handleMobileIzinOpen} />
+							</div>
 						))}
 					</div>
 				)}
