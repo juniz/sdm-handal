@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
 import { Map, MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/mapcn";
+import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
 export default function SupervisorApprovalPage() {
 	const [pendingList, setPendingList] = useState([]);
@@ -33,6 +34,7 @@ export default function SupervisorApprovalPage() {
 	const [actionLoading, setActionLoading] = useState(false);
 
 	const isApprovalDeadlinePassed = (record) => {
+		if (!is24hLimitEnabled()) return false;
 		if (!record || !record.tanggal) return false;
 		const deadline = moment(record.tanggal).add(2, "days").endOf("day");
 		return moment().isAfter(deadline);

@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import moment from "moment";
 import { select, selectFirst, insert, rawQuery } from "@/lib/db-helper";
+import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -408,21 +409,23 @@ export async function POST(request) {
 		}
 
 		// Verify deadline 1x24 jam
-		let isNightShift = false;
-		if (shift && shift !== "OFF" && shift !== "Libur") {
-			const shiftInfo = await selectFirst({
-				table: "jam_masuk",
-				where: { shift: shift }
-			});
-			if (shiftInfo && shiftInfo.jam_pulang < shiftInfo.jam_masuk) {
-				isNightShift = true;
+		if (is24hLimitEnabled()) {
+			let isNightShift = false;
+			if (shift && shift !== "OFF" && shift !== "Libur") {
+				const shiftInfo = await selectFirst({
+					table: "jam_masuk",
+					where: { shift: shift }
+				});
+				if (shiftInfo && shiftInfo.jam_pulang < shiftInfo.jam_masuk) {
+					isNightShift = true;
+				}
 			}
-		}
 
-		const daysToAdd = isNightShift ? 2 : 1;
-		const deadline = moment(tanggal).add(daysToAdd, "days").endOf("day");
-		if (moment().isAfter(deadline)) {
-			return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Penilaian tanggal ${moment(tanggal).format("DD/MM/YYYY")} tidak dapat dibuat.` }, { status: 400 });
+			const daysToAdd = isNightShift ? 2 : 1;
+			const deadline = moment(tanggal).add(daysToAdd, "days").endOf("day");
+			if (moment().isAfter(deadline)) {
+				return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Penilaian tanggal ${moment(tanggal).format("DD/MM/YYYY")} tidak dapat dibuat.` }, { status: 400 });
+			}
 		}
 
 		// Check if record already exists

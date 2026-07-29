@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { selectFirst, select, insert, update, delete_, rawQuery } from "@/lib/db-helper";
 import moment from "moment-timezone";
+import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -40,6 +41,7 @@ async function getSupervisorIdForEmployee(employeeId) {
 
 // Helper check 1x24 jam deadline
 async function checkDeadlinePassed(pegawaiId, tanggal) {
+	if (!is24hLimitEnabled()) return false;
 	try {
 		const evalDateStr = moment(tanggal).format("YYYY-MM-DD");
 		const monthStr = moment(evalDateStr).format("MM");

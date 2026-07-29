@@ -17,6 +17,7 @@ import {
 	Edit3,
 	RotateCcw
 } from "lucide-react";
+import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
 export default function DailyInputPage() {
 	const [selectedDate, setSelectedDate] = useState(null); // resolved on mount to handle night shifts
@@ -517,6 +518,7 @@ export default function DailyInputPage() {
 	const estSkorTotal = Math.round((estSkorKegiatan * 0.6) + (estSkorAbsensi * 0.4));
 
 	const checkIsDeadlinePassed = () => {
+		if (!is24hLimitEnabled()) return false;
 		if (!selectedDate) return false;
 		let isNightShift = false;
 		if (scheduleInfo.hasSchedule && scheduleInfo.shift && scheduleInfo.shift !== "OFF" && scheduleInfo.shift !== "Libur") {
