@@ -1,0 +1,18 @@
+{
+    "hooks": {
+        "session_start": {
+            "commands": [
+                "$caveman --auto"
+            ]
+        },
+        "pre_message": {
+            "commands": [
+                "$caveman --optimize"
+            ]
+        }
+    },
+    "settings": {
+        "compression_level": "high",
+        "preserve_formatting": true
+    }
+}
