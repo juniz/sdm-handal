@@ -384,6 +384,9 @@ export default function DaftarIzin() {
 	});
 	const [selectedIzin, setSelectedIzin] = useState(null);
 	const selectedIzinTriggerRef = useRef(null);
+	const mobileHistoryRef = useRef(null);
+	const deleteOpenedFromSheetRef = useRef(false);
+	const deleteConfirmedRef = useRef(false);
 
 	useEffect(() => {
 		if (!selectedIzin) return;
@@ -392,6 +395,8 @@ export default function DaftarIzin() {
 		const closeOnDesktop = (event) => {
 			if (!event.matches) return;
 			selectedIzinTriggerRef.current = null;
+			deleteOpenedFromSheetRef.current = false;
+			deleteConfirmedRef.current = false;
 			setSelectedIzin(null);
 		};
 
@@ -463,6 +468,10 @@ export default function DaftarIzin() {
 	};
 
 	const handleDelete = async () => {
+		if (deleteOpenedFromSheetRef.current) {
+			deleteConfirmedRef.current = true;
+		}
+
 		try {
 			const response = await fetch(
 				`/api/izin?no_pengajuan=${deleteDialog.noPengajuan}`,
@@ -488,7 +497,9 @@ export default function DaftarIzin() {
 		}
 	};
 
-	const showDeleteDialog = (noPengajuan) => {
+	const showDeleteDialog = (noPengajuan, openedFromSheet = false) => {
+		deleteOpenedFromSheetRef.current = openedFromSheet;
+		deleteConfirmedRef.current = false;
 		setDeleteDialog({
 			isOpen: true,
 			noPengajuan,
@@ -497,12 +508,29 @@ export default function DaftarIzin() {
 
 	const handleSheetDelete = (noPengajuan) => {
 		setSelectedIzin(null);
-		showDeleteDialog(noPengajuan);
+		showDeleteDialog(noPengajuan, true);
 	};
 
 	const handleMobileIzinOpen = (item, trigger) => {
 		selectedIzinTriggerRef.current = trigger;
 		setSelectedIzin(item);
+	};
+
+	const restoreMobileHistoryFocus = (preferOpener) => {
+		const opener = selectedIzinTriggerRef.current;
+		const target =
+			preferOpener && opener?.isConnected ? opener : mobileHistoryRef.current;
+		target?.focus();
+		selectedIzinTriggerRef.current = null;
+	};
+
+	const handleDeleteDialogCloseAutoFocus = (event) => {
+		if (!deleteOpenedFromSheetRef.current) return;
+
+		event.preventDefault();
+		restoreMobileHistoryFocus(!deleteConfirmedRef.current);
+		deleteOpenedFromSheetRef.current = false;
+		deleteConfirmedRef.current = false;
 	};
 
 	return (
@@ -587,7 +615,12 @@ export default function DaftarIzin() {
 			</div>
 
 			{/* Mobile View */}
-			<div className="min-[780px]:hidden">
+			<div
+				ref={mobileHistoryRef}
+				tabIndex={-1}
+				aria-label="Riwayat pengajuan izin"
+				className="min-[780px]:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007aff]"
+			>
 				{loading ? (
 					<MobileHistorySkeleton />
 				) : izin.length === 0 ? (
@@ -625,7 +658,8 @@ export default function DaftarIzin() {
 				onDelete={handleSheetDelete}
 				onCloseAutoFocus={(event) => {
 					event.preventDefault();
-					selectedIzinTriggerRef.current?.focus();
+					if (deleteOpenedFromSheetRef.current) return;
+					restoreMobileHistoryFocus(true);
 				}}
 			/>
 
@@ -731,7 +765,9 @@ export default function DaftarIzin() {
 					setDeleteDialog({ isOpen, noPengajuan: null })
 				}
 			>
-				<AlertDialogContent>
+				<AlertDialogContent
+					onCloseAutoFocus={handleDeleteDialogCloseAutoFocus}
+				>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
 						<AlertDialogDescription>

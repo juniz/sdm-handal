@@ -31,7 +31,7 @@ export default function IzinPage() {
 	const router = useRouter();
 
 	return (
-		<div className="min-h-[80vh] bg-[#f2f2f7] pb-6 min-[780px]:bg-gradient-to-br min-[780px]:from-blue-50 min-[780px]:to-indigo-50 min-[780px]:pb-0">
+		<div className="min-h-[80vh] bg-gradient-to-br from-blue-50 to-indigo-50 max-[779px]:bg-[#f2f2f7] max-[779px]:pb-6">
 			<header className="bg-[#f2f2f7] pt-1 min-[780px]:hidden">
 				<button
 					type="button"
@@ -65,32 +65,34 @@ export default function IzinPage() {
 				className="mx-auto max-w-6xl"
 			>
 				<motion.div variants={fadeIn}>
-					<Card className="rounded-none border-0 bg-transparent py-0 shadow-none min-[780px]:rounded-xl min-[780px]:bg-white/90 min-[780px]:py-6 min-[780px]:shadow-xl min-[780px]:backdrop-blur-sm">
-						<CardHeader className="hidden space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white min-[780px]:flex min-[780px]:p-6">
+					<Card className="backdrop-blur-sm bg-white/90 shadow-xl border-0 max-[779px]:rounded-none max-[779px]:bg-transparent max-[779px]:shadow-none max-[779px]:backdrop-blur-none">
+						<CardHeader className="space-y-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-6 max-[779px]:hidden">
 							<motion.div
 								initial={{ scale: 0.95 }}
 								animate={{ scale: 1 }}
 								transition={{ duration: 0.3 }}
 							>
-								<CardTitle className="text-center text-xl font-bold min-[780px]:text-2xl">
+								<CardTitle className="text-xl md:text-2xl font-bold text-center">
 									Pengajuan Izin
 								</CardTitle>
 							</motion.div>
 						</CardHeader>
-						<CardContent className="px-4 pb-0 pt-1 min-[780px]:p-6">
+						<CardContent className="p-4 md:p-6 max-[779px]:px-4 max-[779px]:pb-0 max-[779px]:pt-1">
 							<Tabs defaultValue="pengajuan" className="w-full">
-								<TabsList className="mb-5 grid h-9 w-full grid-cols-2 rounded-lg bg-[#e3e3e8] p-0.5 min-[780px]:my-4 min-[780px]:flex min-[780px]:h-9 min-[780px]:justify-start min-[780px]:rounded-md min-[780px]:bg-muted min-[780px]:p-[3px]">
+								<TabsList className="w-full justify-start my-4 max-[779px]:mt-0 max-[779px]:mb-5 max-[779px]:grid max-[779px]:h-12 max-[779px]:grid-cols-2 max-[779px]:rounded-lg max-[779px]:bg-[#e3e3e8] max-[779px]:p-0.5">
 									<TabsTrigger
 										value="pengajuan"
-										className="h-8 rounded-[7px] text-[13px] font-semibold text-[#6e6e73] shadow-none data-[state=active]:bg-white data-[state=active]:text-[#1c1c1e] data-[state=active]:shadow-sm min-[780px]:h-[calc(100%-1px)] min-[780px]:rounded-sm min-[780px]:text-sm"
+										className="max-[779px]:h-11 max-[779px]:rounded-[7px] max-[779px]:text-[13px] max-[779px]:font-semibold max-[779px]:text-[#6e6e73] max-[779px]:shadow-none max-[779px]:data-[state=active]:bg-white max-[779px]:data-[state=active]:text-[#1c1c1e] max-[779px]:data-[state=active]:shadow-sm"
 									>
-										Pengajuan
+										<span className="min-[780px]:hidden">Pengajuan</span>
+										<span className="hidden min-[780px]:inline">Pengajuan Izin</span>
 									</TabsTrigger>
 									<TabsTrigger
 										value="daftar"
-										className="h-8 rounded-[7px] text-[13px] font-semibold text-[#6e6e73] shadow-none data-[state=active]:bg-white data-[state=active]:text-[#1c1c1e] data-[state=active]:shadow-sm min-[780px]:h-[calc(100%-1px)] min-[780px]:rounded-sm min-[780px]:text-sm"
+										className="max-[779px]:h-11 max-[779px]:rounded-[7px] max-[779px]:text-[13px] max-[779px]:font-semibold max-[779px]:text-[#6e6e73] max-[779px]:shadow-none max-[779px]:data-[state=active]:bg-white max-[779px]:data-[state=active]:text-[#1c1c1e] max-[779px]:data-[state=active]:shadow-sm"
 									>
-										Riwayat
+										<span className="min-[780px]:hidden">Riwayat</span>
+										<span className="hidden min-[780px]:inline">Daftar Izin</span>
 									</TabsTrigger>
 								</TabsList>
 								<TabsContent value="pengajuan">

@@ -167,7 +167,10 @@ export default function PengajuanIzinForm() {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-5 pb-24 min-[780px]:space-y-6 min-[780px]:pb-0">
+		<form
+			onSubmit={handleSubmit}
+			className="space-y-6 max-[779px]:space-y-5 max-[767px]:pb-[calc(11rem+env(safe-area-inset-bottom))]"
+		>
 			<motion.div
 				variants={staggerContainer}
 				className="space-y-5 min-[780px]:grid min-[780px]:grid-cols-2 min-[780px]:gap-6 min-[780px]:space-y-0"
@@ -250,9 +253,9 @@ export default function PengajuanIzinForm() {
 							<p className="mt-1 text-sm text-red-500">{errors.urgensi}</p>
 						)}
 						{form.urgensi === "Dinas Dalam Kota" && (
-							<div className="mt-2 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/80 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
-								<Info className="mt-0.5 size-5 flex-shrink-0 text-[#007aff]" />
-								<p className="text-sm leading-relaxed text-blue-900">
+							<div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300 max-[779px]:rounded-xl max-[779px]:border-blue-100 max-[779px]:bg-blue-50/80">
+								<Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 max-[779px]:text-[#007aff]" />
+								<p className="text-sm text-blue-800 max-[779px]:leading-relaxed max-[779px]:text-blue-900">
 									<strong>Informasi:</strong> Dinas dalam kota yang waktunya
 									lebih dari 8 jam tidak wajib presensi.
 								</p>
@@ -274,7 +277,7 @@ export default function PengajuanIzinForm() {
 							onChange={handleChange}
 							required
 							placeholder="Jelaskan kepentingan izin..."
-							className={`min-h-28 bg-[#f2f2f7] text-base min-[780px]:min-h-20 min-[780px]:bg-transparent min-[780px]:text-sm ${
+							className={`max-[779px]:min-h-28 max-[779px]:bg-[#f2f2f7] max-[779px]:text-base ${
 								errors.kepentingan
 									? "border-red-500 focus:border-red-500 focus:ring-red-500"
 									: ""
@@ -314,11 +317,11 @@ export default function PengajuanIzinForm() {
 
 			<motion.div
 				variants={fadeIn}
-				className="fixed inset-x-0 bottom-0 z-50 border-t border-black/5 bg-[#f2f2f7]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl min-[780px]:static min-[780px]:flex min-[780px]:justify-end min-[780px]:border-0 min-[780px]:bg-transparent min-[780px]:p-0 min-[780px]:pt-6 min-[780px]:backdrop-blur-none"
+				className="flex justify-end pt-6 max-[767px]:fixed max-[767px]:inset-x-0 max-[767px]:bottom-[calc(5.5rem+env(safe-area-inset-bottom))] max-[767px]:z-50 max-[767px]:border-t max-[767px]:border-black/5 max-[767px]:bg-[#f2f2f7]/95 max-[767px]:px-4 max-[767px]:pb-4 max-[767px]:pt-3 max-[767px]:backdrop-blur-xl"
 			>
 				<Button
 					type="submit"
-					className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#007aff] px-8 py-2 text-base font-semibold text-white transition-opacity active:opacity-70 hover:bg-[#007aff] min-[780px]:min-h-9 min-[780px]:w-auto min-[780px]:rounded-lg min-[780px]:bg-gradient-to-r min-[780px]:from-blue-600 min-[780px]:to-indigo-600 min-[780px]:hover:from-blue-700 min-[780px]:hover:to-indigo-700"
+					className="w-full md:w-auto px-8 py-2 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2 max-[767px]:min-h-12 max-[767px]:rounded-xl max-[767px]:bg-[#007aff] max-[767px]:bg-none max-[767px]:transition-opacity max-[767px]:active:opacity-70 max-[767px]:hover:scale-100 max-[767px]:hover:bg-[#007aff]"
 					disabled={isSubmitting}
 				>
 					{isSubmitting ? (
