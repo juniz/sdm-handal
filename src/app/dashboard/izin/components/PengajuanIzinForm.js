@@ -167,125 +167,158 @@ export default function PengajuanIzinForm() {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-6">
+		<form onSubmit={handleSubmit} className="space-y-5 pb-24 min-[780px]:space-y-6 min-[780px]:pb-0">
 			<motion.div
 				variants={staggerContainer}
-				className="grid grid-cols-1 md:grid-cols-2 gap-6"
+				className="space-y-5 min-[780px]:grid min-[780px]:grid-cols-2 min-[780px]:gap-6 min-[780px]:space-y-0"
 			>
-				{/* Menggunakan div biasa untuk DatePicker */}
-				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-						<span className="text-red-500">*</span>
-						Tanggal Awal
-					</label>
-					<DatePicker
-						value={date.tanggal_awal}
-						onChange={(value) => handleDateChange(value, "tanggal_awal")}
-						placeholder="Pilih tanggal awal"
-						error={errors.tanggal_awal}
-						// minDate={new Date()}
-					/>
-				</div>
+				<section
+					aria-labelledby="periode-title"
+					className="overflow-hidden rounded-2xl bg-white min-[780px]:contents"
+				>
+					<h2
+						id="periode-title"
+						className="border-b border-[#c6c6c8]/30 px-4 py-3 text-[13px] font-semibold uppercase tracking-wide text-[#6e6e73] min-[780px]:hidden"
+					>
+						Periode Izin
+					</h2>
+					<div className="space-y-2 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 min-[780px]:p-0">
+						<label className="flex items-center gap-1 text-sm font-medium text-[#1c1c1e] min-[780px]:text-gray-700">
+							<span className="text-red-500">*</span>
+							Tanggal Awal
+						</label>
+						<DatePicker
+							value={date.tanggal_awal}
+							onChange={(value) => handleDateChange(value, "tanggal_awal")}
+							placeholder="Pilih tanggal awal"
+							error={errors.tanggal_awal}
+						/>
+					</div>
+					<div className="space-y-2 border-t border-[#c6c6c8]/30 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 min-[780px]:border-0 min-[780px]:p-0">
+						<label className="flex items-center gap-1 text-sm font-medium text-[#1c1c1e] min-[780px]:text-gray-700">
+							<span className="text-red-500">*</span>
+							Tanggal Akhir
+						</label>
+						<DatePicker
+							value={date.tanggal_akhir}
+							onChange={(value) => handleDateChange(value, "tanggal_akhir")}
+							placeholder="Pilih tanggal akhir"
+							error={errors.tanggal_akhir}
+						/>
+					</div>
+				</section>
 
-				{/* Menggunakan div biasa untuk DatePicker */}
-				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-						<span className="text-red-500">*</span>
-						Tanggal Akhir
-					</label>
-					<DatePicker
-						value={date.tanggal_akhir}
-						onChange={(value) => handleDateChange(value, "tanggal_akhir")}
-						placeholder="Pilih tanggal akhir"
-						error={errors.tanggal_akhir}
-						// minDate={
-						// 	date.tanggal_awal ? new Date(date.tanggal_awal) : new Date()
-						// }
-					/>
-				</div>
+				<section
+					aria-labelledby="detail-title"
+					className="overflow-hidden rounded-2xl bg-white min-[780px]:contents"
+				>
+					<h2
+						id="detail-title"
+						className="border-b border-[#c6c6c8]/30 px-4 py-3 text-[13px] font-semibold uppercase tracking-wide text-[#6e6e73] min-[780px]:hidden"
+					>
+						Detail Izin
+					</h2>
+					<div className="space-y-2 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 min-[780px]:p-0">
+						<label className="flex items-center gap-1 text-sm font-medium text-[#1c1c1e] min-[780px]:text-gray-700">
+							<span className="text-red-500">*</span>
+							Urgensi
+						</label>
+						<Select value={form.urgensi} onValueChange={handleUrgensiChange}>
+							<SelectTrigger
+								className={`min-h-11 w-full bg-[#f2f2f7] text-base min-[780px]:min-h-9 min-[780px]:bg-transparent min-[780px]:text-sm ${
+									errors.urgensi
+										? "border-red-500 focus:border-red-500 focus:ring-red-500"
+										: ""
+								}`}
+							>
+								<SelectValue placeholder="Pilih urgensi" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectGroup>
+									<SelectItem value="none">Pilih Urgensi</SelectItem>
+									<SelectItem value="Dinas Dalam Kota">
+										Dinas Dalam Kota
+									</SelectItem>
+									<SelectItem value="Dinas Luar Kota">
+										Dinas Luar Kota
+									</SelectItem>
+									<SelectItem value="Lain-lain">Lain-lain</SelectItem>
+								</SelectGroup>
+							</SelectContent>
+						</Select>
+						{errors.urgensi && (
+							<p className="mt-1 text-sm text-red-500">{errors.urgensi}</p>
+						)}
+						{form.urgensi === "Dinas Dalam Kota" && (
+							<div className="mt-2 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/80 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+								<Info className="mt-0.5 size-5 flex-shrink-0 text-[#007aff]" />
+								<p className="text-sm leading-relaxed text-blue-900">
+									<strong>Informasi:</strong> Dinas dalam kota yang waktunya
+									lebih dari 8 jam tidak wajib presensi.
+								</p>
+							</div>
+						)}
+					</div>
 
-				{/* Menggunakan div biasa bukan motion.div untuk mencegah konflik dengan Radix Select di mobile */}
-				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-						<span className="text-red-500">*</span>
-						Urgensi
-					</label>
-					<Select value={form.urgensi} onValueChange={handleUrgensiChange}>
-						<SelectTrigger
-							className={`w-full ${
-								errors.urgensi
+					<motion.div
+						variants={fadeIn}
+						className="space-y-2 border-t border-[#c6c6c8]/30 p-4 min-[780px]:col-span-2 min-[780px]:border-0 min-[780px]:p-0"
+					>
+						<label className="flex items-center gap-1 text-sm font-medium text-[#1c1c1e] min-[780px]:text-gray-700">
+							<span className="text-red-500">*</span>
+							Kepentingan
+						</label>
+						<Textarea
+							name="kepentingan"
+							value={form.kepentingan}
+							onChange={handleChange}
+							required
+							placeholder="Jelaskan kepentingan izin..."
+							className={`min-h-28 bg-[#f2f2f7] text-base min-[780px]:min-h-20 min-[780px]:bg-transparent min-[780px]:text-sm ${
+								errors.kepentingan
 									? "border-red-500 focus:border-red-500 focus:ring-red-500"
 									: ""
 							}`}
-						>
-							<SelectValue placeholder="Pilih urgensi" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectGroup>
-								<SelectItem value="none">Pilih Urgensi</SelectItem>
-								<SelectItem value="Dinas Dalam Kota">
-									Dinas Dalam Kota
-								</SelectItem>
-								<SelectItem value="Dinas Luar Kota">Dinas Luar Kota</SelectItem>
-								<SelectItem value="Lain-lain">Lain-lain</SelectItem>
-							</SelectGroup>
-						</SelectContent>
-					</Select>
-					{errors.urgensi && (
-						<p className="text-sm text-red-500 mt-1">{errors.urgensi}</p>
-					)}
-					{/* Info untuk Dinas Dalam Kota */}
-					{form.urgensi === "Dinas Dalam Kota" && (
-						<div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-							<Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-							<p className="text-sm text-blue-800">
-								<strong>Informasi:</strong> Dinas dalam kota yang waktunya lebih
-								dari 8 jam tidak wajib presensi.
+						/>
+						{errors.kepentingan && (
+							<p className="mt-1 text-sm text-red-500">
+								{errors.kepentingan}
 							</p>
-						</div>
-					)}
-				</div>
+						)}
+					</motion.div>
+				</section>
 
-				<motion.div variants={fadeIn} className="space-y-2 md:col-span-2">
-					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-						<span className="text-red-500">*</span>
-						Kepentingan
-					</label>
-					<Textarea
-						name="kepentingan"
-						value={form.kepentingan}
-						onChange={handleChange}
-						required
-						placeholder="Jelaskan kepentingan izin..."
-						className={
-							errors.kepentingan
-								? "border-red-500 focus:border-red-500 focus:ring-red-500"
-								: ""
-						}
-					/>
-					{errors.kepentingan && (
-						<p className="text-sm text-red-500 mt-1">{errors.kepentingan}</p>
-					)}
-				</motion.div>
-
-					{/* Menggunakan div biasa bukan motion.div untuk mencegah konflik dengan Radix Popover di mobile */}
-				<div className="space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-					<label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-						<span className="text-red-500">*</span>
-						Penanggung Jawab
-					</label>
-					<PegawaiCombobox
-						value={form.nik_pj}
-						onValueChange={handlePegawaiChange}
-						error={errors.nik_pj}
-					/>
-				</div>
+				<section
+					aria-labelledby="handover-title"
+					className="overflow-hidden rounded-2xl bg-white min-[780px]:contents"
+				>
+					<h2
+						id="handover-title"
+						className="border-b border-[#c6c6c8]/30 px-4 py-3 text-[13px] font-semibold uppercase tracking-wide text-[#6e6e73] min-[780px]:hidden"
+					>
+						Serah Terima
+					</h2>
+					<div className="space-y-2 p-4 animate-in fade-in slide-in-from-bottom-4 duration-500 min-[780px]:p-0">
+						<label className="flex items-center gap-1 text-sm font-medium text-[#1c1c1e] min-[780px]:text-gray-700">
+							<span className="text-red-500">*</span>
+							Penanggung Jawab
+						</label>
+						<PegawaiCombobox
+							value={form.nik_pj}
+							onValueChange={handlePegawaiChange}
+							error={errors.nik_pj}
+						/>
+					</div>
+				</section>
 			</motion.div>
 
-			<motion.div variants={fadeIn} className="pt-6 flex justify-end">
+			<motion.div
+				variants={fadeIn}
+				className="fixed inset-x-0 bottom-0 z-50 border-t border-black/5 bg-[#f2f2f7]/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl min-[780px]:static min-[780px]:flex min-[780px]:justify-end min-[780px]:border-0 min-[780px]:bg-transparent min-[780px]:p-0 min-[780px]:pt-6 min-[780px]:backdrop-blur-none"
+			>
 				<Button
 					type="submit"
-					className="w-full md:w-auto px-8 py-2 text-base font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+					className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#007aff] px-8 py-2 text-base font-semibold text-white transition-opacity active:opacity-70 hover:bg-[#007aff] min-[780px]:min-h-9 min-[780px]:w-auto min-[780px]:rounded-lg min-[780px]:bg-gradient-to-r min-[780px]:from-blue-600 min-[780px]:to-indigo-600 min-[780px]:hover:from-blue-700 min-[780px]:hover:to-indigo-700"
 					disabled={isSubmitting}
 				>
 					{isSubmitting ? (

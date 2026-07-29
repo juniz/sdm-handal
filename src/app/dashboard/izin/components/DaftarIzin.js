@@ -98,7 +98,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 	}
 
 	return (
-		<div className="flex items-center justify-between px-2 py-4">
+		<div className="hidden items-center justify-between px-2 py-4 min-[780px]:flex">
 			<div className="flex items-center gap-2">
 				<Button
 					variant="outline"
@@ -159,6 +159,37 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 	);
 };
 
+const MobilePagination = ({ currentPage, totalPages, onPageChange }) => (
+	<nav
+		aria-label="Navigasi halaman izin"
+		className="flex w-full items-center justify-between rounded-2xl bg-white p-2 min-[780px]:hidden"
+	>
+		<Button
+			variant="ghost"
+			size="icon"
+			className="min-h-11 min-w-11 rounded-xl text-[#007aff]"
+			onClick={() => onPageChange(currentPage - 1)}
+			disabled={currentPage === 1}
+			aria-label="Halaman sebelumnya"
+		>
+			<ChevronLeft className="size-5" />
+		</Button>
+		<span className="text-[13px] font-medium text-[#6e6e73]">
+			Halaman {currentPage} dari {totalPages}
+		</span>
+		<Button
+			variant="ghost"
+			size="icon"
+			className="min-h-11 min-w-11 rounded-xl text-[#007aff]"
+			onClick={() => onPageChange(currentPage + 1)}
+			disabled={currentPage === totalPages}
+			aria-label="Halaman berikutnya"
+		>
+			<ChevronRight className="size-5" />
+		</Button>
+	</nav>
+);
+
 const getStatusBadge = (status) => {
 	switch (status) {
 		case "Proses Pengajuan":
@@ -205,62 +236,94 @@ const IzinCard = ({ item, onDelete }) => {
 		<Accordion type="single" collapsible className="w-full">
 			<AccordionItem
 				value={item.no_pengajuan}
-				className="border rounded-lg mb-2"
+				className="mb-2 overflow-hidden rounded-2xl border-0 bg-white"
 			>
-				<AccordionTrigger className="px-4 py-2 hover:no-underline">
-					<div className="flex flex-col items-start text-left">
-						<div className="font-medium">{item.no_pengajuan}</div>
-						<div className="text-sm text-gray-500">
-							{formatDateSafe(item.tanggal)}
+				<AccordionTrigger className="min-h-16 px-4 py-3 hover:no-underline">
+					<div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
+						<div className="flex min-w-0 flex-1 flex-col items-start">
+							<div className="truncate font-semibold text-[#1c1c1e]">
+								{item.no_pengajuan}
+							</div>
+							<div className="text-[13px] text-[#6e6e73]">
+								{formatDateSafe(item.tanggal_awal)} –{" "}
+								{formatDateSafe(item.tanggal_akhir)}
+							</div>
 						</div>
+						<div className="shrink-0">{getStatusBadge(item.status)}</div>
 					</div>
 				</AccordionTrigger>
-				<AccordionContent className="px-4 pb-4">
-					<div className="space-y-3">
-						<div>
-							<div className="text-sm font-medium text-gray-500">Periode</div>
-							<div className="flex items-center mt-1">
-								<Clock className="w-4 h-4 mr-1 text-blue-600" />
-								<div className="text-sm">
-									{formatDateSafe(item.tanggal_awal)}{" "}
-									-{" "}
-									{formatDateSafe(item.tanggal_akhir)}
+				<AccordionContent className="border-t border-[#c6c6c8]/30 px-4 pb-4 pt-3">
+					<div className="space-y-4">
+						<div className="grid grid-cols-2 gap-3">
+							<div>
+								<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
+									Diajukan
+								</div>
+								<div className="mt-1 text-sm text-[#1c1c1e]">
+							{formatDateSafe(item.tanggal)}
 								</div>
 							</div>
-							<Badge variant="outline" className="mt-1">
-								{item.jumlah} hari
-							</Badge>
+							<div>
+								<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
+									Durasi
+								</div>
+								<Badge variant="outline" className="mt-1">
+									{item.jumlah} hari
+								</Badge>
+							</div>
+						</div>
+
+						<div className="rounded-xl bg-[#f2f2f7] p-3">
+							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
+								Periode
+							</div>
+							<div className="mt-1 flex items-center text-sm text-[#1c1c1e]">
+								<Clock className="mr-1.5 size-4 text-[#007aff]" />
+								<span>
+									{formatDateSafe(item.tanggal_awal)}{" "}
+									–{" "}
+									{formatDateSafe(item.tanggal_akhir)}
+								</span>
+							</div>
 						</div>
 
 						<div>
-							<div className="text-sm font-medium text-gray-500">Urgensi</div>
-							<div className="text-sm mt-1">{item.urgensi}</div>
+							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
+								Urgensi
+							</div>
+							<div className="mt-1 text-sm text-[#1c1c1e]">
+								{item.urgensi}
+							</div>
 						</div>
 
 						<div>
-							<div className="text-sm font-medium text-gray-500">
+							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
 								Kepentingan
 							</div>
-							<div className="text-sm mt-1">{item.kepentingan}</div>
+							<div className="mt-1 text-sm leading-relaxed text-[#1c1c1e]">
+								{item.kepentingan}
+							</div>
 						</div>
 
 						<div>
-							<div className="text-sm font-medium text-gray-500">
+							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
 								Penanggung Jawab
 							</div>
-							<div className="text-sm mt-1">{item.nama_pj}</div>
+							<div className="mt-1 text-sm text-[#1c1c1e]">
+								{item.nama_pj}
+							</div>
 						</div>
 
-						<div className="flex items-center justify-between">
-							<div>{getStatusBadge(item.status)}</div>
+						<div className="flex items-center justify-between border-t border-[#c6c6c8]/30 pt-3">
+							{getStatusBadge(item.status)}
 							{item.status !== "Disetujui" && (
 								<Button
 									variant="ghost"
 									size="sm"
-									className="text-red-500 hover:text-red-600 hover:bg-red-50"
+									className="min-h-11 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600"
 									onClick={() => onDelete(item.no_pengajuan)}
 								>
-									<Trash2 className="w-4 h-4 mr-2" />
+									<Trash2 className="mr-2 size-4" />
 									Hapus
 								</Button>
 							)}
@@ -388,18 +451,25 @@ export default function DaftarIzin() {
 	return (
 		<div>
 			{/* Filter Section */}
-			<Accordion type="single" collapsible className="w-full md:hidden mb-4">
-				<AccordionItem value="filter">
-					<AccordionTrigger className="hover:no-underline">
+			<Accordion
+				type="single"
+				collapsible
+				className="mb-4 w-full min-[780px]:hidden"
+			>
+				<AccordionItem
+					value="filter"
+					className="overflow-hidden rounded-2xl border-0 bg-white"
+				>
+					<AccordionTrigger className="min-h-12 px-4 py-2 hover:no-underline">
 						<div className="flex items-center">
-							<Search className="w-4 h-4 mr-2" />
+							<Search className="mr-2 size-4 text-[#007aff]" />
 							Filter Data
 						</div>
 					</AccordionTrigger>
-					<AccordionContent>
+					<AccordionContent className="border-t border-[#c6c6c8]/30 px-4 pb-4 pt-3">
 						<div className="space-y-4">
 							<div>
-								<label className="text-sm font-medium text-gray-700 mb-2 block">
+								<label className="mb-2 block text-sm font-medium text-[#1c1c1e]">
 									Tanggal Awal
 								</label>
 								<DatePicker
@@ -409,7 +479,7 @@ export default function DaftarIzin() {
 								/>
 							</div>
 							<div>
-								<label className="text-sm font-medium text-gray-700 mb-2 block">
+								<label className="mb-2 block text-sm font-medium text-[#1c1c1e]">
 									Tanggal Akhir
 								</label>
 								<DatePicker
@@ -419,21 +489,23 @@ export default function DaftarIzin() {
 									minDate={filterDate.start}
 								/>
 							</div>
-							<Button
-								variant="outline"
-								onClick={clearFilters}
-								className="w-full"
-							>
-								<X className="w-4 h-4 mr-2" />
-								Reset Filter
-							</Button>
+							{(filterDate.start || filterDate.end) && (
+								<Button
+									variant="outline"
+									onClick={clearFilters}
+									className="min-h-11 w-full rounded-xl"
+								>
+									<X className="mr-2 size-4" />
+									Reset Filter
+								</Button>
+							)}
 						</div>
 					</AccordionContent>
 				</AccordionItem>
 			</Accordion>
 
 			{/* Desktop Filter */}
-			<div className="hidden md:block mb-6">
+			<div className="mb-6 hidden min-[780px]:block">
 				<div className="flex flex-col md:flex-row gap-4 items-end">
 					<div className="w-full md:w-1/3">
 						<label className="text-sm font-medium text-gray-700 mb-2 block">
@@ -466,19 +538,28 @@ export default function DaftarIzin() {
 			</div>
 
 			{/* Mobile View */}
-			<div className="md:hidden">
+			<div className="min-[780px]:hidden">
 				{loading ? (
-					<div className="flex items-center justify-center py-10">
-						<div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-						<span className="ml-2">Memuat data...</span>
+					<div className="flex items-center justify-center rounded-2xl bg-white py-10">
+						<div className="size-6 animate-spin rounded-full border-2 border-[#007aff] border-t-transparent" />
+						<span className="ml-2 text-sm text-[#6e6e73]">
+							Memuat data...
+						</span>
 					</div>
 				) : izin.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-10 text-gray-500">
-						<FileText className="w-12 h-12 mb-2" />
-						<p>Belum ada pengajuan izin</p>
+					<div className="flex flex-col items-center justify-center rounded-2xl bg-white px-6 py-12 text-center">
+						<div className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-[#e5f1ff] text-[#007aff]">
+							<FileText className="size-6" />
+						</div>
+						<p className="font-semibold text-[#1c1c1e]">
+							Belum ada pengajuan izin
+						</p>
+						<p className="mt-1 text-sm text-[#6e6e73]">
+							Pengajuan yang Anda buat akan tampil di sini.
+						</p>
 					</div>
 				) : (
-					<div className="space-y-2">
+					<div>
 						{izin.map((item) => (
 							<IzinCard
 								key={item.no_pengajuan}
@@ -491,7 +572,7 @@ export default function DaftarIzin() {
 			</div>
 
 			{/* Desktop View */}
-			<div className="hidden md:block">
+			<div className="hidden min-[780px]:block">
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -572,6 +653,11 @@ export default function DaftarIzin() {
 			{/* Pagination */}
 			{!loading && izin.length > 0 && (
 				<div className="mt-4 flex justify-center">
+					<MobilePagination
+						currentPage={pagination.currentPage}
+						totalPages={pagination.totalPages}
+						onPageChange={handlePageChange}
+					/>
 					<Pagination
 						currentPage={pagination.currentPage}
 						totalPages={pagination.totalPages}
