@@ -93,6 +93,7 @@ export async function GET(request) {
 						nominal_jasa_dasar
 						pengurang_jasa
 						nominal_jasa_tambahan
+						jasa_bagian_unit
 						nominal_jasa_final
 						status_rekap
 						nama

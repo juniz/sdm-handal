@@ -273,11 +273,11 @@ export default function AdminRekapBulananPage() {
 		if (rekapList.length === 0) return;
 		
 		let csvContent = "data:text/csv;charset=utf-8,";
-		csvContent += "NIK,Nama,Departemen,Hari Jadwal,Hari Approved (Reguler),Shift Tambahan,Gap Hari,Rata-rata Skor,Jasa Dasar,Pengurang Jasa,Insentif Tambahan,Jasa Final,Status\n";
+		csvContent += "NIK,Nama,Departemen,Hari Jadwal,Hari Approved (Reguler),Shift Tambahan,Gap Hari,Rata-rata Skor,Jasa Dasar,Pengurang (Individual),Jasa Bagian Unit,Insentif Tambahan (Total),Jasa Final,Status\n";
 		
 		rekapList.forEach(row => {
 			const hariReguler = row.hari_approved - (row.hari_approved_bonus || 0);
-			csvContent += `"${row.nik}","${row.nama}","${row.nama_departemen}",${row.total_hari_jadwal},${hariReguler},${row.hari_approved_bonus || 0},${row.gap_hari},${Math.round(row.rata_skor_total)},${row.nominal_jasa_dasar},${row.pengurang_jasa},${row.nominal_jasa_tambahan || 0},${row.nominal_jasa_final},"${row.status_rekap}"\n`;
+			csvContent += `"${row.nik}","${row.nama}","${row.nama_departemen}",${row.total_hari_jadwal},${hariReguler},${row.hari_approved_bonus || 0},${row.gap_hari},${Math.round(row.rata_skor_total)},${row.nominal_jasa_dasar},${row.pengurang_jasa},${row.jasa_bagian_unit || 0},${row.nominal_jasa_tambahan || 0},${row.nominal_jasa_final},"${row.status_rekap}"\n`;
 		});
 
 		const encodedUri = encodeURI(csvContent);
@@ -610,8 +610,15 @@ export default function AdminRekapBulananPage() {
 												<td className={`px-5 py-4 text-right font-bold font-mono ${row.pengurang_jasa > 0 ? "text-red-600" : "text-slate-400"}`}>
 													Rp {Number(row.pengurang_jasa).toLocaleString("id-ID")}
 												</td>
-												<td className="px-5 py-4 text-right font-bold text-amber-600 font-mono">
-													Rp {Number(row.nominal_jasa_tambahan || 0).toLocaleString("id-ID")}
+												<td className="px-5 py-4 text-right font-mono">
+													<span className="font-bold text-amber-600 block">
+														Rp {Number(row.nominal_jasa_tambahan || 0).toLocaleString("id-ID")}
+													</span>
+													{Boolean(row.jasa_bagian_unit) && (
+														<span className="text-[10px] text-slate-400 block mt-0.5 font-sans font-medium">
+															(+Rp {Number(row.jasa_bagian_unit).toLocaleString("id-ID")} unit share)
+														</span>
+													)}
 												</td>
 												<td className="px-5 py-4 text-right font-extrabold text-[#0090CC] text-sm font-mono">
 													Rp {Number(row.nominal_jasa_final).toLocaleString("id-ID")}
