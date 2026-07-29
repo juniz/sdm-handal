@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
 	Table,
@@ -245,7 +245,7 @@ const getStatusBadge = (status) => {
 const MobileIzinRow = ({ item, onOpen }) => (
 	<button
 		type="button"
-		onClick={() => onOpen(item)}
+		onClick={(event) => onOpen(item, event.currentTarget)}
 		aria-label={`Buka detail pengajuan ${item.no_pengajuan}`}
 		className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007aff]"
 	>
@@ -283,12 +283,21 @@ const MobileHistorySkeleton = () => (
 	</div>
 );
 
-const MobileIzinDetailSheet = ({ item, open, onOpenChange, onDelete }) => {
+const MobileIzinDetailSheet = ({
+	item,
+	open,
+	onOpenChange,
+	onDelete,
+	onCloseAutoFocus,
+}) => {
 	if (!item) return null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="!top-auto !right-0 !bottom-0 !left-0 !max-h-[85dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none border-0 bg-[#f2f2f7] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 min-[780px]:hidden">
+			<DialogContent
+				className="!top-auto !right-0 !bottom-0 !left-0 !max-h-[85dvh] !w-full !max-w-none !translate-x-0 !translate-y-0 overflow-y-auto rounded-t-3xl rounded-b-none border-0 bg-[#f2f2f7] px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 min-[780px]:hidden [&>button]:!top-2 [&>button]:!right-2 [&>button]:!size-11 [&>button]:!p-0"
+				onCloseAutoFocus={onCloseAutoFocus}
+			>
 				<div className="mx-auto h-1.5 w-10 rounded-full bg-[#c7c7cc]" aria-hidden="true" />
 				<DialogHeader className="gap-1 text-left">
 					<DialogTitle className="text-xl text-[#1c1c1e]">
@@ -381,6 +390,22 @@ export default function DaftarIzin() {
 		noPengajuan: null,
 	});
 	const [selectedIzin, setSelectedIzin] = useState(null);
+	const selectedIzinTriggerRef = useRef(null);
+
+	useEffect(() => {
+		if (!selectedIzin) return;
+
+		const mediaQuery = window.matchMedia("(min-width: 780px)");
+		const closeOnDesktop = (event) => {
+			if (!event.matches) return;
+			selectedIzinTriggerRef.current = null;
+			setSelectedIzin(null);
+		};
+
+		closeOnDesktop(mediaQuery);
+		mediaQuery.addEventListener("change", closeOnDesktop);
+		return () => mediaQuery.removeEventListener("change", closeOnDesktop);
+	}, [selectedIzin]);
 
 	const fetchIzin = async (filters = {}, page = 1) => {
 		try {
@@ -480,6 +505,11 @@ export default function DaftarIzin() {
 	const handleSheetDelete = (noPengajuan) => {
 		setSelectedIzin(null);
 		showDeleteDialog(noPengajuan);
+	};
+
+	const handleMobileIzinOpen = (item, trigger) => {
+		selectedIzinTriggerRef.current = trigger;
+		setSelectedIzin(item);
 	};
 
 	return (
@@ -598,7 +628,7 @@ export default function DaftarIzin() {
 							<MobileIzinRow
 								key={item.no_pengajuan}
 								item={item}
-								onOpen={setSelectedIzin}
+								onOpen={handleMobileIzinOpen}
 							/>
 						))}
 					</div>
@@ -612,6 +642,10 @@ export default function DaftarIzin() {
 					if (!isOpen) setSelectedIzin(null);
 				}}
 				onDelete={handleSheetDelete}
+				onCloseAutoFocus={(event) => {
+					event.preventDefault();
+					selectedIzinTriggerRef.current?.focus();
+				}}
 			/>
 
 			{/* Desktop View */}
