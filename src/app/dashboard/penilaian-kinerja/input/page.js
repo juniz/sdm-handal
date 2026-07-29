@@ -516,7 +516,22 @@ export default function DailyInputPage() {
 	const estSkorAbsensi = attendanceInfo ? Number(attendanceInfo.skor_absensi || 0) : 0;
 	const estSkorTotal = Math.round((estSkorKegiatan * 0.6) + (estSkorAbsensi * 0.4));
 
-	const isReadOnly = harianRecord && (harianRecord.status === "submitted" || harianRecord.status === "approved");
+	const checkIsDeadlinePassed = () => {
+		if (!selectedDate) return false;
+		let isNightShift = false;
+		if (scheduleInfo.hasSchedule && scheduleInfo.shift && scheduleInfo.shift !== "OFF" && scheduleInfo.shift !== "Libur") {
+			const sInfo = shiftDetails.find(s => s.shift === scheduleInfo.shift);
+			if (sInfo && sInfo.jam_pulang < sInfo.jam_masuk) {
+				isNightShift = true;
+			}
+		}
+		const daysToAdd = isNightShift ? 2 : 1;
+		const deadline = moment(selectedDate).add(daysToAdd, "days").endOf("day");
+		return moment().isAfter(deadline);
+	};
+
+	const isDeadlinePassed = checkIsDeadlinePassed();
+	const isReadOnly = (harianRecord && (harianRecord.status === "submitted" || harianRecord.status === "approved")) || isDeadlinePassed;
 
 	const getStatusBadge = (status) => {
 		switch (status) {
@@ -557,7 +572,7 @@ export default function DailyInputPage() {
 						<CalendarIcon className="h-4 w-4 text-primary-400" />
 						<input
 							type="date"
-							value={selectedDate}
+							value={selectedDate || ""}
 							max={moment().format("YYYY-MM-DD")}
 							onChange={(e) => setSelectedDate(e.target.value)}
 							className="bg-transparent text-slate-850 font-bold text-sm focus:outline-none cursor-pointer"
@@ -577,6 +592,17 @@ export default function DailyInputPage() {
 				<div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl flex items-start gap-3">
 					<CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
 					<span className="font-semibold text-sm leading-relaxed">{successMsg}</span>
+				</div>
+			)}
+			{isDeadlinePassed && (
+				<div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start gap-3 shadow-xs">
+					<AlertTriangle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+					<div>
+						<h4 className="font-bold text-sm font-figtree">Batas Waktu Pengisian Lewat</h4>
+						<p className="text-xs mt-0.5 font-medium leading-relaxed">
+							Batas pengisian telah lewat (&gt; 1x24 jam dari tanggal kerja). Laporan tanggal {selectedDate ? moment(selectedDate).format("DD/MM/YYYY") : ""} tidak dapat diubah atau dikirim.
+						</p>
+					</div>
 				</div>
 			)}
 
@@ -766,16 +792,20 @@ export default function DailyInputPage() {
 								</div>
 								<h3 className="text-lg font-bold text-slate-800 font-figtree mb-1">Mulai Laporan Harian</h3>
 								<p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">
-									Buat draf laporan kinerja baru untuk mengisi item kegiatan yang Anda selesaikan hari ini.
+									{isDeadlinePassed 
+										? "Batas waktu pengisian telah lewat. Laporan kinerja harian untuk tanggal ini tidak dapat dibuat lagi."
+										: "Buat draf laporan kinerja baru untuk mengisi item kegiatan yang Anda selesaikan hari ini."}
 								</p>
-								<button
-									onClick={startDraft}
-									disabled={saving}
-									className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all duration-200 text-white font-bold rounded-xl text-sm shadow hover:shadow-md inline-flex items-center gap-2 hover:-translate-y-[1px] active:scale-[0.98] cursor-pointer"
-								>
-									{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-									Mulai Isi Penilaian Hari Ini
-								</button>
+								{!isDeadlinePassed && (
+									<button
+										onClick={startDraft}
+										disabled={saving}
+										className="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 transition-all duration-200 text-white font-bold rounded-xl text-sm shadow hover:shadow-md inline-flex items-center gap-2 hover:-translate-y-[1px] active:scale-[0.98] cursor-pointer"
+									>
+										{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+										Mulai Isi Penilaian Hari Ini
+									</button>
+								)}
 							</div>
 						) : (
 							/* Activities sheet */
@@ -1010,7 +1040,7 @@ export default function DailyInputPage() {
 									)}
 
 									{/* ── Cancel submit action */}
-									{harianRecord && harianRecord.status === "submitted" && (
+									{harianRecord && harianRecord.status === "submitted" && !isDeadlinePassed && (
 										<div className="pt-4 border-t border-slate-100 flex justify-end">
 											<button
 												type="button"
@@ -1029,7 +1059,11 @@ export default function DailyInputPage() {
 										<div className="p-4 bg-[#F8FAFC] border border-slate-200/60 rounded-xl flex items-start gap-3">
 											<Info className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
 											<p className="text-xs text-slate-500 leading-relaxed font-medium">
-												{harianRecord.status === "submitted" ? (
+												{isDeadlinePassed ? (
+													<>
+														Penilaian harian ini telah dikunci karena <strong className="text-rose-600">batas waktu pengisian telah lewat (&gt; 1x24 jam)</strong>. Perubahan tidak dapat dilakukan lagi.
+													</>
+												) : harianRecord?.status === "submitted" ? (
 													<>
 														Penilaian harian ini telah dikunci karena berstatus{" "}
 														<strong className="text-slate-700">Menunggu Approval</strong>.
@@ -1038,7 +1072,7 @@ export default function DailyInputPage() {
 												) : (
 													<>
 														Penilaian harian ini telah dikunci karena berstatus{" "}
-														<strong className="capitalize text-slate-700">{harianRecord.status}</strong>.
+														<strong className="capitalize text-slate-700">{harianRecord?.status}</strong>.
 														Perubahan tidak dapat dilakukan kecuali dikembalikan oleh supervisor untuk direvisi.
 													</>
 												)}

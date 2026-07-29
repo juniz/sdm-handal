@@ -38,6 +38,65 @@ async function getSupervisorIdForEmployee(employeeId) {
 	return supervisorResult.length > 0 ? supervisorResult[0].supervisor_id : null;
 }
 
+// Helper check 1x24 jam deadline
+async function checkDeadlinePassed(pegawaiId, tanggal) {
+	try {
+		const evalDateStr = moment(tanggal).format("YYYY-MM-DD");
+		const monthStr = moment(evalDateStr).format("MM");
+		const yearStr = moment(evalDateStr).format("YYYY");
+		const dayStr = moment(evalDateStr).format("D");
+
+		const schedule = await selectFirst({
+			table: "jadwal_pegawai",
+			where: {
+				id: pegawaiId,
+				bulan: monthStr,
+				tahun: yearStr
+			}
+		});
+
+		const scheduleTambahan = await selectFirst({
+			table: "jadwal_tambahan",
+			where: {
+				id: pegawaiId,
+				bulan: monthStr,
+				tahun: yearStr
+			}
+		});
+
+		let shift = schedule ? (schedule[`h${dayStr}`] || "") : "";
+		if (!shift) {
+			shift = scheduleTambahan ? (scheduleTambahan[`h${dayStr}`] || "") : "";
+		}
+
+		let isNightShift = false;
+		if (shift && shift !== "OFF" && shift !== "Libur") {
+			const shiftInfo = await selectFirst({
+				table: "jam_masuk",
+				where: { shift: shift }
+			});
+			if (shiftInfo) {
+				const jamMasuk = shiftInfo.jam_masuk;
+				const jamPulang = shiftInfo.jam_pulang;
+				if (jamPulang < jamMasuk) {
+					isNightShift = true;
+				}
+			}
+		}
+
+		// Batas 1x24 jam dihitung dari 23:59:59 hari berikutnya setelah tanggal kerja.
+		// Jika shift malam (lintas midnight), dihitung dari 23:59:59 hari kedua setelah tanggal kerja (hari setelah pulang).
+		const daysToAdd = isNightShift ? 2 : 1;
+		const deadline = moment.tz(evalDateStr, "Asia/Jakarta").add(daysToAdd, "days").endOf("day");
+		const now = moment().tz("Asia/Jakarta");
+
+		return now.isAfter(deadline);
+	} catch (err) {
+		console.error("Gagal memeriksa deadline 1x24 jam:", err);
+		return false;
+	}
+}
+
 export async function PUT(request, { params }) {
 	try {
 		const cookieStore = await cookies();
@@ -75,6 +134,12 @@ export async function PUT(request, { params }) {
 		// Verify status
 		if (harian.status !== "draft" && harian.status !== "revisi") {
 			return NextResponse.json({ error: "Penilaian yang sudah dikirim atau disetujui tidak dapat diubah" }, { status: 400 });
+		}
+
+		// Verify deadline 1x24 jam
+		const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
+		if (isExpired) {
+			return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diubah.` }, { status: 400 });
 		}
 
 		const body = await request.json();
@@ -229,6 +294,12 @@ export async function POST(request, { params }) {
 
 			if (harian.status !== "draft" && harian.status !== "revisi") {
 				return NextResponse.json({ error: "Penilaian sudah dikirim atau disetujui" }, { status: 400 });
+			}
+
+			// Verify deadline 1x24 jam
+			const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
+			if (isExpired) {
+				return NextResponse.json({ error: `Batas pengiriman telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat dikirim.` }, { status: 400 });
 			}
 
 			// Validasi jam pulang berdasarkan jadwal shift
@@ -401,6 +472,12 @@ export async function POST(request, { params }) {
 
 		if (harian.status !== "submitted") {
 			return NextResponse.json({ error: "Penilaian harus berstatus 'submitted' untuk diproses" }, { status: 400 });
+		}
+
+		// Verify deadline 1x24 jam for supervisor approval
+		const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
+		if (isExpired) {
+			return NextResponse.json({ error: `Batas waktu persetujuan supervisor telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diproses.` }, { status: 400 });
 		}
 
 		if (action === "approve") {

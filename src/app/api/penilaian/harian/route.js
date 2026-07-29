@@ -407,6 +407,24 @@ export async function POST(request) {
 			return NextResponse.json({ error: "Tanggal ini bukan hari kerja per jadwal Anda" }, { status: 400 });
 		}
 
+		// Verify deadline 1x24 jam
+		let isNightShift = false;
+		if (shift && shift !== "OFF" && shift !== "Libur") {
+			const shiftInfo = await selectFirst({
+				table: "jam_masuk",
+				where: { shift: shift }
+			});
+			if (shiftInfo && shiftInfo.jam_pulang < shiftInfo.jam_masuk) {
+				isNightShift = true;
+			}
+		}
+
+		const daysToAdd = isNightShift ? 2 : 1;
+		const deadline = moment(tanggal).add(daysToAdd, "days").endOf("day");
+		if (moment().isAfter(deadline)) {
+			return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Penilaian tanggal ${moment(tanggal).format("DD/MM/YYYY")} tidak dapat dibuat.` }, { status: 400 });
+		}
+
 		// Check if record already exists
 		const existing = await selectFirst({
 			table: "penilaian_harian",

@@ -32,6 +32,12 @@ export default function SupervisorApprovalPage() {
 	const [catatan, setCatatan] = useState("");
 	const [actionLoading, setActionLoading] = useState(false);
 
+	const isApprovalDeadlinePassed = (record) => {
+		if (!record || !record.tanggal) return false;
+		const deadline = moment(record.tanggal).add(2, "days").endOf("day");
+		return moment().isAfter(deadline);
+	};
+
 	useEffect(() => {
 		loadPendingQueue();
 	}, []);
@@ -232,6 +238,18 @@ export default function SupervisorApprovalPage() {
 
 						{/* Content */}
 						<div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
+							{isApprovalDeadlinePassed(selectedEval) && (
+								<div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start gap-3">
+									<AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+									<div>
+										<h4 className="font-bold text-sm font-figtree">Batas Waktu Approval Lewat</h4>
+										<p className="text-xs mt-0.5 font-medium leading-relaxed">
+											Batas waktu persetujuan supervisor telah lewat (&gt; 1x24 jam dari tanggal kerja). Laporan tidak dapat disetujui atau dikembalikan lagi.
+										</p>
+									</div>
+								</div>
+							)}
+
 							{/* Performance metrics */}
 							<div className="grid grid-cols-3 gap-3 bg-slate-50/50 border border-slate-200/60 p-4 rounded-xl">
 								<div className="text-center">
@@ -412,30 +430,39 @@ export default function SupervisorApprovalPage() {
 
 						{/* Footer Actions */}
 						<div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-							<button 
-								onClick={() => handleAction("revisi")}
-								disabled={actionLoading || modalLoading || !catatan.trim()}
-								className="px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50 text-rose-700 font-bold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-							>
-								{actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-								Kembalikan (Minta Revisi)
-							</button>
+							{isApprovalDeadlinePassed(selectedEval) ? (
+								<div className="text-xs text-rose-600 font-bold font-figtree flex items-center gap-1.5">
+									<AlertCircle className="h-4 w-4" />
+									Telah melewati batas waktu approval (&gt; 1x24 jam)
+								</div>
+							) : (
+								<button 
+									onClick={() => handleAction("revisi")}
+									disabled={actionLoading || modalLoading || !catatan.trim()}
+									className="px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 disabled:opacity-50 text-rose-700 font-bold rounded-xl text-xs transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+								>
+									{actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+									Kembalikan (Minta Revisi)
+								</button>
+							)}
 
 							<div className="flex gap-2 justify-end w-full sm:w-auto">
 								<button 
 									onClick={closeModal}
 									className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer active:scale-95"
 								>
-									Batal
+									Tutup
 								</button>
-								<button 
-									onClick={() => handleAction("approve")}
-									disabled={actionLoading || modalLoading}
-									className="px-5 py-2 bg-primary-600 hover:bg-primary-800 disabled:bg-primary-300 text-white font-bold rounded-xl text-xs transition-all inline-flex items-center gap-1.5 shadow-md shadow-primary-500/10 cursor-pointer active:scale-95 hover:-translate-y-[1px]"
-								>
-									{actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-									Setujui Laporan
-								</button>
+								{!isApprovalDeadlinePassed(selectedEval) && (
+									<button 
+										onClick={() => handleAction("approve")}
+										disabled={actionLoading || modalLoading}
+										className="px-5 py-2 bg-primary-600 hover:bg-primary-800 disabled:bg-primary-300 text-white font-bold rounded-xl text-xs transition-all inline-flex items-center gap-1.5 shadow-md shadow-primary-500/10 cursor-pointer active:scale-95 hover:-translate-y-[1px]"
+									>
+										{actionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+										Setujui Laporan
+									</button>
+								)}
 							</div>
 						</div>
 					</div>
