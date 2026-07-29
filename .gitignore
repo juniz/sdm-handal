@@ -59,3 +59,6 @@ pm2.log
 
 # graphify
 graphify-out
+
+# isolated development worktrees
+.worktrees/
