@@ -18,11 +18,13 @@ import {
 	X,
 	ChevronLeft,
 	ChevronRight,
+	CalendarDays,
 	Trash2,
 } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { id } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DatePicker } from "@/components/DatePicker";
 import {
 	AlertDialog,
@@ -231,109 +233,46 @@ const getStatusBadge = (status) => {
 	}
 };
 
-const IzinCard = ({ item, onDelete }) => {
-	return (
-		<Accordion type="single" collapsible className="w-full">
-			<AccordionItem
-				value={item.no_pengajuan}
-				className="mb-2 overflow-hidden rounded-2xl border-0 bg-white"
+const MobileIzinRow = ({ item, onOpen }) => (
+	<button
+		type="button"
+		onClick={() => onOpen(item)}
+		aria-label={`Buka detail pengajuan ${item.no_pengajuan}`}
+		className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#007aff]"
+	>
+		<div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#e5f1ff] text-[#007aff]">
+			<CalendarDays className="size-5" aria-hidden="true" />
+		</div>
+		<div className="min-w-0 flex-1">
+			<p className="truncate font-semibold text-[#1c1c1e]">{item.no_pengajuan}</p>
+			<p className="mt-0.5 text-[13px] text-[#6e6e73]">
+				{formatDateSafe(item.tanggal_awal)} – {formatDateSafe(item.tanggal_akhir)}
+				<span className="ml-2">{item.jumlah} hari</span>
+			</p>
+		</div>
+		<div className="shrink-0">{getStatusBadge(item.status)}</div>
+		<ChevronRight className="size-5 shrink-0 text-[#c7c7cc]" aria-hidden="true" />
+	</button>
+);
+
+const MobileHistorySkeleton = () => (
+	<div className="overflow-hidden rounded-2xl bg-white">
+		{Array.from({ length: 3 }, (_, index) => (
+			<div
+				key={index}
+				className="flex min-h-16 items-center gap-3 px-4 py-3 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-[#c6c6c8]/30"
 			>
-				<AccordionTrigger className="min-h-16 px-4 py-3 hover:no-underline">
-					<div className="flex min-w-0 flex-1 items-center gap-3 pr-2 text-left">
-						<div className="flex min-w-0 flex-1 flex-col items-start">
-							<div className="truncate font-semibold text-[#1c1c1e]">
-								{item.no_pengajuan}
-							</div>
-							<div className="text-[13px] text-[#6e6e73]">
-								{formatDateSafe(item.tanggal_awal)} –{" "}
-								{formatDateSafe(item.tanggal_akhir)}
-							</div>
-						</div>
-						<div className="shrink-0">{getStatusBadge(item.status)}</div>
-					</div>
-				</AccordionTrigger>
-				<AccordionContent className="border-t border-[#c6c6c8]/30 px-4 pb-4 pt-3">
-					<div className="space-y-4">
-						<div className="grid grid-cols-2 gap-3">
-							<div>
-								<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-									Diajukan
-								</div>
-								<div className="mt-1 text-sm text-[#1c1c1e]">
-							{formatDateSafe(item.tanggal)}
-								</div>
-							</div>
-							<div>
-								<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-									Durasi
-								</div>
-								<Badge variant="outline" className="mt-1">
-									{item.jumlah} hari
-								</Badge>
-							</div>
-						</div>
-
-						<div className="rounded-xl bg-[#f2f2f7] p-3">
-							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-								Periode
-							</div>
-							<div className="mt-1 flex items-center text-sm text-[#1c1c1e]">
-								<Clock className="mr-1.5 size-4 text-[#007aff]" />
-								<span>
-									{formatDateSafe(item.tanggal_awal)}{" "}
-									–{" "}
-									{formatDateSafe(item.tanggal_akhir)}
-								</span>
-							</div>
-						</div>
-
-						<div>
-							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-								Urgensi
-							</div>
-							<div className="mt-1 text-sm text-[#1c1c1e]">
-								{item.urgensi}
-							</div>
-						</div>
-
-						<div>
-							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-								Kepentingan
-							</div>
-							<div className="mt-1 text-sm leading-relaxed text-[#1c1c1e]">
-								{item.kepentingan}
-							</div>
-						</div>
-
-						<div>
-							<div className="text-[12px] font-medium uppercase tracking-wide text-[#8e8e93]">
-								Penanggung Jawab
-							</div>
-							<div className="mt-1 text-sm text-[#1c1c1e]">
-								{item.nama_pj}
-							</div>
-						</div>
-
-						<div className="flex items-center justify-between border-t border-[#c6c6c8]/30 pt-3">
-							{getStatusBadge(item.status)}
-							{item.status !== "Disetujui" && (
-								<Button
-									variant="ghost"
-									size="sm"
-									className="min-h-11 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600"
-									onClick={() => onDelete(item.no_pengajuan)}
-								>
-									<Trash2 className="mr-2 size-4" />
-									Hapus
-								</Button>
-							)}
-						</div>
-					</div>
-				</AccordionContent>
-			</AccordionItem>
-		</Accordion>
-	);
-};
+				<Skeleton className="size-10 shrink-0 rounded-xl" />
+				<div className="min-w-0 flex-1 space-y-2">
+					<Skeleton className="h-4 w-32" />
+					<Skeleton className="h-3 w-48 max-w-full" />
+				</div>
+				<Skeleton className="h-6 w-16 rounded-full" />
+				<Skeleton className="size-5 rounded-full" />
+			</div>
+		))}
+	</div>
+);
 
 export default function DaftarIzin() {
 	const [izin, setIzin] = useState([]);
