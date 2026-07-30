@@ -74,7 +74,7 @@ export async function POST(request) {
 		}
 
 		const body = await request.json();
-		const { tipe_relasi, pegawai_id, supervisor_id, tipe_unit, kode_unit, berlaku_mulai, berlaku_sampai } = body;
+		const { tipe_relasi, pegawai_id, supervisor_id, tipe_unit, kode_unit, berlaku_mulai, berlaku_sampai, is_auto_approve, auto_approve_days } = body;
 
 		if (!tipe_relasi || !supervisor_id || !berlaku_mulai) {
 			return NextResponse.json({ error: "Tipe relasi, supervisor, dan tanggal mulai berlaku wajib diisi" }, { status: 400 });
@@ -97,6 +97,8 @@ export async function POST(request) {
 				tipe_unit: tipe_relasi === "unit" ? tipe_unit : null,
 				kode_unit: tipe_relasi === "unit" ? kode_unit : null,
 				is_aktif: 1,
+				is_auto_approve: is_auto_approve ? 1 : 0,
+				auto_approve_days: auto_approve_days ? parseInt(auto_approve_days) : 3,
 				berlaku_mulai,
 				berlaku_sampai: berlaku_sampai || null,
 				dibuat_oleh: loggedInUser.id
@@ -145,7 +147,9 @@ export async function PUT(request) {
 			kode_unit, 
 			berlaku_mulai, 
 			berlaku_sampai, 
-			is_aktif 
+			is_aktif,
+			is_auto_approve,
+			auto_approve_days
 		} = body;
 
 		if (!id) {
@@ -154,6 +158,8 @@ export async function PUT(request) {
 
 		const dataToUpdate = {};
 		if (is_aktif !== undefined) dataToUpdate.is_aktif = is_aktif === 0 ? 0 : 1;
+		if (is_auto_approve !== undefined) dataToUpdate.is_auto_approve = is_auto_approve ? 1 : 0;
+		if (auto_approve_days !== undefined) dataToUpdate.auto_approve_days = auto_approve_days ? parseInt(auto_approve_days) : 3;
 		if (supervisor_id !== undefined) dataToUpdate.supervisor_id = supervisor_id;
 		if (berlaku_mulai !== undefined) dataToUpdate.berlaku_mulai = berlaku_mulai;
 		if (berlaku_sampai !== undefined) dataToUpdate.berlaku_sampai = berlaku_sampai || null;

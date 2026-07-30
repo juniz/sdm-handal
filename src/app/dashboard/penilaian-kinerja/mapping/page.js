@@ -41,6 +41,8 @@ export default function SupervisorMappingPage() {
 	const [berlakuMulai, setBerlakuMulai] = useState(moment().format("YYYY-MM-DD"));
 	const [berlakuSampai, setBerlakuSampai] = useState("");
 	const [isAktif, setIsAktif] = useState(1);
+	const [isAutoApprove, setIsAutoApprove] = useState(false);
+	const [autoApproveDays, setAutoApproveDays] = useState(3);
 	const [saving, setSaving] = useState(false);
 	
 	// Search filter
@@ -116,6 +118,8 @@ export default function SupervisorMappingPage() {
 		setBerlakuMulai(moment().format("YYYY-MM-DD"));
 		setBerlakuSampai("");
 		setIsAktif(1);
+		setIsAutoApprove(false);
+		setAutoApproveDays(3);
 		setIsModalOpen(true);
 	};
 
@@ -130,6 +134,8 @@ export default function SupervisorMappingPage() {
 		setBerlakuMulai(moment(item.berlaku_mulai).format("YYYY-MM-DD"));
 		setBerlakuSampai(item.berlaku_sampai ? moment(item.berlaku_sampai).format("YYYY-MM-DD") : "");
 		setIsAktif(item.is_aktif);
+		setIsAutoApprove(Boolean(item.is_auto_approve));
+		setAutoApproveDays(item.auto_approve_days || 3);
 		setIsModalOpen(true);
 	};
 
@@ -167,7 +173,9 @@ export default function SupervisorMappingPage() {
 			tipe_unit: tipeRelasi === "unit" ? tipeUnit : null,
 			kode_unit: tipeRelasi === "unit" ? kodeUnit : null,
 			berlaku_mulai: berlakuMulai,
-			berlaku_sampai: berlakuSampai || null
+			berlaku_sampai: berlakuSampai || null,
+			is_auto_approve: isAutoApprove,
+			auto_approve_days: Number(autoApproveDays) || 3
 		};
 
 		try {
@@ -320,6 +328,7 @@ export default function SupervisorMappingPage() {
 									<th className="px-5 py-3.5">Supervisor (Evaluator)</th>
 									<th className="px-5 py-3.5">Mulai Berlaku</th>
 									<th className="px-5 py-3.5">Berakhir Berlaku</th>
+									<th className="px-5 py-3.5 text-center">Auto Approval</th>
 									<th className="px-5 py-3.5 text-center">Status</th>
 									<th className="px-5 py-3.5 text-right">Aksi</th>
 								</tr>
@@ -359,6 +368,17 @@ export default function SupervisorMappingPage() {
 										</td>
 										<td className="px-5 py-4 text-slate-500 font-medium">
 											{row.berlaku_sampai ? moment(row.berlaku_sampai).format("DD/MM/YYYY") : "Aktif Seterusnya"}
+										</td>
+										<td className="px-5 py-4 text-center">
+											{row.is_auto_approve === 1 || row.is_auto_approve === true ? (
+												<span className="px-2.5 py-1 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 inline-block font-figtree">
+													Aktif ({row.auto_approve_days || 3} Hari)
+												</span>
+											) : (
+												<span className="px-2.5 py-1 text-[10px] font-medium rounded-full bg-slate-100 text-slate-600 inline-block font-figtree">
+													Nonaktif
+												</span>
+											)}
 										</td>
 										<td className="px-5 py-4 text-center">
 											<button 
@@ -517,6 +537,34 @@ export default function SupervisorMappingPage() {
 										onChange={(e) => setBerlakuSampai(e.target.value)}
 										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold shadow-xs"
 									/>
+								</div>
+
+								{/* Auto Approval Toggle & Days */}
+								<div className="space-y-2 pt-2 border-t border-slate-100">
+									<label className="flex items-center gap-2 text-sm text-slate-700 font-bold cursor-pointer">
+										<input 
+											type="checkbox" 
+											id="is_auto_approve" 
+											checked={isAutoApprove} 
+											onChange={(e) => setIsAutoApprove(e.target.checked)} 
+											className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-slate-300 rounded cursor-pointer"
+										/>
+										Aktifkan Auto Approval
+									</label>
+
+									{isAutoApprove && (
+										<div className="space-y-1.5 pl-6">
+											<label htmlFor="auto_approve_days" className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block font-figtree">Toleransi Auto Approval (Hari)</label>
+											<input 
+												type="number" 
+												id="auto_approve_days"
+												min="1" 
+												value={autoApproveDays} 
+												onChange={(e) => setAutoApproveDays(e.target.value)} 
+												className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-700 font-semibold shadow-xs"
+											/>
+										</div>
+									)}
 								</div>
 
 								{modalMode === "edit" && (
