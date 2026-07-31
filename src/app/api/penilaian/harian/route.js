@@ -171,7 +171,7 @@ async function resolveAbsensi(pegawaiId, nikPegawai, tanggal, isTambahan = false
 
 	if (isTambahan) {
 		return {
-			sumber: "tepat_waktu",
+			sumber: "absensi",
 			nilai_kondisi: "tepat_waktu",
 			ref_no: null
 		};

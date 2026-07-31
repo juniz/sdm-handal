@@ -242,7 +242,46 @@ export async function GET(request) {
 			});
 		}
 
-		// 4. Default Fallback
+		// 4. Check if day is from jadwal_tambahan
+		const momentDate = new Date(tanggal);
+		const day = momentDate.getDate();
+		const month = String(momentDate.getMonth() + 1).padStart(2, "0");
+		const year = momentDate.getFullYear();
+
+		const schedule = await selectFirst({
+			table: "jadwal_pegawai",
+			where: {
+				id: pegawaiId,
+				bulan: month,
+				tahun: year
+			}
+		});
+
+		let shift = schedule ? schedule[`h${day}`] : "";
+		if (!shift || shift === "") {
+			const scheduleTambahan = await selectFirst({
+				table: "jadwal_tambahan",
+				where: {
+					id: pegawaiId,
+					bulan: month,
+					tahun: year
+				}
+			});
+			shift = scheduleTambahan ? scheduleTambahan[`h${day}`] : "";
+			if (shift && shift !== "") {
+				const kondisi = "tepat_waktu";
+				const skor = await getScoreForKondisi(kondisi);
+				return NextResponse.json({
+					success: true,
+					sumber: "absensi",
+					nilai_kondisi: kondisi,
+					skor_absensi: skor,
+					ref_no: null
+				});
+			}
+		}
+
+		// 5. Default Fallback
 		const fallbackKondisi = "alpha";
 		const fallbackSkor = await getScoreForKondisi(fallbackKondisi);
 		return NextResponse.json({
