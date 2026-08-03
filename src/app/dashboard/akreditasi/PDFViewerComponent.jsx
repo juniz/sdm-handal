@@ -31,7 +31,7 @@ export default function PDFViewerComponent({
 	});
 
 	return (
-		<Worker workerUrl="/pdf.worker.min.js">
+		<Worker workerUrl="/pdfjs-dist@3.4.120/build/pdf.worker.min.js">
 			<Viewer
 				fileUrl="/documents/akreditasi.pdf"
 				plugins={[
