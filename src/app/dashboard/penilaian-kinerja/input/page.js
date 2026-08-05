@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import moment from "moment";
-import PenilaianRevisiAlert from "@/components/notifications/PenilaianRevisiAlert";
 import { 
 	Calendar as CalendarIcon, 
 	CheckCircle, 
@@ -594,7 +593,6 @@ function DailyInputContent() {
 			</div>
 
 			{/* ── Feedback banners ────────────────────────────────────── */}
-			<PenilaianRevisiAlert />
 
 			{errorMsg && (
 				<div className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-xl flex items-start gap-3">
