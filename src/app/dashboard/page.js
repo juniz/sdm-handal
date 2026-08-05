@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import NotificationBellMobile from "@/components/notifications/NotificationBellMobile";
+import PenilaianRevisiAlert from "@/components/notifications/PenilaianRevisiAlert";
 import { useRouter } from "next/navigation";
 import adminType from "@/types/adminType";
 import { useUser } from "@/hooks/useUser";
@@ -256,6 +257,9 @@ export default function DashboardPage() {
 						>
 							{/* Profil Pegawai (Physical 3D ID Card with Flippable Stats) */}
 							<EmployeeCard />
+
+							{/* Notifikasi Revisi Penilaian Kinerja */}
+							<PenilaianRevisiAlert />
 
 							{/* Admin Menu - Hanya untuk Departemen IT/SPI */}
 							{isLoading ? (

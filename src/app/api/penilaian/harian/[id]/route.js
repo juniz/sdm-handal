@@ -513,7 +513,8 @@ export async function POST(request, { params }) {
 				table: "penilaian_harian",
 				data: {
 					status: "revisi",
-					catatan_supervisor: catatan_supervisor
+					catatan_supervisor: catatan_supervisor,
+					revisi_is_read: false
 				},
 				where: { id: id }
 			});

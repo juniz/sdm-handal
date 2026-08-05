@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import moment from "moment";
+import PenilaianRevisiAlert from "@/components/notifications/PenilaianRevisiAlert";
 import { 
 	Calendar as CalendarIcon, 
 	CheckCircle, 
@@ -19,7 +21,7 @@ import {
 } from "lucide-react";
 import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
-export default function DailyInputPage() {
+function DailyInputContent() {
 	const [selectedDate, setSelectedDate] = useState(null); // resolved on mount to handle night shifts
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
@@ -56,11 +58,19 @@ export default function DailyInputPage() {
 	const isSavingRef = useRef(false);
 	const hasPendingSaveRef = useRef(false);
 
+	const searchParams = useSearchParams();
+
 	// Resolve the active work date on mount.
 	// For night-shift workers (jam_pulang < jam_masuk) who are past midnight,
 	// the "work date" is still yesterday until the shift ends.
 	useEffect(() => {
 		const resolveWorkDate = async () => {
+			const paramTanggal = searchParams.get("tanggal");
+			if (paramTanggal && /^\d{4}-\d{2}-\d{2}$/.test(paramTanggal)) {
+				setSelectedDate(paramTanggal);
+				return;
+			}
+
 			const todayStr = moment().format("YYYY-MM-DD");
 			const yesterdayMoment = moment().subtract(1, "day");
 			const yesterdayStr = yesterdayMoment.format("YYYY-MM-DD");
@@ -584,6 +594,8 @@ export default function DailyInputPage() {
 			</div>
 
 			{/* ── Feedback banners ────────────────────────────────────── */}
+			<PenilaianRevisiAlert />
+
 			{errorMsg && (
 				<div className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-xl flex items-start gap-3">
 					<AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
@@ -1135,6 +1147,18 @@ export default function DailyInputPage() {
 				</div>
 			)}
 		</div>
+	);
+}
+
+export default function DailyInputPage() {
+	return (
+		<Suspense fallback={
+			<div className="flex justify-center items-center min-h-[400px]">
+				<Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+			</div>
+		}>
+			<DailyInputContent />
+		</Suspense>
 	);
 }
 
