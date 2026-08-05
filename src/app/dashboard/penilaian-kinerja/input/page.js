@@ -796,6 +796,19 @@ function DailyInputContent() {
 
 					{/* ── RIGHT COLUMN: Activities sheet ──────────────── */}
 					<div className={`${activeTab === "kegiatan" ? "block" : "hidden"} lg:block lg:col-span-2 space-y-5`}>
+						{/* Revision notes banner for mobile / activity tab view */}
+						{harianRecord?.status === "revisi" && (
+							<div className="bg-red-50 border border-red-200/80 p-4 rounded-2xl space-y-2">
+								<div className="flex items-center gap-2 text-red-800 font-bold text-sm font-figtree">
+									<AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+									Catatan Revisi Supervisor
+								</div>
+								<p className="text-red-700 text-xs font-medium leading-relaxed bg-white/80 p-3 rounded-xl border border-red-100/80">
+									{harianRecord.catatan_supervisor || "Harap sesuaikan kegiatan dengan jadwal yang telah disepakati."}
+								</p>
+							</div>
+						)}
+
 						{!harianRecord ? (
 							/* Start draft CTA */
 							<div className="bg-white border border-slate-200/60 rounded-2xl p-10 text-center shadow-sm">
@@ -895,8 +908,8 @@ function DailyInputContent() {
 														<option value="rendah">Rendah (x{wRendah})</option>
 													</select>
 												</div>
-												{/* Submit button */}
-												<div className="md:col-span-1">
+												{/* Submit button (Desktop) */}
+												<div className="hidden md:block md:col-span-1">
 													<button
 														type="submit"
 														disabled={saving || !newActivityTitle.trim()}
@@ -907,6 +920,8 @@ function DailyInputContent() {
 													</button>
 												</div>
 											</div>
+
+											{/* Textarea Penjabaran */}
 											<textarea
 												placeholder="Penjabaran singkat / catatan hasil pekerjaan (opsional)"
 												value={newActivityDesc}
@@ -914,6 +929,18 @@ function DailyInputContent() {
 												rows={2}
 												className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-600/10 resize-none font-medium placeholder:text-slate-300 transition-all"
 											/>
+
+											{/* Submit button (Mobile) */}
+											<div className="block md:hidden">
+												<button
+													type="submit"
+													disabled={saving || !newActivityTitle.trim()}
+													className="w-full py-2.5 bg-primary-600 hover:bg-primary-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold rounded-lg text-sm transition-all duration-200 flex items-center justify-center gap-1.5 shadow-sm hover:shadow cursor-pointer active:scale-[0.98]"
+												>
+													{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+													+ Tambah Kegiatan
+												</button>
+											</div>
 										</form>
 									)}
 
