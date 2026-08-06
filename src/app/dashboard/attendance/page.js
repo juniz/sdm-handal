@@ -38,6 +38,19 @@ const padZero = (num) => {
 	return num.toString().padStart(2, "0");
 };
 
+const getExpectedCheckout = (attendance, jamPulang, jamMasuk) => {
+	if (!attendance?.jamDatang || !jamPulang || !jamMasuk) return null;
+
+	const expected = moment(
+		`${moment(attendance.jamDatang).format("YYYY-MM-DD")} ${jamPulang}`,
+		"YYYY-MM-DD HH:mm:ss",
+	);
+
+	if (jamPulang < jamMasuk) expected.add(1, "day");
+
+	return expected;
+};
+
 export default function AttendancePage() {
 	const [photo, setPhoto] = useState(null);
 	const [isLocationValid, setIsLocationValid] = useState(false);
@@ -339,11 +352,16 @@ export default function AttendancePage() {
 
 	// Efek terpisah untuk menghitung status checkout
 	useEffect(() => {
-		const jamNow = moment().format("HH:mm:ss");
-		if (jamPulang) {
-			setIsCheckingOut(jamNow > jamPulang);
-		}
-	}, [jamPulang]);
+		const expectedCheckout = getExpectedCheckout(
+			todayAttendance,
+			todayAttendance?.jamPulang,
+			todayAttendance?.jamMasuk,
+		);
+
+		setIsCheckingOut(
+			Boolean(expectedCheckout && !moment().isBefore(expectedCheckout))
+		);
+	}, [todayAttendance, formattedTime]);
 
 	useEffect(() => {
 		if (jadwal && tanggal) {
