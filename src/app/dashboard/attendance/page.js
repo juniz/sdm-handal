@@ -38,6 +38,24 @@ const padZero = (num) => {
 	return num.toString().padStart(2, "0");
 };
 
+const getExpectedCheckout = (attendance, jamPulang, jamMasuk) => {
+	if (!attendance?.jamDatang || !jamPulang || !jamMasuk) return null;
+
+	const shiftEnd = moment(jamPulang, ["HH:mm:ss", "HH:mm"], true);
+	const shiftStart = moment(jamMasuk, ["HH:mm:ss", "HH:mm"], true);
+	if (!shiftEnd.isValid() || !shiftStart.isValid()) return null;
+
+	const expected = moment(
+		`${moment(attendance.jamDatang).format("YYYY-MM-DD")} ${jamPulang}`,
+		["YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD HH:mm"],
+		true,
+	);
+
+	if (shiftEnd.isBefore(shiftStart)) expected.add(1, "day");
+
+	return expected;
+};
+
 export default function AttendancePage() {
 	const [photo, setPhoto] = useState(null);
 	const [isLocationValid, setIsLocationValid] = useState(false);
@@ -52,7 +70,6 @@ export default function AttendancePage() {
 	const cameraRef = useRef(null);
 	const [todayAttendance, setTodayAttendance] = useState(null);
 	const [isCheckingOut, setIsCheckingOut] = useState(false);
-	const [jamPulang, setJamPulang] = useState(null);
 	const [attendanceStatus, setAttendanceStatus] = useState({
 		hasCheckedIn: false,
 		hasCheckedOut: false,
@@ -186,15 +203,12 @@ export default function AttendancePage() {
 			const result = await apiFetchToday();
 			if (result?.data) {
 				setTodayAttendance(result.data);
-				setJamPulang(result.jamPulang);
 			} else {
 				setTodayAttendance(null);
-				setJamPulang(null);
 			}
 		} catch (error) {
 			console.error("Error fetching today attendance:", error);
 			setTodayAttendance(null);
-			setJamPulang(null);
 		}
 	};
 
@@ -275,7 +289,6 @@ export default function AttendancePage() {
 		setAttendanceStatus({ hasCheckedIn: false, hasCheckedOut: false, isCompleted: false });
 		setUnfinishedAttendance(null);
 		setShowUnfinishedAlert(false);
-		setJamPulang(null);
 
 		// Single batched GraphQL request replaces 5 sequential fetches
 		const fetchAllData = async () => {
@@ -288,7 +301,6 @@ export default function AttendancePage() {
 				// Today attendance
 				if (d.today?.data) {
 					setTodayAttendance(d.today.data);
-					setJamPulang(d.today.jamPulang);
 				}
 
 				// Completed
@@ -328,22 +340,25 @@ export default function AttendancePage() {
 			// Pastikan state benar-benar null
 			if (todayAttendance !== null) setTodayAttendance(null);
 			if (completedAttendance !== null) setCompletedAttendance(null);
-			if (jamPulang !== null) setJamPulang(null);
 		}
 	}, [
 		todayAttendance,
 		completedAttendance,
 		attendanceStatus.isCompleted,
-		jamPulang,
 	]);
 
 	// Efek terpisah untuk menghitung status checkout
 	useEffect(() => {
-		const jamNow = moment().format("HH:mm:ss");
-		if (jamPulang) {
-			setIsCheckingOut(jamNow > jamPulang);
-		}
-	}, [jamPulang]);
+		const expectedCheckout = getExpectedCheckout(
+			todayAttendance,
+			todayAttendance?.jamPulang,
+			todayAttendance?.jamMasuk,
+		);
+
+		setIsCheckingOut(
+			Boolean(expectedCheckout && !moment().isBefore(expectedCheckout))
+		);
+	}, [todayAttendance, formattedTime]);
 
 	useEffect(() => {
 		if (jadwal && tanggal) {

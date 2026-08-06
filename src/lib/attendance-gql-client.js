@@ -116,7 +116,7 @@ export async function fetchAttendanceInitialData() {
     query InitialLoad {
       shift: attendanceShift { shiftToday }
       today: attendanceToday {
-        data { idPegawai shift jamDatang status keterlambatan photo }
+        data { idPegawai shift jamDatang status keterlambatan photo jamMasuk jamPulang }
         jamPulang
       }
       completed: attendanceCompleted {
@@ -141,7 +141,7 @@ export async function fetchAttendanceInitialData() {
 export async function fetchTodayAttendance() {
   const data = await gql(`
     query { attendanceToday {
-      data { idPegawai shift jamDatang status keterlambatan photo }
+      data { idPegawai shift jamDatang status keterlambatan photo jamMasuk jamPulang }
       jamPulang
     }}
   `);
@@ -292,4 +292,3 @@ export async function fetchSdmAttendanceStats() {
   const data = await sdmStatsPromise;
   return data.sdmAttendanceStats;
 }
-
