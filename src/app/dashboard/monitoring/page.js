@@ -38,6 +38,30 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:300
 // SSE reconnect with exponential backoff
 const SSE_BACKOFF = [3000, 6000, 12000, 30000];
 
+const getCronDomainBadge = (jobName) => {
+  if (jobName.toLowerCase().includes("approval") || jobName.toLowerCase().includes("penilaian")) {
+    return <Badge className="bg-sky-100 text-sky-800 border-sky-200 font-bold text-[10px] mr-1.5">SDM-Penilaian</Badge>;
+  }
+  if (jobName.toLowerCase().includes("log") || jobName.toLowerCase().includes("rotation")) {
+    return <Badge className="bg-slate-100 text-slate-700 border-slate-200 font-bold text-[10px] mr-1.5">System-Log</Badge>;
+  }
+  return <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 font-bold text-[10px] mr-1.5">Backend-Task</Badge>;
+};
+
+const getEndpointDomainBadge = (path = "") => {
+  const p = path.toLowerCase();
+  if (p.includes("pegawai") || p.includes("sdm") || p.includes("cuti") || p.includes("presensi")) {
+    return <Badge className="bg-sky-50 text-sky-700 border-sky-200 text-[9px] px-1 py-0 font-bold">SDM</Badge>;
+  }
+  if (p.includes("auth") || p.includes("login") || p.includes("profile")) {
+    return <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[9px] px-1 py-0 font-bold">Keamanan</Badge>;
+  }
+  if (p.includes("pasien") || p.includes("dokter") || p.includes("rawat") || p.includes("bios")) {
+    return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[9px] px-1 py-0 font-bold">SIMRS</Badge>;
+  }
+  return null;
+};
+
 export default function MonitoringPage() {
   const [summary, setSummary] = useState(null);
   const [traffic, setTraffic] = useState([]);
@@ -603,6 +627,7 @@ export default function MonitoringPage() {
                     <span className="font-bold px-1.5 py-0.5 rounded text-[10px] flex-shrink-0" style={{ backgroundColor: `${color}20`, color }}>
                       {ep.method}
                     </span>
+                    {getEndpointDomainBadge(ep.path)}
                     <span className="font-mono text-slate-600 truncate">{ep.path}</span>
                   </div>
                   <span className="text-slate-800 font-semibold flex-shrink-0">{ep.avgResponseTime} ms</span>
@@ -1034,7 +1059,10 @@ export default function MonitoringPage() {
                           onClick={() => setExpandedCronIdx(expandedCronIdx === idx ? null : idx)}
                         >
                           <TableCell className="text-xs">
-                            <div className="font-bold text-slate-800">{job.name}</div>
+                            <div className="font-bold text-slate-800 flex items-center">
+                              {getCronDomainBadge(job.name)}
+                              {job.name}
+                            </div>
                             <div className="text-slate-500 text-[11px]">{job.description || "-"}</div>
                           </TableCell>
                           <TableCell className="text-xs">
