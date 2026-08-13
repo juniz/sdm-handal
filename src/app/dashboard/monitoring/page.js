@@ -82,7 +82,15 @@ export default function MonitoringPage() {
       const res = await fetch(`${BACKEND_URL}/api/v1/monitor/cron-jobs`, { headers });
       if (res.ok) {
         const json = await res.json();
-        setCronJobs(json.data || []);
+        const rawData = json.data;
+        const jobList = Array.isArray(rawData)
+          ? rawData
+          : Array.isArray(rawData?.data)
+          ? rawData.data
+          : Array.isArray(json)
+          ? json
+          : [];
+        setCronJobs(jobList);
       }
     } catch (err) {
       console.error("Failed to fetch cron jobs status:", err);
@@ -877,7 +885,7 @@ export default function MonitoringPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cronJobs.length === 0 ? (
+                {!Array.isArray(cronJobs) || cronJobs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-slate-400 py-8 text-xs">
                       Tidak ada data Cron Job terdaftar.
