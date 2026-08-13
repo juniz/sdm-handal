@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef } from "react";
+import { useState, useRef } from "react";
 import { Terminal, Trash2, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
 export default function LogViewer({ logs = [], isConnected = false, isPaused = false, setIsPaused, onClear }) {
+  const [selectedType, setSelectedType] = useState("all");
   const terminalEndRef = useRef(null);
+
+  const filteredLogs = logs.filter((log) => selectedType === "all" || log.type === selectedType);
 
   const getLogColorClass = (type) => {
     switch (type) {
@@ -57,6 +60,19 @@ export default function LogViewer({ logs = [], isConnected = false, isPaused = f
           </span>
         </div>
         <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 bg-gray-950 p-1 rounded-lg border border-gray-800 mr-2">
+            {["all", "traffic", "graphql", "error", "auth"].map((type) => (
+              <button
+                key={type}
+                onClick={() => setSelectedType(type)}
+                className={`px-2 py-0.5 text-[10px] font-mono rounded capitalize transition-colors ${
+                  selectedType === type ? "bg-sky-600 text-white font-bold" : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
           <Button
             variant="outline"
             size="sm"
@@ -80,12 +96,12 @@ export default function LogViewer({ logs = [], isConnected = false, isPaused = f
 
       {/* Terminal logs */}
       <div className="flex-1 p-4 overflow-y-auto font-mono text-xs leading-relaxed text-gray-300 space-y-1">
-        {logs.length === 0 ? (
+        {filteredLogs.length === 0 ? (
           <div className="text-gray-500 text-center py-20">
             Waiting for logs... Perform some actions in the application.
           </div>
         ) : (
-          logs.map((log, idx) => (
+          filteredLogs.map((log, idx) => (
             <div key={idx} className={`${getLogColorClass(log.type)} break-all whitespace-pre-wrap transition-all duration-150`}>
               {formatLogPayload(log.type, log.entry)}
             </div>
