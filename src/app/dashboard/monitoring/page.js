@@ -20,6 +20,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
@@ -797,6 +798,33 @@ export default function MonitoringPage() {
       .catch(() => showToast("Gagal mengunduh file log: Akses ditolak", "error"));
   };
 
+  const filteredCronJobs = Array.isArray(cronJobs)
+    ? cronJobs.filter(
+        (job) =>
+          job.name.toLowerCase().includes(cronFilter.toLowerCase()) ||
+          (job.description && job.description.toLowerCase().includes(cronFilter.toLowerCase())) ||
+          (job.cronExpression && job.cronExpression.includes(cronFilter)),
+      )
+    : [];
+
+  const filteredSlowQueries = Array.isArray(slowQueries)
+    ? slowQueries.filter((q) => q.query.toLowerCase().includes(auditFilter.toLowerCase()))
+    : [];
+
+  const filteredErrors = Array.isArray(errors)
+    ? errors.filter(
+        (e) =>
+          e.path.toLowerCase().includes(auditFilter.toLowerCase()) ||
+          e.errorMessage.toLowerCase().includes(auditFilter.toLowerCase()),
+      )
+    : [];
+
+  const filteredLogs = logs.filter((log) => {
+    if (!logFilter) return true;
+    const text = JSON.stringify(log).toLowerCase();
+    return text.includes(logFilter.toLowerCase());
+  });
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
       {/* Header */}
@@ -960,15 +988,23 @@ export default function MonitoringPage() {
       {/* Cron Jobs Tab Content */}
       {activeTab === "cron" && (
         <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
               <CalendarDays className="h-4 w-4 text-sky-500 mr-2" />
               Pemantauan &amp; Jadwal Cron Job Backend
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={fetchCronJobs} className="text-xs h-7 border-slate-200">
-              <RefreshCcw className="h-3 w-3 mr-1" />
-              Refresh Status
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Input
+                placeholder="Cari nama, deskripsi, atau jadwal cron..."
+                value={cronFilter}
+                onChange={(e) => setCronFilter(e.target.value)}
+                className="max-w-xs text-xs h-8"
+              />
+              <Button variant="outline" size="sm" onClick={fetchCronJobs} className="text-xs h-7 border-slate-200 flex-shrink-0">
+                <RefreshCcw className="h-3 w-3 mr-1" />
+                Refresh Status
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -984,14 +1020,14 @@ export default function MonitoringPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!Array.isArray(cronJobs) || cronJobs.length === 0 ? (
+                  {!Array.isArray(filteredCronJobs) || filteredCronJobs.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-slate-400 py-8 text-xs">
                         Tidak ada data Cron Job terdaftar.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    cronJobs.map((job, idx) => (
+                    filteredCronJobs.map((job, idx) => (
                       <Fragment key={idx}>
                         <TableRow
                           className="hover:bg-slate-50 cursor-pointer"
@@ -1005,6 +1041,9 @@ export default function MonitoringPage() {
                             <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px]">
                               {job.cronExpression || "-"}
                             </code>
+                            <div className="text-slate-500 text-[10px] mt-0.5" title={humanizeCron(job.cronExpression)}>
+                              {humanizeCron(job.cronExpression)}
+                            </div>
                           </TableCell>
                           <TableCell className="text-xs">
                             {renderCronStatusBadge(job)}
@@ -1083,12 +1122,37 @@ export default function MonitoringPage() {
 
       {/* Logs Tab Content */}
       {activeTab === "logs" && (
-        <LogViewer logs={logs} isConnected={isConnected} isPaused={isPaused} setIsPaused={setIsPaused} onClear={() => setLogs([])} />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Input
+              placeholder="Filter live stream log..."
+              value={logFilter}
+              onChange={(e) => setLogFilter(e.target.value)}
+              className="max-w-xs text-xs h-8"
+            />
+          </div>
+          <LogViewer
+            logs={filteredLogs}
+            isConnected={isConnected}
+            isPaused={isPaused}
+            setIsPaused={setIsPaused}
+            onClear={() => setLogs([])}
+          />
+        </div>
       )}
 
       {/* Audit Tab Content */}
       {activeTab === "audit" && (
         <>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <Input
+              placeholder="Cari query SQL, path endpoint, atau error message..."
+              value={auditFilter}
+              onChange={(e) => setAuditFilter(e.target.value)}
+              className="max-w-xs text-xs h-8"
+            />
+          </div>
+
           {/* Slow Database Queries Card */}
           <Card className="border-slate-100 shadow-sm">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -1112,12 +1176,12 @@ export default function MonitoringPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {slowQueries.length === 0 ? (
+                    {filteredSlowQueries.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center text-slate-400 py-10 text-xs">Tidak ada query lambat tercatat.</TableCell>
                       </TableRow>
                     ) : (
-                      slowQueries.map((q, idx) => (
+                      filteredSlowQueries.map((q, idx) => (
                         <Fragment key={idx}>
                           <TableRow
                             className="hover:bg-slate-50 cursor-pointer"
@@ -1188,11 +1252,11 @@ export default function MonitoringPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {errors.length === 0 ? (
+                      {filteredErrors.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center text-slate-400 py-10 text-xs">Tidak ada error tercatat.</TableCell>
                         </TableRow>
-                      ) : errors.map((err, idx) => (
+                      ) : filteredErrors.map((err, idx) => (
                         <Fragment key={idx}>
                           <TableRow
                             className="hover:bg-slate-50 cursor-pointer"
