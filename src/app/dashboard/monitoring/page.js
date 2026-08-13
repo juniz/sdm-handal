@@ -42,6 +42,29 @@ export default function MonitoringPage() {
   const [expandedQueryIdx, setExpandedQueryIdx] = useState(null);
   const [expandedCronIdx, setExpandedCronIdx] = useState(null);
 
+  const [activeTab, setActiveTab] = useState("overview");
+  const [cronFilter, setCronFilter] = useState("");
+  const [logFilter, setLogFilter] = useState("");
+  const [auditFilter, setAuditFilter] = useState("");
+  const [selectedCronJob, setSelectedCronJob] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const humanizeCron = (expression) => {
+    if (!expression) return "Jadwal kustom";
+    if (expression === "0 0 * * *") return "Setiap hari pukul 00:00 WIB";
+    if (expression === "0 5 0 * * *") return "Setiap hari pukul 00:05 WIB";
+    if (expression.startsWith("*/")) {
+      const mins = expression.split(" ")[0].replace("*/", "");
+      return `Setiap ${mins} menit`;
+    }
+    return `Jadwal: ${expression}`;
+  };
+
+  const showToast = (message, type = "info") => {
+    setToastMessage({ message, type, id: Date.now() });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   // Helper to format local Date object to YYYY-MM-DD
   const formatDateLocal = (date) => {
     if (!date) return "";
@@ -767,399 +790,467 @@ export default function MonitoringPage() {
         </div>
       </div>
 
-      {/* KPI Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-blue-50/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Total Requests</CardTitle>
-            <Activity className="h-4 w-4 text-[#0093dd]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{summary?.totalRequests ?? 0}</div>
-            <p className="text-xs text-slate-500 mt-1">Total traffic HTTP &amp; GraphQL terdeteksi</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-purple-50/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Rata-rata Latency</CardTitle>
-            <Clock className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{summary?.avgResponseTime ?? 0} ms</div>
-            <p className="text-xs text-slate-500 mt-1">Waktu pemrosesan request HTTP &amp; GraphQL</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-rose-50/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Error Rate</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-rose-600">{summary?.errorRate ?? 0}%</div>
-            <p className="text-xs text-slate-500 mt-1">Rasio request berakhir kegagalan</p>
-          </CardContent>
-        </Card>
+      {/* Navigation Tab Bar */}
+      <div className="flex border-b border-slate-200 dark:border-slate-800 space-x-1 sm:space-x-2">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "overview"
+              ? "border-[#0093dd] text-[#0093dd]"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Ikhtisar &amp; Resource
+        </button>
+        <button
+          onClick={() => setActiveTab("cron")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "cron"
+              ? "border-[#0093dd] text-[#0093dd]"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Cron Job Backend
+        </button>
+        <button
+          onClick={() => setActiveTab("logs")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "logs"
+              ? "border-[#0093dd] text-[#0093dd]"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Live Terminal Stream
+        </button>
+        <button
+          onClick={() => setActiveTab("audit")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "audit"
+              ? "border-[#0093dd] text-[#0093dd]"
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
+          }`}
+        >
+          Audit Error &amp; Database
+        </button>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Traffic Chart (dual line) */}
-        <Card className="col-span-2 border-slate-100 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-700">Volume Traffic per Jam</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading && traffic.length === 0 ? (
-              <div className="h-[180px] flex items-center justify-center text-slate-400">Memuat grafik...</div>
-            ) : renderTrafficChart()}
-          </CardContent>
-        </Card>
+      {/* Overview Tab Content */}
+      {activeTab === "overview" && (
+        <>
+          {/* KPI Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-blue-50/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Total Requests</CardTitle>
+                <Activity className="h-4 w-4 text-[#0093dd]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-slate-800">{summary?.totalRequests ?? 0}</div>
+                <p className="text-xs text-slate-500 mt-1">Total traffic HTTP &amp; GraphQL terdeteksi</p>
+              </CardContent>
+            </Card>
 
-        {/* Method Distribution Donut */}
+            <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-purple-50/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Rata-rata Latency</CardTitle>
+                <Clock className="h-4 w-4 text-purple-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-slate-800">{summary?.avgResponseTime ?? 0} ms</div>
+                <p className="text-xs text-slate-500 mt-1">Waktu pemrosesan request HTTP &amp; GraphQL</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-rose-50/20">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-600">Error Rate</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-rose-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-rose-600">{summary?.errorRate ?? 0}%</div>
+                <p className="text-xs text-slate-500 mt-1">Rasio request berakhir kegagalan</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Traffic Chart (dual line) */}
+            <Card className="col-span-2 border-slate-100 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-slate-700">Volume Traffic per Jam</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading && traffic.length === 0 ? (
+                  <div className="h-[180px] flex items-center justify-center text-slate-400">Memuat grafik...</div>
+                ) : renderTrafficChart()}
+              </CardContent>
+            </Card>
+
+            {/* Method Distribution Donut */}
+            <Card className="border-slate-100 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-700">Distribusi Method</CardTitle>
+                <PieChart className="h-4 w-4 text-slate-400" />
+              </CardHeader>
+              <CardContent>
+                {renderMethodDonut()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Slow Endpoints + Server Resources Row */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Slow Endpoints Bar Chart */}
+            <Card className="col-span-2 border-slate-100 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base font-semibold text-slate-700">Endpoint Terlambat (Top 5)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {renderSlowEndpointsBar()}
+              </CardContent>
+            </Card>
+
+            {/* Server Resources Card */}
+            <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-slate-50/10">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+                  <Cpu className="h-4 w-4 mr-2 text-indigo-500 animate-pulse" />
+                  Resource Server
+                </CardTitle>
+                <HardDrive className="h-4 w-4 text-slate-400" />
+              </CardHeader>
+              <CardContent>
+                {renderResourcesCard()}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Cron Jobs Tab Content */}
+      {activeTab === "cron" && (
         <Card className="border-slate-100 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold text-slate-700">Distribusi Method</CardTitle>
-            <PieChart className="h-4 w-4 text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            {renderMethodDonut()}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Slow Endpoints + Server Resources Row */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Slow Endpoints Bar Chart */}
-        <Card className="col-span-2 border-slate-100 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-slate-700">Endpoint Terlambat (Top 5)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderSlowEndpointsBar()}
-          </CardContent>
-        </Card>
-
-        {/* Server Resources Card */}
-        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-white to-slate-50/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
             <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
-              <Cpu className="h-4 w-4 mr-2 text-indigo-500 animate-pulse" />
-              Resource Server
+              <CalendarDays className="h-4 w-4 text-sky-500 mr-2" />
+              Pemantauan &amp; Jadwal Cron Job Backend
             </CardTitle>
-            <HardDrive className="h-4 w-4 text-slate-400" />
+            <Button variant="outline" size="sm" onClick={fetchCronJobs} className="text-xs h-7 border-slate-200">
+              <RefreshCcw className="h-3 w-3 mr-1" />
+              Refresh Status
+            </Button>
           </CardHeader>
           <CardContent>
-            {renderResourcesCard()}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Live Log Stream */}
-      <LogViewer logs={logs} isConnected={isConnected} isPaused={isPaused} setIsPaused={setIsPaused} onClear={() => setLogs([])} />
-
-      {/* Cron Jobs Monitoring Card */}
-      <Card className="border-slate-100 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
-            <CalendarDays className="h-4 w-4 text-sky-500 mr-2" />
-            Pemantauan &amp; Jadwal Cron Job Backend
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={fetchCronJobs} className="text-xs h-7 border-slate-200">
-            <RefreshCcw className="h-3 w-3 mr-1" />
-            Refresh Status
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">Nama &amp; Deskripsi Job</TableHead>
-                  <TableHead className="w-[120px] text-xs">Jadwal (Cron)</TableHead>
-                  <TableHead className="w-[110px] text-xs">Status</TableHead>
-                  <TableHead className="w-[140px] text-xs">Eksekusi Terakhir</TableHead>
-                  <TableHead className="w-[140px] text-xs">Eksekusi Berikutnya</TableHead>
-                  <TableHead className="w-[130px] text-xs text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!Array.isArray(cronJobs) || cronJobs.length === 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-400 py-8 text-xs">
-                      Tidak ada data Cron Job terdaftar.
-                    </TableCell>
+                    <TableHead className="text-xs">Nama &amp; Deskripsi Job</TableHead>
+                    <TableHead className="w-[120px] text-xs">Jadwal (Cron)</TableHead>
+                    <TableHead className="w-[110px] text-xs">Status</TableHead>
+                    <TableHead className="w-[140px] text-xs">Eksekusi Terakhir</TableHead>
+                    <TableHead className="w-[140px] text-xs">Eksekusi Berikutnya</TableHead>
+                    <TableHead className="w-[130px] text-xs text-right">Aksi</TableHead>
                   </TableRow>
-                ) : (
-                  cronJobs.map((job, idx) => (
-                    <Fragment key={idx}>
-                      <TableRow
-                        className="hover:bg-slate-50 cursor-pointer"
-                        onClick={() => setExpandedCronIdx(expandedCronIdx === idx ? null : idx)}
-                      >
-                        <TableCell className="text-xs">
-                          <div className="font-bold text-slate-800">{job.name}</div>
-                          <div className="text-slate-500 text-[11px]">{job.description || "-"}</div>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px]">
-                            {job.cronExpression || "-"}
-                          </code>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {renderCronStatusBadge(job)}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600 font-mono">
-                          {job.lastRunTime ? (
-                            <div>
-                              <div>{new Date(job.lastRunTime).toLocaleTimeString("id-ID", { hour12: false })}</div>
-                              <div className="text-[10px] text-slate-400">
-                                {job.lastDurationMs != null ? `${job.lastDurationMs} ms` : ""}
-                              </div>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-slate-600 font-mono">
-                          {job.nextRunTime ? (
-                            <div>
-                              <div>{new Date(job.nextRunTime).toLocaleDateString("id-ID")}</div>
-                              <div className="text-[10px] text-slate-400">
-                                {new Date(job.nextRunTime).toLocaleTimeString("id-ID", { hour12: false })}
-                              </div>
-                            </div>
-                          ) : (
-                            "-"
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-xs" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs border-sky-200 text-sky-700 hover:bg-sky-50"
-                            disabled={job.isRunning || triggeringJob === job.name}
-                            onClick={() => handleTriggerCron(job.name)}
-                          >
-                            {triggeringJob === job.name ? (
-                              <RefreshCcw className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <RefreshCcw className="h-3 w-3 mr-1" />
-                            )}
-                            Jalankan
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-
-                      {expandedCronIdx === idx && (
-                        <TableRow className="bg-slate-50/50">
-                          <TableCell colSpan={6} className="p-3">
-                            <div className="space-y-2">
-                              <div className="text-xs font-bold text-slate-600">Detail Eksekusi Terakhir ({job.name}):</div>
-                              {job.lastStatus === "FAILED" ? (
-                                <pre className="bg-slate-900 text-rose-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
-                                  {job.lastError || "Terjadi kesalahan tanpa detail error message."}
-                                </pre>
-                              ) : job.lastResultSummary ? (
-                                <pre className="bg-slate-900 text-emerald-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
-                                  {job.lastResultSummary}
-                                </pre>
-                              ) : (
-                                <div className="text-slate-400 italic text-xs">Belum ada ringkasan hasil eksekusi recorded.</div>
-                              )}
-                            </div>
+                </TableHeader>
+                <TableBody>
+                  {!Array.isArray(cronJobs) || cronJobs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-slate-400 py-8 text-xs">
+                        Tidak ada data Cron Job terdaftar.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    cronJobs.map((job, idx) => (
+                      <Fragment key={idx}>
+                        <TableRow
+                          className="hover:bg-slate-50 cursor-pointer"
+                          onClick={() => setExpandedCronIdx(expandedCronIdx === idx ? null : idx)}
+                        >
+                          <TableCell className="text-xs">
+                            <div className="font-bold text-slate-800">{job.name}</div>
+                            <div className="text-slate-500 text-[11px]">{job.description || "-"}</div>
                           </TableCell>
-                        </TableRow>
-                      )}
-                    </Fragment>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Slow Database Queries Card */}
-      <Card className="border-slate-100 shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
-            <Database className="h-4 w-4 text-indigo-500 mr-2" />
-            Query Database Lambat (&gt;100ms)
-          </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("query")} className="text-xs h-7 border-slate-200">
-            Unduh Log Query
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <div className="max-h-[350px] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px] text-xs">Waktu</TableHead>
-                  <TableHead className="w-[100px] text-xs">Koneksi</TableHead>
-                  <TableHead className="text-xs">SQL Query</TableHead>
-                  <TableHead className="w-[100px] text-xs text-right">Durasi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {slowQueries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-slate-400 py-10 text-xs">Tidak ada query lambat tercatat.</TableCell>
-                  </TableRow>
-                ) : (
-                  slowQueries.map((q, idx) => (
-                    <Fragment key={idx}>
-                      <TableRow
-                        className="hover:bg-slate-50 cursor-pointer"
-                        onClick={() => setExpandedQueryIdx(expandedQueryIdx === idx ? null : idx)}
-                      >
-                        <TableCell className="text-xs font-mono text-slate-500">
-                          {new Date(q.timestamp).toLocaleTimeString("id-ID", { hour12: false })}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge className="bg-slate-100 text-slate-700 border-none font-bold text-[10px] uppercase">{q.connection || "default"}</Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          <div className="font-mono text-slate-600 truncate max-w-[500px]" title={q.query}>{q.query}</div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          <Badge className="bg-amber-100 text-amber-800 border-none font-bold">{q.durationMs} ms</Badge>
-                        </TableCell>
-                      </TableRow>
-                      {expandedQueryIdx === idx && (
-                        <TableRow className="bg-slate-50/50">
-                          <TableCell colSpan={4} className="p-3">
-                            <div className="space-y-2">
-                              <div className="bg-slate-900 text-indigo-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[200px]">
-                                {q.query}
-                              </div>
-                              {q.parameters && q.parameters.length > 0 && (
-                                <div className="text-xs">
-                                  <div className="text-slate-500 font-bold mb-1">Parameters:</div>
-                                  <pre className="bg-slate-950 p-2 rounded text-[10px] text-slate-300 font-mono overflow-x-auto max-h-[100px]">
-                                    {JSON.stringify(q.parameters, null, 2)}
-                                  </pre>
+                          <TableCell className="text-xs">
+                            <code className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[11px]">
+                              {job.cronExpression || "-"}
+                            </code>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {renderCronStatusBadge(job)}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600 font-mono">
+                            {job.lastRunTime ? (
+                              <div>
+                                <div>{new Date(job.lastRunTime).toLocaleTimeString("id-ID", { hour12: false })}</div>
+                                <div className="text-[10px] text-slate-400">
+                                  {job.lastDurationMs != null ? `${job.lastDurationMs} ms` : ""}
                                 </div>
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600 font-mono">
+                            {job.nextRunTime ? (
+                              <div>
+                                <div>{new Date(job.nextRunTime).toLocaleDateString("id-ID")}</div>
+                                <div className="text-[10px] text-slate-400">
+                                  {new Date(job.nextRunTime).toLocaleTimeString("id-ID", { hour12: false })}
+                                </div>
+                              </div>
+                            ) : (
+                              "-"
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right text-xs" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs border-sky-200 text-sky-700 hover:bg-sky-50"
+                              disabled={job.isRunning || triggeringJob === job.name}
+                              onClick={() => handleTriggerCron(job.name)}
+                            >
+                              {triggeringJob === job.name ? (
+                                <RefreshCcw className="h-3 w-3 animate-spin mr-1" />
+                              ) : (
+                                <RefreshCcw className="h-3 w-3 mr-1" />
                               )}
-                            </div>
+                              Jalankan
+                            </Button>
                           </TableCell>
                         </TableRow>
-                      )}
-                    </Fragment>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Errors + Auth Tables */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Recent Errors */}
-        <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
-              <AlertTriangle className="h-4 w-4 text-rose-500 mr-2" />
-              Exception &amp; Error Terbaru
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("error")} className="text-xs h-7 border-slate-200">
-              Unduh Log Error
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-[300px] overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[80px] text-xs">Method</TableHead>
-                    <TableHead className="text-xs">Path &amp; Message</TableHead>
-                    <TableHead className="w-[80px] text-xs text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {errors.length === 0 ? (
+                        {expandedCronIdx === idx && (
+                          <TableRow className="bg-slate-50/50">
+                            <TableCell colSpan={6} className="p-3">
+                              <div className="space-y-2">
+                                <div className="text-xs font-bold text-slate-600">Detail Eksekusi Terakhir ({job.name}):</div>
+                                {job.lastStatus === "FAILED" ? (
+                                  <pre className="bg-slate-900 text-rose-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
+                                    {job.lastError || "Terjadi kesalahan tanpa detail error message."}
+                                  </pre>
+                                ) : job.lastResultSummary ? (
+                                  <pre className="bg-slate-900 text-emerald-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
+                                    {job.lastResultSummary}
+                                  </pre>
+                                ) : (
+                                  <div className="text-slate-400 italic text-xs">Belum ada ringkasan hasil eksekusi recorded.</div>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </Fragment>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Logs Tab Content */}
+      {activeTab === "logs" && (
+        <LogViewer logs={logs} isConnected={isConnected} isPaused={isPaused} setIsPaused={setIsPaused} onClear={() => setLogs([])} />
+      )}
+
+      {/* Audit Tab Content */}
+      {activeTab === "audit" && (
+        <>
+          {/* Slow Database Queries Card */}
+          <Card className="border-slate-100 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+                <Database className="h-4 w-4 text-indigo-500 mr-2" />
+                Query Database Lambat (&gt;100ms)
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("query")} className="text-xs h-7 border-slate-200">
+                Unduh Log Query
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[350px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-slate-400 py-10 text-xs">Tidak ada error tercatat.</TableCell>
+                      <TableHead className="w-[120px] text-xs">Waktu</TableHead>
+                      <TableHead className="w-[100px] text-xs">Koneksi</TableHead>
+                      <TableHead className="text-xs">SQL Query</TableHead>
+                      <TableHead className="w-[100px] text-xs text-right">Durasi</TableHead>
                     </TableRow>
-                  ) : errors.map((err, idx) => (
-                    <Fragment key={idx}>
-                      <TableRow
-                        className="hover:bg-slate-50 cursor-pointer"
-                        onClick={() => setExpandedErrorIdx(expandedErrorIdx === idx ? null : idx)}
-                      >
-                        <TableCell className="font-bold text-xs">{err.method}</TableCell>
-                        <TableCell className="text-xs">
-                          <div className="font-mono text-slate-600 truncate max-w-[250px]">{err.path}</div>
-                          <div className="text-rose-600 font-medium truncate max-w-[250px]">{err.errorMessage}</div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs">
-                          <Badge variant="destructive">{err.statusCode}</Badge>
-                        </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {slowQueries.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-slate-400 py-10 text-xs">Tidak ada query lambat tercatat.</TableCell>
                       </TableRow>
-                      {expandedErrorIdx === idx && (
-                        <TableRow className="bg-slate-50/50">
-                          <TableCell colSpan={3} className="p-3">
-                            <div className="bg-slate-900 text-slate-200 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
-                              {err.stackTrace || "No stack trace available."}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    ) : (
+                      slowQueries.map((q, idx) => (
+                        <Fragment key={idx}>
+                          <TableRow
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => setExpandedQueryIdx(expandedQueryIdx === idx ? null : idx)}
+                          >
+                            <TableCell className="text-xs font-mono text-slate-500">
+                              {new Date(q.timestamp).toLocaleTimeString("id-ID", { hour12: false })}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <Badge className="bg-slate-100 text-slate-700 border-none font-bold text-[10px] uppercase">{q.connection || "default"}</Badge>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="font-mono text-slate-600 truncate max-w-[500px]" title={q.query}>{q.query}</div>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              <Badge className="bg-amber-100 text-amber-800 border-none font-bold">{q.durationMs} ms</Badge>
+                            </TableCell>
+                          </TableRow>
+                          {expandedQueryIdx === idx && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={4} className="p-3">
+                                <div className="space-y-2">
+                                  <div className="bg-slate-900 text-indigo-300 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[200px]">
+                                    {q.query}
+                                  </div>
+                                  {q.parameters && q.parameters.length > 0 && (
+                                    <div className="text-xs">
+                                      <div className="text-slate-500 font-bold mb-1">Parameters:</div>
+                                      <pre className="bg-slate-950 p-2 rounded text-[10px] text-slate-300 font-mono overflow-x-auto max-h-[100px]">
+                                        {JSON.stringify(q.parameters, null, 2)}
+                                      </pre>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Recent Auth Events */}
-        <Card className="border-slate-100 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
-              <ShieldAlert className="h-4 w-4 text-amber-500 mr-2" />
-              Log Audit Keamanan (Auth)
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("auth")} className="text-xs h-7 border-slate-200">
-              Unduh Log Auth
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="max-h-[300px] overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[120px] text-xs">Waktu</TableHead>
-                    <TableHead className="text-xs">Event / IP</TableHead>
-                    <TableHead className="text-xs">Keterangan / Alasan</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {authEvents.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-slate-400 py-10 text-xs">Tidak ada log keamanan tercatat.</TableCell>
-                    </TableRow>
-                  ) : authEvents.map((evt, idx) => (
-                    <TableRow key={idx} className="hover:bg-slate-50">
-                      <TableCell className="text-xs font-mono text-slate-500">
-                        {new Date(evt.timestamp).toLocaleTimeString()}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        <Badge className="bg-amber-100 text-amber-800 border-none font-bold text-[10px] mb-1">{evt.event}</Badge>
-                        <div className="font-mono text-slate-500 text-[10px]">{evt.ip}</div>
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600">{evt.reason || evt.path}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Errors + Auth Tables */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Recent Errors */}
+            <Card className="border-slate-100 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+                  <AlertTriangle className="h-4 w-4 text-rose-500 mr-2" />
+                  Exception &amp; Error Terbaru
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("error")} className="text-xs h-7 border-slate-200">
+                  Unduh Log Error
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[300px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[80px] text-xs">Method</TableHead>
+                        <TableHead className="text-xs">Path &amp; Message</TableHead>
+                        <TableHead className="w-[80px] text-xs text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {errors.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-slate-400 py-10 text-xs">Tidak ada error tercatat.</TableCell>
+                        </TableRow>
+                      ) : errors.map((err, idx) => (
+                        <Fragment key={idx}>
+                          <TableRow
+                            className="hover:bg-slate-50 cursor-pointer"
+                            onClick={() => setExpandedErrorIdx(expandedErrorIdx === idx ? null : idx)}
+                          >
+                            <TableCell className="font-bold text-xs">{err.method}</TableCell>
+                            <TableCell className="text-xs">
+                              <div className="font-mono text-slate-600 truncate max-w-[250px]">{err.path}</div>
+                              <div className="text-rose-600 font-medium truncate max-w-[250px]">{err.errorMessage}</div>
+                            </TableCell>
+                            <TableCell className="text-right text-xs">
+                              <Badge variant="destructive">{err.statusCode}</Badge>
+                            </TableCell>
+                          </TableRow>
+                          {expandedErrorIdx === idx && (
+                            <TableRow className="bg-slate-50/50">
+                              <TableCell colSpan={3} className="p-3">
+                                <div className="bg-slate-900 text-slate-200 p-3 rounded-lg font-mono text-[10px] whitespace-pre-wrap overflow-x-auto max-h-[150px]">
+                                  {err.stackTrace || "No stack trace available."}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recent Auth Events */}
+            <Card className="border-slate-100 shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base font-semibold text-slate-700 flex items-center">
+                  <ShieldAlert className="h-4 w-4 text-amber-500 mr-2" />
+                  Log Audit Keamanan (Auth)
+                </CardTitle>
+                <Button variant="outline" size="sm" onClick={() => handleDownloadLogs("auth")} className="text-xs h-7 border-slate-200">
+                  Unduh Log Auth
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[300px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[120px] text-xs">Waktu</TableHead>
+                        <TableHead className="text-xs">Event / IP</TableHead>
+                        <TableHead className="text-xs">Keterangan / Alasan</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {authEvents.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-slate-400 py-10 text-xs">Tidak ada log keamanan tercatat.</TableCell>
+                        </TableRow>
+                      ) : authEvents.map((evt, idx) => (
+                        <TableRow key={idx} className="hover:bg-slate-50">
+                          <TableCell className="text-xs font-mono text-slate-500">
+                            {new Date(evt.timestamp).toLocaleTimeString()}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <Badge className="bg-amber-100 text-amber-800 border-none font-bold text-[10px] mb-1">{evt.event}</Badge>
+                            <div className="font-mono text-slate-500 text-[10px]">{evt.ip}</div>
+                          </TableCell>
+                          <TableCell className="text-xs text-slate-600">{evt.reason || evt.path}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {toastMessage && (
+        <div className={`fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium border ${
+          toastMessage.type === "error" ? "bg-rose-900 text-rose-100 border-rose-700" :
+          toastMessage.type === "success" ? "bg-emerald-900 text-emerald-100 border-emerald-700" :
+          "bg-slate-900 text-slate-100 border-slate-700"
+        }`}>
+          {toastMessage.message}
+        </div>
+      )}
     </div>
   );
 }
