@@ -34,10 +34,13 @@ export default function MonitoringPage() {
   const [errors, setErrors] = useState([]);
   const [authEvents, setAuthEvents] = useState([]);
   const [slowQueries, setSlowQueries] = useState([]);
+  const [cronJobs, setCronJobs] = useState([]);
+  const [triggeringJob, setTriggeringJob] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedErrorIdx, setExpandedErrorIdx] = useState(null);
   const [expandedSlowIdx, setExpandedSlowIdx] = useState(null);
   const [expandedQueryIdx, setExpandedQueryIdx] = useState(null);
+  const [expandedCronIdx, setExpandedCronIdx] = useState(null);
 
   // Helper to format local Date object to YYYY-MM-DD
   const formatDateLocal = (date) => {
@@ -68,6 +71,23 @@ export default function MonitoringPage() {
     if (dateRange?.to) params.set("to", formatDateLocal(dateRange.to));
     return params.toString() ? `?${params.toString()}` : "";
   };
+
+  const fetchCronJobs = useCallback(async () => {
+    const token = getClientToken();
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/monitor/cron-jobs`, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        setCronJobs(json.data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch cron jobs status:", err);
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -112,12 +132,13 @@ export default function MonitoringPage() {
         const resJson = await queriesRes.json();
         setSlowQueries(resJson.data?.data || []);
       }
+      await fetchCronJobs();
     } catch (err) {
       console.error("Failed to fetch monitoring data:", err);
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, fetchCronJobs]);
 
   const handleRealtimeLog = (payload) => {
     const { type, entry } = payload;
