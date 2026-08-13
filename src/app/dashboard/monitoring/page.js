@@ -21,6 +21,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
 
@@ -85,6 +95,7 @@ export default function MonitoringPage() {
   const [logs, setLogs] = useState([]);
   const [isPaused, setIsPaused] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const logQueueRef = useRef([]);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef(null);
 
@@ -120,8 +131,15 @@ export default function MonitoringPage() {
     }
   }, []);
 
-  const handleTriggerCron = async (jobName) => {
+  const handleTriggerCron = (jobName) => {
     if (triggeringJob) return;
+    setSelectedCronJob(jobName);
+  };
+
+  const executeTriggerCron = async () => {
+    if (!selectedCronJob || triggeringJob) return;
+    const jobName = selectedCronJob;
+    setSelectedCronJob(null);
     setTriggeringJob(jobName);
     const token = getClientToken();
     try {
@@ -134,14 +152,14 @@ export default function MonitoringPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        alert(json.message || `Cron job ${jobName} berhasil dipicu.`);
+        showToast(json.message || `Cron job ${jobName} berhasil dipicu.`, "success");
         await fetchCronJobs();
       } else {
-        alert(`Gagal memicu cron job: ${json.message || "Unknown error"}`);
+        showToast(`Gagal memicu cron job: ${json.message || "Unknown error"}`, "error");
       }
     } catch (err) {
       console.error("Error triggering cron job:", err);
-      alert("Gagal memicu cron job: Terjadi kesalahan jaringan");
+      showToast("Gagal memicu cron job: Terjadi kesalahan jaringan", "error");
     } finally {
       setTriggeringJob(null);
     }
@@ -319,13 +337,28 @@ export default function MonitoringPage() {
     fetchData();
   }, [fetchData]);
 
-  // SSE manager with exponential backoff reconnect
+  // SSE manager with exponential backoff reconnect and 500ms queue batching
   useEffect(() => {
     if (isPaused) return;
 
     let es = null;
     let retryCount = 0;
     let cancelled = false;
+
+    const flushInterval = setInterval(() => {
+      if (logQueueRef.current.length === 0) return;
+      const batch = [...logQueueRef.current];
+      logQueueRef.current = [];
+
+      setLogs((prev) => {
+        const next = [...prev, ...batch];
+        return next.length > 200 ? next.slice(next.length - 200) : next;
+      });
+
+      batch.forEach((payload) => {
+        handleRealtimeLog(payload);
+      });
+    }, 500);
 
     const connect = () => {
       if (cancelled) return;
@@ -346,12 +379,7 @@ export default function MonitoringPage() {
           const payload = rawPayload.data ? rawPayload.data : rawPayload;
           if (!payload || !payload.entry) return;
 
-          setLogs((prev) => {
-            const next = [...prev, payload];
-            return next.length > 200 ? next.slice(next.length - 200) : next;
-          });
-
-          handleRealtimeLog(payload);
+          logQueueRef.current.push(payload);
         } catch (err) {
           console.error("Error parsing log stream event:", err);
         }
@@ -372,6 +400,7 @@ export default function MonitoringPage() {
 
     return () => {
       cancelled = true;
+      clearInterval(flushInterval);
       clearTimeout(retryTimerRef.current);
       if (es) { es.close(); }
       setIsConnected(false);
@@ -765,7 +794,7 @@ export default function MonitoringPage() {
         a.click();
         a.remove();
       })
-      .catch(() => alert("Gagal mengunduh file log: Akses ditolak"));
+      .catch(() => showToast("Gagal mengunduh file log: Akses ditolak", "error"));
   };
 
   return (
@@ -1241,6 +1270,23 @@ export default function MonitoringPage() {
           </div>
         </>
       )}
+
+      <AlertDialog open={!!selectedCronJob} onOpenChange={(open) => !open && setSelectedCronJob(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Konfirmasi Trigger Cron Job</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menjalankan cron job <strong className="text-slate-800 font-semibold">{selectedCronJob}</strong> secara manual sekarang?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedCronJob(null)}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={executeTriggerCron} className="bg-[#0093dd] hover:bg-[#007ebb]">
+              Ya, Jalankan Sekarang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium border ${
