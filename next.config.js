@@ -71,6 +71,8 @@ const nextConfig = {
 	// Headers untuk PWA Android compatibility dan foto presensi
 	async headers() {
 		const isDev = process.env.NODE_ENV === "development";
+		// Dev-only allowance so Impeccable Live can connect locally.
+		const __impeccableLiveDev = isDev ? " http://localhost:8400" : "";
 
 		if (isDev) {
 			return [];
@@ -105,11 +107,11 @@ const nextConfig = {
 				key: "Content-Security-Policy",
 				value: [
 					"default-src 'self'",
-					"script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+					`script-src 'self' 'unsafe-eval' 'unsafe-inline'${__impeccableLiveDev}`,
 					"style-src 'self' 'unsafe-inline'",
 					"img-src 'self' data: https:",
 					"font-src 'self'",
-					"connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001",
+					`connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001${__impeccableLiveDev}`,
 					"object-src 'none'",
 					"base-uri 'self'",
 					"form-action 'self'",

@@ -9,7 +9,19 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 // Helper check authorization
 async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
 	if (Number(loggedInUser.id) === Number(targetEmployeeId)) return true;
-	if (loggedInUser.departemen?.toUpperCase() === "IT") return true;
+
+	const deptUpper = (loggedInUser.departemen || "").toUpperCase();
+	if (
+		deptUpper === "IT" ||
+		deptUpper === "SPI" ||
+		deptUpper === "SDM" ||
+		deptUpper === "HRD" ||
+		deptUpper.includes("SPI") ||
+		deptUpper.includes("PENGAWAS") ||
+		deptUpper.includes("SDM")
+	) {
+		return true;
+	}
 
 	const personalMapping = await selectFirst({
 		table: "supervisor_mapping",

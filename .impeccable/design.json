@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-06T00:00:00+07:00",
+  "title": "Design System: SDM Handal",
+  "extensions": {
+    "colorMeta": {
+      "primary-sky": { "role": "primary", "displayName": "Primary Sky", "canonical": "#E0F2FE", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#38BDF8", "#BAE6FD", "#F0F9FF"] },
+      "primary-sky-hover": { "role": "primary", "displayName": "Primary Sky Hover", "canonical": "#BAE6FD", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#38BDF8", "#BAE6FD", "#E0F2FE"] },
+      "active-cyan": { "role": "primary", "displayName": "Active Cyan", "canonical": "#0EA5E9", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#0EA5E9", "#7DD3FC", "#E0F2FE"] },
+      "brand-cyan": { "role": "primary", "displayName": "Brand Cyan", "canonical": "#0284C7", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#38BDF8", "#BAE6FD", "#F0F9FF"] },
+      "deep-sky-accent": { "role": "primary", "displayName": "Deep Sky Accent", "canonical": "#0369A1", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#38BDF8", "#BAE6FD", "#F0F9FF"] },
+      "muted-slate": { "role": "neutral", "displayName": "Muted Slate", "canonical": "#475569", "tonalRamp": ["#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#F1F5F9"] },
+      "border-slate": { "role": "neutral", "displayName": "Border Slate", "canonical": "#E2E8F0", "tonalRamp": ["#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0"] },
+      "pale-cyan": { "role": "primary", "displayName": "Pale Cyan", "canonical": "#F0F9FF", "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#0284C7", "#38BDF8", "#BAE6FD", "#F0F9FF"] },
+      "neutral-surface": { "role": "neutral", "displayName": "Neutral Surface", "canonical": "#F8FAFC", "tonalRamp": ["#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#CBD5E1", "#E2E8F0", "#F8FAFC"] },
+      "destructive-red": { "role": "tertiary", "displayName": "Destructive Red", "canonical": "#DC2626", "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#B91C1C", "#DC2626", "#F87171", "#FECACA", "#FEF2F2"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Figtree Display", "purpose": "Page-level titles and high-level dashboard statements." },
+      "body": { "displayName": "Noto Sans Body", "purpose": "Explanatory copy and standard table content." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "0 1px 3px rgba(15, 23, 42, 0.08)", "purpose": "Quiet separation for cards on the neutral canvas." },
+      { "name": "card-hover", "value": "0 4px 12px rgba(15, 23, 42, 0.12)", "purpose": "Responsive lift on interactive cards." },
+      { "name": "overlay", "value": "0 12px 32px rgba(15, 23, 42, 0.18)", "purpose": "Temporary depth for modals and menus." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for navigation and control state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action for submissions and confirmed workflows.",
+      "html": "<button class=\"ds-btn-primary\">Simpan perubahan</button>",
+      "css": ".ds-btn-primary { background: #0284C7; color: #FFFFFF; border: 0; border-radius: 8px; padding: 8px 16px; height: 36px; font: 600 12px/1.35 Figtree, sans-serif; letter-spacing: .04em; transition: background .2s cubic-bezier(.4,0,.2,1), box-shadow .2s; } .ds-btn-primary:hover { background: #0369A1; } .ds-btn-primary:focus-visible { outline: 3px solid rgba(14,165,233,.35); outline-offset: 2px; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Destructive action that needs an explicit visual warning.",
+      "html": "<button class=\"ds-btn-danger\">Hapus data</button>",
+      "css": ".ds-btn-danger { background: #DC2626; color: #FFFFFF; border: 0; border-radius: 8px; padding: 8px 16px; height: 36px; font: 600 12px/1.35 Figtree, sans-serif; transition: background .2s; } .ds-btn-danger:hover { background: #B91C1C; } .ds-btn-danger:focus-visible { outline: 3px solid rgba(220,38,38,.28); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Compact field for filters, forms, and employee data entry.",
+      "html": "<input class=\"ds-input\" placeholder=\"Cari pegawai\" />",
+      "css": ".ds-input { width: 100%; height: 36px; border: 1px solid #E2E8F0; border-radius: 8px; background: transparent; color: #0F172A; padding: 8px 12px; font: 400 14px/1.5 'Noto Sans', sans-serif; transition: border-color .2s, box-shadow .2s; } .ds-input::placeholder { color: #64748B; } .ds-input:focus-visible { border-color: #0284C7; outline: 0; box-shadow: 0 0 0 3px rgba(14,165,233,.14); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White information container on the neutral application canvas.",
+      "html": "<section class=\"ds-card\"><h3>Ringkasan absensi</h3><p>Data kehadiran bulan berjalan.</p></section>",
+      "css": ".ds-card { background: #FFFFFF; color: #0F172A; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(15,23,42,.08); transition: transform .2s, box-shadow .2s; } .ds-card h3 { margin: 0 0 8px; font: 700 16px/1.4 Figtree, sans-serif; } .ds-card p { margin: 0; color: #475569; font: 400 14px/1.5 'Noto Sans', sans-serif; } .ds-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15,23,42,.12); }"
+    },
+    {
+      "name": "Active Navigation Item",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Selected dashboard destination in the persistent sidebar.",
+      "html": "<a class=\"ds-nav-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 12 12 4l9 8v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linejoin=\"round\"/></svg>Dashboard</a>",
+      "css": ".ds-nav-active { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: #BAE6FD; color: #0369A1; text-decoration: none; font: 600 13px/1.35 Figtree, sans-serif; transition: background .2s, color .2s; } .ds-nav-active svg { width: 16px; height: 16px; } .ds-nav-active:hover { background: #E0F2FE; } .ds-nav-active:focus-visible { outline: 3px solid rgba(14,165,233,.35); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Pusat Layanan SDM Tepercaya",
+    "overview": "SDM Handal should feel like a dependable clinical operations desk: calm enough for sensitive employee work, exact enough for payroll and attendance decisions, and structured enough to make approvals legible. The visual system uses a clean cyan-blue medical palette against pale neutral surfaces, with dark slate text and restrained elevation so information remains the dominant signal.\n\nThe interface is operational rather than decorative. Rounded surfaces, compact data typography, clear status color, and responsive navigation create a consistent environment across employee self-service and HRD/IT administration. The tone is precise and clinical: confident through consistency, not through visual noise.",
+    "keyCharacteristics": ["Cyan-blue accents on pale, quiet surfaces.", "Figtree for UI hierarchy and Noto Sans for longer explanatory copy.", "Rounded, tactile controls with visible hover and focus states.", "Dense but breathable dashboard layouts that prioritize scanability."],
+    "rules": [
+      { "name": "The Clinical Signal Rule", "body": "Use cyan to clarify action or state; do not flood neutral content with accent color.", "section": "colors" },
+      { "name": "The Data-First Rule", "body": "Keep labels compact and values easy to scan; reserve display scale for page context, not every card.", "section": "typography" },
+      { "name": "The Quiet Surface Rule", "body": "Depth should explain hierarchy or interaction state, never decorate an otherwise flat dashboard.", "section": "elevation" }
+    ],
+    "dos": ["Do use cyan-blue as a purposeful action and state signal.", "Do preserve the Figtree/Noto Sans pairing and the compact data hierarchy.", "Do provide visible hover, focus, disabled, and error states for interactive controls.", "Do use Lucide or equivalent SVG icons with consistent sizing instead of text glyphs.", "Do maintain WCAG AA contrast for body copy and important statuses."],
+    "donts": ["Don't introduce AI-slop purple, blue, or pink gradients.", "Don't use emojis as structural navigation icons.", "Don't mix sharp corners and ultra-round shapes within the same view.", "Don't mix raw hex and semantic primary tokens for the same role in one component.", "Don't make interactive surfaces visually static or remove their focus treatment."]
+  }
+}

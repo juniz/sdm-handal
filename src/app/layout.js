@@ -141,7 +141,10 @@ export default function RootLayout({ children }) {
 						`,
 					}}
 				/>
-			</body>
+			{/* impeccable-live-start */}
+<script src="http://localhost:8400/live.js?token=b98b77a1-a9bd-40dd-a9be-a1779e27cbdf"></script>
+{/* impeccable-live-end */}
+</body>
 		</html>
 	);
 }
