@@ -174,9 +174,10 @@ export default function MonitoringPage() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({}),
       });
       const json = await res.json();
-      if (res.ok && json.success) {
+      if (res.ok) {
         showToast(json.message || `Cron job ${jobName} berhasil dipicu.`, "success");
         await fetchCronJobs();
       } else {
