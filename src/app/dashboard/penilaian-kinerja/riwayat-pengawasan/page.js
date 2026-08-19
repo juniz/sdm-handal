@@ -872,7 +872,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 										) : (
 											<div className="space-y-2">
 												{activities.map((act, idx) => {
-													const isDone = act.status_selesai === 1 || act.status_selesai === "1" || act.status_selesai === true;
+													const isDone = act.status_selesai === "selesai" || act.status_selesai === 1 || act.status_selesai === "1" || act.status_selesai === true;
 													return (
 														<div key={act.id || idx} className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-1.5 shadow-2xs">
 															<div className="flex justify-between items-start gap-2">
