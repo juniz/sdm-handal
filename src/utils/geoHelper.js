@@ -2,33 +2,17 @@ export async function getReverseGeocode(latitude, longitude) {
 	if (!latitude || !longitude) return "";
 	try {
 		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 2000);
+		const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-		const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
-		const response = await fetch(url, {
-			signal: controller.signal,
-			headers: { "Accept": "application/json" }
-		});
+		const url = `/api/geo/reverse-geocode?lat=${latitude}&lng=${longitude}`;
+		const response = await fetch(url, { signal: controller.signal });
 		clearTimeout(timeoutId);
 
 		if (!response.ok) return "";
 		const data = await response.json();
-		
-		if (data && data.address) {
-			const addr = data.address;
-			const parts = [
-				addr.road || addr.street || addr.pedestrian || addr.building,
-				addr.village || addr.suburb || addr.neighbourhood,
-				addr.city_district || addr.district || addr.subdistrict,
-				addr.city || addr.town || addr.county || addr.state
-			].filter(Boolean);
-
-			return parts.join(", ") || data.display_name?.split(",").slice(0, 3).join(",") || "";
-		}
-
-		return "";
+		return data?.address || "";
 	} catch (error) {
-		console.warn("Reverse geocode error / timeout:", error);
+		console.warn("Reverse geocode client error:", error?.message);
 		return "";
 	}
 }
@@ -76,14 +60,14 @@ export function fetchMiniMapTile(latitude, longitude, zoom = 16) {
 	return new Promise((resolve) => {
 		try {
 			const { x, y, z } = latLonToTile(Number(latitude), Number(longitude), zoom);
-			const tileUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
+			const tileUrl = `/api/geo/map-tile?z=${z}&x=${x}&y=${y}`;
 
 			const img = new Image();
 			img.crossOrigin = "anonymous";
 
 			const timer = setTimeout(() => {
 				resolve(null);
-			}, 1500);
+			}, 3000);
 
 			img.onload = () => {
 				clearTimeout(timer);
@@ -97,7 +81,7 @@ export function fetchMiniMapTile(latitude, longitude, zoom = 16) {
 
 			img.src = tileUrl;
 		} catch (err) {
-			console.warn("Mini map tile fetch failed:", err);
+			console.warn("Mini map tile client fetch failed:", err?.message);
 			resolve(null);
 		}
 	});

@@ -422,7 +422,7 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 						? ` (±${Math.round(Number(accuracy))}m)`
 						: "";
 
-				const rawAddress = address || `Koordinat: ${latitude}, ${longitude}`;
+				const rawAddress = address || "Area GPS Terverifikasi";
 				const addressFullText = `📍 ${rawAddress}`;
 
 				const timeDisplay = timestamp
