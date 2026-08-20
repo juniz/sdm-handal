@@ -12,6 +12,7 @@ import { Camera, AlertTriangle, Loader2 } from "lucide-react";
 import {
 	fileToOptimizedBase64,
 	getOptimalImageSettings,
+	stampGpsWatermark,
 } from "@/utils/imageOptimizer";
 import { useErrorLogger } from "@/hooks/useErrorLogger";
 
@@ -210,7 +211,7 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 
 	// Expose methods to parent component
 	useImperativeHandle(ref, () => ({
-		capturePhoto: async () => {
+		capturePhoto: async (watermarkMetadata = null) => {
 			if (!webcamRef.current || !cameraReady) {
 				const error = new Error("Camera not ready for capture");
 				await logError({
@@ -262,9 +263,25 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 					throw error;
 				}
 
+				let photoToOptimize = imageSrc;
+				if (watermarkMetadata) {
+					try {
+						photoToOptimize = await stampGpsWatermark(
+							imageSrc,
+							watermarkMetadata
+						);
+					} catch (stampErr) {
+						console.error(
+							"Failed to stamp GPS watermark, falling back to raw photo:",
+							stampErr
+						);
+						photoToOptimize = imageSrc;
+					}
+				}
+
 				// Optimize captured photo
 				console.log("Starting photo optimization...");
-				const optimizedPhoto = await optimizePhoto(imageSrc);
+				const optimizedPhoto = await optimizePhoto(photoToOptimize);
 
 				console.log("Optimized photo result:", {
 					type: typeof optimizedPhoto,
