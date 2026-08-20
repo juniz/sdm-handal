@@ -6,6 +6,7 @@ import { AttendanceCamera } from "@/components/AttendanceCamera";
 import SecureLocationMap from "@/components/SecureLocationMap";
 import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
 import { useErrorLogger } from "@/hooks/useErrorLogger";
+import { getReverseGeocode } from "@/utils/geoHelper";
 import moment from "moment";
 import "moment/locale/id";
 import {
@@ -57,6 +58,7 @@ const getExpectedCheckout = (attendance, jamPulang, jamMasuk) => {
 };
 
 export default function AttendancePage() {
+	const [currentUser, setCurrentUser] = useState(null);
 	const [photo, setPhoto] = useState(null);
 	const [isLocationValid, setIsLocationValid] = useState(false);
 	const [userLocation, setUserLocation] = useState(null);
@@ -293,30 +295,37 @@ export default function AttendancePage() {
 		// Single batched GraphQL request replaces 5 sequential fetches
 		const fetchAllData = async () => {
 			try {
-				const d = await fetchAttendanceInitialData();
+				const [d, authRes] = await Promise.all([
+					fetchAttendanceInitialData(),
+					fetch("/api/auth/user").then((res) => res.ok ? res.json() : null).catch(() => null),
+				]);
+
+				if (authRes?.user) {
+					setCurrentUser(authRes.user);
+				}
 
 				// Shift
-				if (d.shift?.shiftToday) setShift(d.shift.shiftToday);
+				if (d?.shift?.shiftToday) setShift(d.shift.shiftToday);
 
 				// Today attendance
-				if (d.today?.data) {
+				if (d?.today?.data) {
 					setTodayAttendance(d.today.data);
 				}
 
 				// Completed
-				if (d.completed) setCompletedAttendance(d.completed);
+				if (d?.completed) setCompletedAttendance(d.completed);
 
 				// Status
-				if (d.status) setAttendanceStatus(d.status);
+				if (d?.status) setAttendanceStatus(d.status);
 
 				// Unfinished
-				if (d.unfinished?.hasUnfinished) {
+				if (d?.unfinished?.hasUnfinished) {
 					setUnfinishedAttendance(d.unfinished.data);
 					setShowUnfinishedAlert(true);
 				}
 
 				// Location settings
-				if (d.locationSettings) {
+				if (d?.locationSettings) {
 					setLocationValidationEnabled(d.locationSettings.isLocationValidationEnabled);
 				}
 			} catch (error) {
@@ -403,9 +412,6 @@ export default function AttendancePage() {
 
 		setIsSubmitting(true);
 		try {
-			const capturedPhoto = await cameraRef.current?.capturePhoto();
-			if (!capturedPhoto) throw new Error("Gagal mengambil foto");
-
 			let lat, lng, acc;
 			if (userLocation) {
 				lat = userLocation.latitude;
@@ -422,6 +428,26 @@ export default function AttendancePage() {
 				lng = position.coords.longitude;
 				acc = position.coords.accuracy;
 			}
+
+			let address = "";
+			try {
+				address = await getReverseGeocode(lat, lng);
+			} catch (geoErr) {
+				console.warn("Reverse geocode failed:", geoErr);
+			}
+
+			const watermarkMetadata = {
+				userName: currentUser?.nama || "",
+				nik: currentUser?.nik || "",
+				latitude: lat,
+				longitude: lng,
+				accuracy: acc,
+				timestamp: momentInstance.format("dddd, DD MMMM YYYY, HH:mm:ss"),
+				address: address || "",
+			};
+
+			const capturedPhoto = await cameraRef.current?.capturePhoto(watermarkMetadata);
+			if (!capturedPhoto) throw new Error("Gagal mengambil foto");
 
 			const result = await mutationCheckIn({
 				photo: capturedPhoto,
