@@ -1,3 +1,5 @@
+import { formatDistance } from "@/utils/geoHelper";
+
 /**
  * Utility untuk optimasi dan kompresi gambar
  */
@@ -278,6 +280,27 @@ export const getOptimalImageSettings = () => {
 };
 
 /**
+ * Helper to draw rounded rectangle path
+ */
+const drawRoundedRect = (context, x, y, w, h, r) => {
+	context.beginPath();
+	if (typeof context.roundRect === "function") {
+		context.roundRect(x, y, w, h, r);
+	} else {
+		context.moveTo(x + r, y);
+		context.lineTo(x + w - r, y);
+		context.quadraticCurveTo(x + w, y, x + w, y + r);
+		context.lineTo(x + w, y + h - r);
+		context.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+		context.lineTo(x + r, y + h);
+		context.quadraticCurveTo(x, y + h, x, y + h - r);
+		context.lineTo(x, y + r);
+		context.quadraticCurveTo(x, y, x + r, y);
+		context.closePath();
+	}
+};
+
+/**
  * Helper to wrap text into multiple lines based on maximum width on canvas
  */
 const wrapText = (context, text, maxWidth) => {
@@ -309,7 +332,7 @@ const wrapText = (context, text, maxWidth) => {
 /**
  * Stempel watermark GPS, pegawai, alamat, dan timestamp pada foto absensi
  * @param {string} dataUrl - Base64 image data URL
- * @param {Object} metadata - Metadata info (userName, nik, latitude, longitude, accuracy, timestamp, address)
+ * @param {Object} metadata - Metadata info (userName, nik, latitude, longitude, accuracy, timestamp, address, distance, allowedRadius, isWithinRadius, mapImage)
  * @returns {Promise<string>} - Resolves with stamped base64 image data URL
  */
 export const stampGpsWatermark = (dataUrl, metadata = {}) => {
@@ -340,10 +363,10 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 				canvas.width = width;
 				canvas.height = height;
 
-				// 4. Draw original image onto canvas
+				// Draw original image onto canvas
 				ctx.drawImage(img, 0, 0, width, height);
 
-				// 5. Compute responsive scale factor
+				// Compute responsive scale factor
 				const scale = Math.max(0.7, width / 600);
 
 				const {
@@ -354,33 +377,24 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 					accuracy = null,
 					timestamp = "",
 					address = "",
+					distance = null,
+					allowedRadius = 500,
+					isWithinRadius = true,
+					mapImage = null,
 				} = metadata;
 
 				const paddingX = 16 * scale;
 				const paddingY = 12 * scale;
 				const accentBarWidth = 3 * scale;
 				const gapToText = 10 * scale;
-				const contentLeft = paddingX + accentBarWidth + gapToText;
-				const maxTextWidth = width - contentLeft - paddingX;
 
 				// Typography setups
 				const fontLine1 = `bold ${Math.round(14 * scale)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 				const fontLine2 = `normal ${Math.round(12 * scale)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 				const fontLine3 = `600 ${Math.round(11 * scale)}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
 				const fontLine4 = `600 ${Math.round(11 * scale)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+				const fontDist = `600 ${Math.round(11 * scale)}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-				const items = [];
-
-				// Line 1: User & NIK
-				const line1Text = `👤 ${userName || "Pegawai"}${nik ? ` (${nik})` : ""}`;
-				items.push({
-					text: line1Text,
-					font: fontLine1,
-					color: "#FFFFFF",
-					height: 18 * scale,
-				});
-
-				// Line 2: Address (with multi-line wrapping)
 				const latStr =
 					latitude !== null &&
 					latitude !== undefined &&
@@ -403,27 +417,6 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 				const rawAddress = address || `Koordinat: ${latitude}, ${longitude}`;
 				const addressFullText = `📍 ${rawAddress}`;
 
-				ctx.font = fontLine2;
-				const addressLines = wrapText(ctx, addressFullText, maxTextWidth);
-				addressLines.forEach((line) => {
-					items.push({
-						text: line,
-						font: fontLine2,
-						color: "#E2E8F0",
-						height: 16 * scale,
-					});
-				});
-
-				// Line 3: Coordinates
-				const line3Text = `🌐 Lat: ${latStr}, Long: ${longStr}${accStr}`;
-				items.push({
-					text: line3Text,
-					font: fontLine3,
-					color: "#38BDF8",
-					height: 15 * scale,
-				});
-
-				// Line 4: Timestamp
 				const timeDisplay = timestamp
 					? timestamp.includes("WIB") ||
 					  timestamp.includes("WITA") ||
@@ -432,21 +425,112 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 						: `${timestamp} WIB`
 					: `${new Date().toLocaleString("id-ID")} WIB`;
 				const line4Text = `🕒 ${timeDisplay}`;
-				items.push({
-					text: line4Text,
-					font: fontLine4,
-					color: "#FEF08A",
-					height: 15 * scale,
-				});
 
 				const lineGap = 4 * scale;
-				const totalTextHeight =
-					items.reduce((acc, item) => acc + item.height, 0) +
-					(items.length - 1) * lineGap;
+
+				const buildItems = (availableWidth) => {
+					const list = [];
+
+					// Line 1: User & NIK
+					const line1Text = `👤 ${userName || "Pegawai"}${nik ? ` (${nik})` : ""}`;
+					list.push({
+						text: line1Text,
+						font: fontLine1,
+						color: "#FFFFFF",
+						height: 18 * scale,
+					});
+
+					// Line 2: Address (with multi-line wrapping)
+					ctx.font = fontLine2;
+					const addressLines = wrapText(ctx, addressFullText, availableWidth);
+					addressLines.forEach((line) => {
+						list.push({
+							text: line,
+							font: fontLine2,
+							color: "#E2E8F0",
+							height: 16 * scale,
+						});
+					});
+
+					// Line 3: Coordinates
+					const line3Text = `🌐 Lat: ${latStr}, Long: ${longStr}${accStr}`;
+					list.push({
+						text: line3Text,
+						font: fontLine3,
+						color: "#38BDF8",
+						height: 15 * scale,
+					});
+
+					// Line 4: Office Distance & Radius (if distance is provided)
+					if (
+						distance !== null &&
+						distance !== undefined &&
+						!isNaN(Number(distance))
+					) {
+						const formattedDist = formatDistance(Number(distance));
+						const radiusStatus = isWithinRadius ? "Valid" : "Di Luar Area";
+						const lineDistText = `📏 Jarak Kantor: ${formattedDist} (Radius: ${allowedRadius || 500}m - ${radiusStatus})`;
+						list.push({
+							text: lineDistText,
+							font: fontDist,
+							color: isWithinRadius ? "#34D399" : "#F87171",
+							height: 15 * scale,
+						});
+					}
+
+					// Line 5: Timestamp
+					list.push({
+						text: line4Text,
+						font: fontLine4,
+						color: "#FEF08A",
+						height: 15 * scale,
+					});
+
+					return list;
+				};
+
+				let contentLeft = paddingX + accentBarWidth + gapToText;
+				let maxTextWidth = width - contentLeft - paddingX;
+				let items = [];
+				let totalTextHeight = 0;
+				let mapSize = 0;
+				let mapX = 0;
+
+				if (mapImage) {
+					// 1st pass: estimate map box size to calculate available text width
+					const estMapSize = 80 * scale;
+					mapX = paddingX + accentBarWidth + 10 * scale;
+					contentLeft = mapX + estMapSize + 12 * scale;
+					maxTextWidth = width - contentLeft - paddingX;
+
+					items = buildItems(maxTextWidth);
+					totalTextHeight =
+						items.reduce((acc, item) => acc + item.height, 0) +
+						(items.length - 1) * lineGap;
+
+					mapSize = Math.max(65 * scale, Math.min(95 * scale, totalTextHeight));
+					contentLeft = mapX + mapSize + 12 * scale;
+					maxTextWidth = width - contentLeft - paddingX;
+
+					// Re-calculate text wrapping with exact maxTextWidth
+					items = buildItems(maxTextWidth);
+					totalTextHeight =
+						items.reduce((acc, item) => acc + item.height, 0) +
+						(items.length - 1) * lineGap;
+					mapSize = Math.max(65 * scale, Math.min(95 * scale, totalTextHeight));
+				} else {
+					contentLeft = paddingX + accentBarWidth + gapToText;
+					maxTextWidth = width - contentLeft - paddingX;
+					items = buildItems(maxTextWidth);
+					totalTextHeight =
+						items.reduce((acc, item) => acc + item.height, 0) +
+						(items.length - 1) * lineGap;
+				}
+
 				const bannerHeight = totalTextHeight + paddingY * 2;
 				const bannerY = height - bannerHeight;
 
-				// 7. Draw translucent gradient banner at the bottom
+				// Draw translucent gradient banner at the bottom
 				const bannerGradient = ctx.createLinearGradient(0, bannerY, 0, height);
 				bannerGradient.addColorStop(0, "rgba(0, 0, 0, 0.70)");
 				bannerGradient.addColorStop(1, "rgba(0, 0, 0, 0.88)");
@@ -478,7 +562,44 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 					totalTextHeight
 				);
 
-				// 8. Draw typography with shadow
+				// Render mapImage thumbnail if available
+				if (mapImage) {
+					const mapY = bannerY + paddingY + (totalTextHeight - mapSize) / 2;
+					const mapRadius = 6 * scale;
+
+					// Draw rounded rectangle clip and draw mapImage
+					ctx.save();
+					drawRoundedRect(ctx, mapX, mapY, mapSize, mapSize, mapRadius);
+					ctx.clip();
+					ctx.drawImage(mapImage, mapX, mapY, mapSize, mapSize);
+					ctx.restore();
+
+					// Draw subtle white border
+					ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+					ctx.lineWidth = Math.max(1, 1.5 * scale);
+					drawRoundedRect(ctx, mapX, mapY, mapSize, mapSize, mapRadius);
+					ctx.stroke();
+
+					// Draw red circular pin marker with a white center dot at exact center of map
+					const pinCenterX = mapX + mapSize / 2;
+					const pinCenterY = mapY + mapSize / 2;
+
+					ctx.fillStyle = "#EF4444";
+					ctx.beginPath();
+					ctx.arc(pinCenterX, pinCenterY, 5 * scale, 0, Math.PI * 2);
+					ctx.fill();
+
+					ctx.strokeStyle = "#FFFFFF";
+					ctx.lineWidth = 1 * scale;
+					ctx.stroke();
+
+					ctx.fillStyle = "#FFFFFF";
+					ctx.beginPath();
+					ctx.arc(pinCenterX, pinCenterY, 2 * scale, 0, Math.PI * 2);
+					ctx.fill();
+				}
+
+				// Draw typography with shadow
 				ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
 				ctx.shadowBlur = 3 * scale;
 				ctx.shadowOffsetX = 1 * scale;
@@ -499,7 +620,7 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 				ctx.shadowOffsetX = 0;
 				ctx.shadowOffsetY = 0;
 
-				// 9. Export stamped image as image/jpeg 0.95
+				// Export stamped image as image/jpeg 0.95
 				const stampedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
 				resolve(stampedDataUrl);
 			} catch (err) {
