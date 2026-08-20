@@ -304,69 +304,73 @@ export async function POST(request, { params }) {
 				return NextResponse.json({ error: `Batas pengiriman telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat dikirim.` }, { status: 400 });
 			}
 
-			// Validasi jam pulang berdasarkan jadwal shift
-			try {
-				const evalDateStr = moment(harian.tanggal).format("YYYY-MM-DD");
-				const todayStr = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
+			const isDinasLuar = harian.nilai_kondisi === "izin_dinas_luar";
 
-				if (evalDateStr === todayStr) {
-					const monthStr = moment(evalDateStr).format("MM");
-					const yearStr = moment(evalDateStr).format("YYYY");
-					const dayStr = moment(evalDateStr).format("D");
+			// Validasi jam pulang berdasarkan jadwal shift (hanya jika bukan dinas luar kota)
+			if (!isDinasLuar) {
+				try {
+					const evalDateStr = moment(harian.tanggal).format("YYYY-MM-DD");
+					const todayStr = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
 
-					// Ambil jadwal reguler
-					const schedule = await selectFirst({
-						table: "jadwal_pegawai",
-						where: {
-							id: harian.pegawai_id,
-							bulan: monthStr,
-							tahun: yearStr
-						}
-					});
+					if (evalDateStr === todayStr) {
+						const monthStr = moment(evalDateStr).format("MM");
+						const yearStr = moment(evalDateStr).format("YYYY");
+						const dayStr = moment(evalDateStr).format("D");
 
-					// Ambil jadwal tambahan
-					const scheduleTambahan = await selectFirst({
-						table: "jadwal_tambahan",
-						where: {
-							id: harian.pegawai_id,
-							bulan: monthStr,
-							tahun: yearStr
-						}
-					});
-
-					let shift = schedule ? (schedule[`h${dayStr}`] || "") : "";
-					if (shift === "") {
-						shift = scheduleTambahan ? (scheduleTambahan[`h${dayStr}`] || "") : "";
-					}
-
-					if (shift && shift !== "OFF" && shift !== "Libur") {
-						const shiftInfo = await selectFirst({
-							table: "jam_masuk",
-							where: { shift: shift }
+						// Ambil jadwal reguler
+						const schedule = await selectFirst({
+							table: "jadwal_pegawai",
+							where: {
+								id: harian.pegawai_id,
+								bulan: monthStr,
+								tahun: yearStr
+							}
 						});
 
-						if (shiftInfo) {
-							const jamMasuk = shiftInfo.jam_masuk;
-							const jamPulang = shiftInfo.jam_pulang;
-
-							// Parse jam target checkout
-							let targetCheckout = moment.tz(`${evalDateStr} ${jamPulang}`, "YYYY-MM-DD HH:mm:ss", "Asia/Jakarta");
-							if (jamPulang < jamMasuk) {
-								// Shift malam: checkout esok hari
-								targetCheckout = targetCheckout.add(1, "day");
+						// Ambil jadwal tambahan
+						const scheduleTambahan = await selectFirst({
+							table: "jadwal_tambahan",
+							where: {
+								id: harian.pegawai_id,
+								bulan: monthStr,
+								tahun: yearStr
 							}
+						});
 
-							const now = moment().tz("Asia/Jakarta");
-							if (now.isBefore(targetCheckout)) {
-								return NextResponse.json({
-									error: `Pengiriman diblokir. Anda baru dapat mengirim penilaian setelah jam pulang shift ${shift} (${targetCheckout.format("HH:mm")}).`
-								}, { status: 400 });
+						let shift = schedule ? (schedule[`h${dayStr}`] || "") : "";
+						if (shift === "") {
+							shift = scheduleTambahan ? (scheduleTambahan[`h${dayStr}`] || "") : "";
+						}
+
+						if (shift && shift !== "OFF" && shift !== "Libur") {
+							const shiftInfo = await selectFirst({
+								table: "jam_masuk",
+								where: { shift: shift }
+							});
+
+							if (shiftInfo) {
+								const jamMasuk = shiftInfo.jam_masuk;
+								const jamPulang = shiftInfo.jam_pulang;
+
+								// Parse jam target checkout
+								let targetCheckout = moment.tz(`${evalDateStr} ${jamPulang}`, "YYYY-MM-DD HH:mm:ss", "Asia/Jakarta");
+								if (jamPulang < jamMasuk) {
+									// Shift malam: checkout esok hari
+									targetCheckout = targetCheckout.add(1, "day");
+								}
+
+								const now = moment().tz("Asia/Jakarta");
+								if (now.isBefore(targetCheckout)) {
+									return NextResponse.json({
+										error: `Pengiriman diblokir. Anda baru dapat mengirim penilaian setelah jam pulang shift ${shift} (${targetCheckout.format("HH:mm")}).`
+									}, { status: 400 });
+								}
 							}
 						}
 					}
+				} catch (validationErr) {
+					console.error("Gagal memproses validasi jam pulang server-side:", validationErr);
 				}
-			} catch (validationErr) {
-				console.error("Gagal memproses validasi jam pulang server-side:", validationErr);
 			}
 
 			// Get all activities
@@ -375,7 +379,7 @@ export async function POST(request, { params }) {
 				where: { penilaian_id: id }
 			});
 
-			if (kegiatan.length === 0) {
+			if (kegiatan.length === 0 && !isDinasLuar) {
 				return NextResponse.json({ error: "Minimal harus ada 1 kegiatan harian sebelum dikirim" }, { status: 400 });
 			}
 
@@ -395,36 +399,48 @@ export async function POST(request, { params }) {
 				return wSedang;
 			};
 
-			const totalWeight = kegiatan.reduce((acc, curr) => acc + getWeight(curr.prioritas), 0);
-			const completedWeight = kegiatan.reduce((acc, curr) => acc + (curr.status_selesai === "selesai" ? getWeight(curr.prioritas) : 0), 0);
-
-			const skorKegiatan = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+			let skorKegiatan = 100;
+			if (!isDinasLuar) {
+				const totalWeight = kegiatan.reduce((acc, curr) => acc + getWeight(curr.prioritas), 0);
+				const completedWeight = kegiatan.reduce((acc, curr) => acc + (curr.status_selesai === "selesai" ? getWeight(curr.prioritas) : 0), 0);
+				skorKegiatan = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
+			}
 
 			// Get bobot parameter
 			const paramKegiatan = paramsList.find(p => p.kode === "KGT_PRODUKTIF");
 			const bobotKegiatan = paramKegiatan ? Number(paramKegiatan.bobot_persen) : 60;
 			const bobotAbsensi = 100 - bobotKegiatan;
 
-			const skorAbsensi = Number(harian.skor_absensi);
-			const skorTotal = (skorKegiatan * bobotKegiatan / 100) + (skorAbsensi * bobotAbsensi / 100);
+			const skorAbsensi = isDinasLuar ? 100 : Number(harian.skor_absensi);
+			const skorTotal = isDinasLuar 
+				? 100 
+				: (skorKegiatan * bobotKegiatan / 100) + (skorAbsensi * bobotAbsensi / 100);
+			const newStatus = isDinasLuar ? "approved" : "submitted";
 
 			await update({
 				table: "penilaian_harian",
 				data: {
 					skor_kegiatan: skorKegiatan,
+					skor_absensi: skorAbsensi,
 					skor_total: skorTotal,
-					status: "submitted"
+					status: newStatus,
+					approved_at: isDinasLuar ? new Date() : null,
+					catatan_supervisor: isDinasLuar 
+						? (harian.catatan_supervisor || `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${harian.ref_izin_no || "-"}]`)
+						: harian.catatan_supervisor
 				},
 				where: { id: id }
 			});
 
 			return NextResponse.json({
 				success: true,
-				message: "Penilaian berhasil dikirim untuk approval supervisor",
+				message: isDinasLuar
+					? "Penilaian dinas luar kota berhasil disetujui otomatis"
+					: "Penilaian berhasil dikirim untuk approval supervisor",
 				data: {
 					skor_kegiatan: skorKegiatan,
 					skor_total: skorTotal,
-					status: "submitted"
+					status: newStatus
 				}
 			});
 		}
