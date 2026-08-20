@@ -464,7 +464,7 @@ export async function POST(request) {
 				is_aktif: 1
 			}
 		});
-		const skorAbsensi = param ? Number(param.nilai_skor) : 0;
+		const isDinasLuar = resAbsen.nilai_kondisi === "izin_dinas_luar";
 
 		const insertData = {
 			pegawai_id: pegawaiId,
@@ -474,11 +474,13 @@ export async function POST(request) {
 			ref_cuti_no: resAbsen.sumber === "cuti" ? resAbsen.ref_no : null,
 			ref_izin_no: resAbsen.sumber === "izin" ? resAbsen.ref_no : null,
 			nilai_kondisi: resAbsen.nilai_kondisi,
-			skor_kegiatan: 0,
-			skor_absensi: skorAbsensi,
-			skor_total: 0, // will compute during submit
+			skor_kegiatan: isDinasLuar ? 100 : 0,
+			skor_absensi: isDinasLuar ? 100 : skorAbsensi,
+			skor_total: isDinasLuar ? 100 : 0, // will compute during submit for others
 			is_tambahan: isTambahan ? 1 : 0,
-			status: "draft",
+			status: isDinasLuar ? "approved" : "draft",
+			approved_at: isDinasLuar ? new Date() : null,
+			catatan_supervisor: isDinasLuar ? `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${resAbsen.ref_no || "-"}]` : null,
 			dibuat_oleh: pegawaiId
 		};
 
@@ -487,9 +489,26 @@ export async function POST(request) {
 			data: insertData
 		});
 
+		if (isDinasLuar) {
+			await insert({
+				table: "kegiatan_harian",
+				data: {
+					penilaian_id: result.insertId,
+					judul_kegiatan: "Melaksanakan Tugas / Perjalanan Dinas Luar Kota",
+					penjabaran: `Tugas dinas luar kota sesuai pengajuan izin resmi ${resAbsen.ref_no || ""}`.trim(),
+					prioritas: "tinggi",
+					status_selesai: "selesai",
+					urutan: 1,
+					selesai_at: new Date()
+				}
+			});
+		}
+
 		return NextResponse.json({
 			success: true,
-			message: "Draft penilaian harian berhasil dibuat",
+			message: isDinasLuar 
+				? "Penilaian harian otomatis disetujui untuk dinas luar kota"
+				: "Draft penilaian harian berhasil dibuat",
 			data: {
 				id: result.insertId,
 				...insertData
