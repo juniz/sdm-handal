@@ -67,15 +67,15 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 		if (isMobile) {
 			return {
 				facingMode: "user",
-				width: { ideal: 480, min: 320, max: 640 },
-				height: { ideal: 480, min: 320, max: 640 },
+				width: { ideal: 960, min: 640, max: 1280 },
+				height: { ideal: 960, min: 640, max: 1280 },
 				aspectRatio: { ideal: 1, min: 0.8, max: 1.2 },
 			};
 		} else {
 			return {
 				facingMode: "user",
-				width: { ideal: 640, min: 480, max: 1280 },
-				height: { ideal: 480, min: 360, max: 720 },
+				width: { ideal: 1024, min: 768, max: 1920 },
+				height: { ideal: 768, min: 576, max: 1080 },
 				aspectRatio: { ideal: 4 / 3, min: 4 / 3, max: 16 / 9 },
 			};
 		}
@@ -235,10 +235,10 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 
 				// Capture photo
 				const imageSrc = webcamRef.current.getScreenshot({
-					width: isMobile ? 480 : 640,
-					height: isMobile ? 480 : 480,
+					width: isMobile ? 960 : 1024,
+					height: isMobile ? 960 : 768,
 					screenshotFormat: "image/jpeg",
-					screenshotQuality: 0.9,
+					screenshotQuality: 0.95,
 				});
 
 				console.log("Raw capture result:", {
@@ -263,37 +263,32 @@ export const AttendanceCamera = forwardRef(function AttendanceCamera(
 					throw error;
 				}
 
-				let photoToOptimize = imageSrc;
+				let finalPhoto = imageSrc;
 				if (watermarkMetadata) {
 					try {
-						photoToOptimize = await stampGpsWatermark(
-							imageSrc,
-							watermarkMetadata
-						);
+						finalPhoto = await stampGpsWatermark(imageSrc, watermarkMetadata);
 					} catch (stampErr) {
 						console.error(
-							"Failed to stamp GPS watermark, falling back to raw photo:",
+							"Failed to stamp GPS watermark, falling back to optimized photo:",
 							stampErr
 						);
-						photoToOptimize = imageSrc;
+						finalPhoto = await optimizePhoto(imageSrc);
 					}
+				} else {
+					finalPhoto = await optimizePhoto(imageSrc);
 				}
 
-				// Optimize captured photo
-				console.log("Starting photo optimization...");
-				const optimizedPhoto = await optimizePhoto(photoToOptimize);
-
-				console.log("Optimized photo result:", {
-					type: typeof optimizedPhoto,
-					length: optimizedPhoto?.length,
-					startsWith: optimizedPhoto?.substring(0, 30),
+				console.log("Final photo result:", {
+					type: typeof finalPhoto,
+					length: finalPhoto?.length,
+					startsWith: finalPhoto?.substring(0, 30),
 				});
 
 				if (onCapture) {
-					onCapture(optimizedPhoto);
+					onCapture(finalPhoto);
 				}
 
-				return optimizedPhoto;
+				return finalPhoto;
 			} catch (error) {
 				console.error("Error capturing photo:", error);
 
