@@ -465,6 +465,7 @@ export async function POST(request) {
 			}
 		});
 		const isDinasLuar = resAbsen.nilai_kondisi === "izin_dinas_luar";
+		const skorAbsensi = param ? Number(param.nilai_skor) : 0;
 
 		const insertData = {
 			pegawai_id: pegawaiId,
