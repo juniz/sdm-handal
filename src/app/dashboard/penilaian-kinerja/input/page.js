@@ -16,7 +16,8 @@ import {
 	PlusCircle, 
 	Info,
 	Edit3,
-	RotateCcw
+	RotateCcw,
+	Briefcase
 } from "lucide-react";
 import { is24hLimitEnabled } from "@/lib/penilaian-config";
 
@@ -183,9 +184,24 @@ function DailyInputContent() {
 						const attData = await attRes.json();
 						setAttendanceInfo(attData);
 						
-						// If the resolved attendance is different from what's stored in the draft,
-						// update the database draft to keep it in sync!
-						if (
+						// If the resolved attendance is dinas luar kota, auto-submit and approve!
+						if (attData.nilai_kondisi === "izin_dinas_luar") {
+							const submitRes = await fetch(`/api/penilaian/harian/${harianData.data.id}`, {
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({ action: "submit" })
+							});
+							if (submitRes.ok) {
+								const reloadRes = await fetch(`/api/penilaian/harian?tanggal=${selectedDate}`);
+								if (reloadRes.ok) {
+									const reloaded = await reloadRes.json();
+									if (reloaded.data) {
+										setHarianRecord(reloaded.data);
+										setActivities(reloaded.data.kegiatan || []);
+									}
+								}
+							}
+						} else if (
 							attData.sumber !== harianData.data.sumber_absensi ||
 							attData.nilai_kondisi !== harianData.data.nilai_kondisi ||
 							Number(attData.skor_absensi) !== Number(harianData.data.skor_absensi)
@@ -226,15 +242,44 @@ function DailyInputContent() {
 					});
 				}
 			} else {
-				setHarianRecord(null);
-				setActivities([]);
-				setAlasanTerlambat("");
 				// Fetch resolved attendance status on the fly
 				const attRes = await fetch(`/api/penilaian/absensi-status?tanggal=${selectedDate}`);
 				if (attRes.ok) {
 					const attData = await attRes.json();
 					setAttendanceInfo(attData);
+
+					if (attData.nilai_kondisi === "izin_dinas_luar") {
+						// Auto-create and auto-approve immediately
+						const createRes = await fetch("/api/penilaian/harian", {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ tanggal: selectedDate })
+						});
+						if (createRes.ok) {
+							const createData = await createRes.json();
+							if (createData.data) {
+								setHarianRecord(createData.data);
+								setActivities([
+									{
+										id: null,
+										judul_kegiatan: "Melaksanakan Tugas / Perjalanan Dinas Luar Kota",
+										penjabaran: `Tugas dinas luar kota sesuai pengajuan izin resmi ${attData.ref_no || ""}`.trim(),
+										prioritas: "tinggi",
+										status_selesai: "selesai",
+										urutan: 1
+									}
+								]);
+							}
+						}
+					} else {
+						setHarianRecord(null);
+						setActivities([]);
+						setAlasanTerlambat("");
+					}
 				} else {
+					setHarianRecord(null);
+					setActivities([]);
+					setAlasanTerlambat("");
 					setAttendanceInfo(null);
 				}
 			}
@@ -522,9 +567,11 @@ function DailyInputContent() {
 	const totalWeight = activities.reduce((acc, curr) => acc + getWeight(curr.prioritas), 0);
 	const completedWeight = activities.reduce((acc, curr) => acc + (curr.status_selesai === "selesai" ? getWeight(curr.prioritas) : 0), 0);
 
-	const estSkorKegiatan = totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0;
-	const estSkorAbsensi = attendanceInfo ? Number(attendanceInfo.skor_absensi || 0) : 0;
-	const estSkorTotal = Math.round((estSkorKegiatan * 0.6) + (estSkorAbsensi * 0.4));
+	const isDinasLuarKota = attendanceInfo?.nilai_kondisi === "izin_dinas_luar" || harianRecord?.nilai_kondisi === "izin_dinas_luar";
+
+	const estSkorKegiatan = isDinasLuarKota ? 100 : (totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0);
+	const estSkorAbsensi = isDinasLuarKota ? 100 : (attendanceInfo ? Number(attendanceInfo.skor_absensi || 0) : 0);
+	const estSkorTotal = isDinasLuarKota ? 100 : Math.round((estSkorKegiatan * 0.6) + (estSkorAbsensi * 0.4));
 
 	const checkIsDeadlinePassed = () => {
 		if (!is24hLimitEnabled()) return false;
@@ -542,7 +589,7 @@ function DailyInputContent() {
 	};
 
 	const isDeadlinePassed = checkIsDeadlinePassed();
-	const isReadOnly = (harianRecord && (harianRecord.status === "submitted" || harianRecord.status === "approved")) || isDeadlinePassed;
+	const isReadOnly = (harianRecord && (harianRecord.status === "submitted" || harianRecord.status === "approved")) || isDeadlinePassed || isDinasLuarKota;
 
 	const getStatusBadge = (status) => {
 		switch (status) {
@@ -593,6 +640,25 @@ function DailyInputContent() {
 			</div>
 
 			{/* ── Feedback banners ────────────────────────────────────── */}
+
+			{isDinasLuarKota && (
+				<div className="p-4 md:p-5 bg-sky-50 border border-sky-200/80 text-sky-900 rounded-2xl flex items-start gap-3.5 shadow-xs">
+					<div className="w-9 h-9 rounded-xl bg-sky-100/80 text-sky-600 flex items-center justify-center shrink-0 mt-0.5 border border-sky-200">
+						<Briefcase className="h-5 w-5" />
+					</div>
+					<div className="flex-1">
+						<div className="flex flex-wrap items-center gap-2">
+							<h4 className="font-bold text-sm font-figtree text-sky-950">Izin Dinas Luar Kota Terverifikasi</h4>
+							<span className="px-2 py-0.5 bg-sky-200/60 text-sky-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider font-mono">
+								Auto-Approved 100%
+							</span>
+						</div>
+						<p className="text-xs mt-1 font-medium text-sky-800/90 leading-relaxed">
+							Penilaian kinerja harian untuk tanggal ini telah otomatis diproses dan disetujui penuh oleh sistem. Anda tidak diwajibkan melakukan presensi kantor maupun pengisian daftar kegiatan kerja harian.
+						</p>
+					</div>
+				</div>
+			)}
 
 			{errorMsg && (
 				<div className="p-4 bg-red-50 border border-red-100 text-red-800 rounded-xl flex items-start gap-3">
@@ -813,15 +879,19 @@ function DailyInputContent() {
 							/* Start draft CTA */
 							<div className="bg-white border border-slate-200/60 rounded-2xl p-10 text-center shadow-sm">
 								<div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-									<Edit3 className="h-6 w-6" />
+									{isDinasLuarKota ? <Briefcase className="h-6 w-6 text-sky-600" /> : <Edit3 className="h-6 w-6" />}
 								</div>
-								<h3 className="text-lg font-bold text-slate-800 font-figtree mb-1">Mulai Laporan Harian</h3>
+								<h3 className="text-lg font-bold text-slate-800 font-figtree mb-1">
+									{isDinasLuarKota ? "Izin Dinas Luar Kota" : "Mulai Laporan Harian"}
+								</h3>
 								<p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">
-									{isDeadlinePassed 
+									{isDinasLuarKota
+										? "Laporan kinerja harian untuk izin dinas luar kota otomatis disetujui penuh oleh sistem."
+										: isDeadlinePassed 
 										? "Batas waktu pengisian telah lewat. Laporan kinerja harian untuk tanggal ini tidak dapat dibuat lagi."
 										: "Buat draf laporan kinerja baru untuk mengisi item kegiatan yang Anda selesaikan hari ini."}
 								</p>
-								{!isDeadlinePassed && (
+								{!isDeadlinePassed && !isDinasLuarKota && (
 									<button
 										onClick={startDraft}
 										disabled={saving}
@@ -1098,7 +1168,11 @@ function DailyInputContent() {
 										<div className="p-4 bg-[#F8FAFC] border border-slate-200/60 rounded-xl flex items-start gap-3">
 											<Info className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
 											<p className="text-xs text-slate-500 leading-relaxed font-medium">
-												{isDeadlinePassed ? (
+												{isDinasLuarKota ? (
+													<>
+														Penilaian harian ini telah <strong className="text-sky-700">disetujui otomatis</strong> oleh sistem karena Anda memiliki izin dinas luar kota resmi yang disetujui.
+													</>
+												) : isDeadlinePassed ? (
 													<>
 														Penilaian harian ini telah dikunci karena <strong className="text-rose-600">batas waktu pengisian telah lewat (&gt; 1x24 jam)</strong>. Perubahan tidak dapat dilakukan lagi.
 													</>
