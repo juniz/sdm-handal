@@ -6,7 +6,12 @@ import { AttendanceCamera } from "@/components/AttendanceCamera";
 import SecureLocationMap from "@/components/SecureLocationMap";
 import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
 import { useErrorLogger } from "@/hooks/useErrorLogger";
-import { getReverseGeocode } from "@/utils/geoHelper";
+import {
+	getReverseGeocode,
+	calculateDistance,
+	formatDistance,
+	fetchMiniMapTile,
+} from "@/utils/geoHelper";
 import moment from "moment";
 import "moment/locale/id";
 import {
@@ -483,11 +488,24 @@ export default function AttendancePage() {
 			const lng = loc.longitude;
 			const acc = loc.accuracy;
 
+			const officeLat = parseFloat(process.env.NEXT_PUBLIC_OFFICE_LAT || "-7.9797");
+			const officeLng = parseFloat(process.env.NEXT_PUBLIC_OFFICE_LNG || "112.6304");
+			const allowedRadius = parseFloat(process.env.NEXT_PUBLIC_ALLOWED_RADIUS || "500");
+
+			const distance = calculateDistance(lat, lng, officeLat, officeLng);
+			const isWithinRadius = distance <= allowedRadius;
+
 			let address = "";
+			let mapImage = null;
 			try {
-				address = await getReverseGeocode(lat, lng);
+				const [addrRes, mapRes] = await Promise.all([
+					getReverseGeocode(lat, lng).catch(() => ""),
+					fetchMiniMapTile(lat, lng).catch(() => null),
+				]);
+				address = addrRes || "";
+				mapImage = mapRes || null;
 			} catch (geoErr) {
-				console.warn("Reverse geocode failed:", geoErr);
+				console.warn("Geocoding / map tile fetch failed:", geoErr);
 			}
 
 			const watermarkMetadata = {
@@ -498,6 +516,10 @@ export default function AttendancePage() {
 				accuracy: acc,
 				timestamp: momentInstance.format("dddd, DD MMMM YYYY, HH:mm:ss"),
 				address: address || "",
+				distance,
+				allowedRadius,
+				isWithinRadius,
+				mapImage,
 			};
 
 			const capturedPhoto = await cameraRef.current?.capturePhoto(watermarkMetadata);
