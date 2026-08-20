@@ -146,19 +146,12 @@ export default function AttendancePage() {
 				};
 			} catch (err2) {
 				console.error("Standard accuracy GPS also failed:", err2);
-				if (!locationValidationEnabled) {
-					return {
-						latitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LAT || "-7.9797"),
-						longitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LNG || "112.6304"),
-						accuracy: 50,
-					};
-				}
 				throw new Error(
 					err2?.code === 1
 						? "Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di browser."
 						: err2?.code === 3
 						? "Waktu pencarian sinyal GPS habis. Pastikan GPS aktif atau coba di tempat terbuka."
-						: "Gagal mendapatkan koordinat GPS. Pastikan GPS aktif."
+						: "Gagal mendapatkan koordinat GPS perangkat. Pastikan GPS aktif."
 				);
 			}
 		}
