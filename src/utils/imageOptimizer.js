@@ -39,6 +39,8 @@ export const compressImage = (file, options = {}) => {
 			canvas.height = height;
 
 			// Draw and compress
+			ctx.imageSmoothingEnabled = true;
+			ctx.imageSmoothingQuality = "high";
 			ctx.drawImage(img, 0, 0, width, height);
 
 			canvas.toBlob(
@@ -225,9 +227,9 @@ export const createProgressiveImage = async (
 export const getOptimalImageSettings = () => {
 	// Default settings untuk server-side rendering
 	const defaultSettings = {
-		quality: 0.8,
-		maxWidth: 800,
-		maxHeight: 600,
+		quality: 0.85,
+		maxWidth: 1024,
+		maxHeight: 768,
 	};
 
 	// Check if running in browser
@@ -242,8 +244,8 @@ export const getOptimalImageSettings = () => {
 	const devicePixelRatio = window.devicePixelRatio || 1;
 	const screenWidth = window.screen?.width || 1024;
 
-	let quality = 0.8;
-	let maxWidth = 800;
+	let quality = 0.85;
+	let maxWidth = 1024;
 
 	// Adjust based on connection speed
 	if (connection) {
@@ -259,7 +261,7 @@ export const getOptimalImageSettings = () => {
 				break;
 			case "4g":
 				quality = 0.85;
-				maxWidth = 1000;
+				maxWidth = 1024;
 				break;
 		}
 	}
@@ -357,11 +359,17 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 					return;
 				}
 
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = "high";
+
 				const width = img.naturalWidth || img.width || 640;
 				const height = img.naturalHeight || img.height || 480;
 
 				canvas.width = width;
 				canvas.height = height;
+
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = "high";
 
 				// Draw original image onto canvas
 				ctx.drawImage(img, 0, 0, width, height);
@@ -620,8 +628,8 @@ export const stampGpsWatermark = (dataUrl, metadata = {}) => {
 				ctx.shadowOffsetX = 0;
 				ctx.shadowOffsetY = 0;
 
-				// Export stamped image as image/jpeg 0.95
-				const stampedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+				// Export stamped image as image/jpeg 0.85
+				const stampedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
 				resolve(stampedDataUrl);
 			} catch (err) {
 				console.error("Error stamping GPS watermark:", err);
