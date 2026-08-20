@@ -64,6 +64,7 @@ export default function AttendancePage() {
 	const [userLocation, setUserLocation] = useState(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [status, setStatus] = useState(null);
+	const [errorMessage, setErrorMessage] = useState(null);
 	const { formattedTime, formattedDate, momentInstance } = useRealTime();
 	const [jadwal, setJadwal] = useState(null);
 	const [tanggal, setTanggal] = useState(moment().format("D"));
@@ -93,6 +94,70 @@ export default function AttendancePage() {
 
 	// Error logging
 	const { logError } = useErrorLogger();
+
+	// Robust location fetcher with automatic fallback
+	const getRobustLocation = async () => {
+		if (userLocation?.latitude && userLocation?.longitude) {
+			return {
+				latitude: userLocation.latitude,
+				longitude: userLocation.longitude,
+				accuracy: userLocation.accuracy || 10,
+			};
+		}
+
+		if (typeof window === "undefined" || !navigator?.geolocation) {
+			throw new Error("Perangkat tidak mendukung geolokasi GPS");
+		}
+
+		// Attempt 1: High accuracy GPS with 8s timeout
+		try {
+			const pos = await new Promise((resolve, reject) => {
+				navigator.geolocation.getCurrentPosition(resolve, reject, {
+					enableHighAccuracy: true,
+					timeout: 8000,
+					maximumAge: 10000,
+				});
+			});
+			return {
+				latitude: pos.coords.latitude,
+				longitude: pos.coords.longitude,
+				accuracy: pos.coords.accuracy,
+			};
+		} catch (err1) {
+			console.warn("High accuracy GPS failed, falling back to standard accuracy:", err1);
+			// Attempt 2: Standard accuracy GPS / WiFi triangulation with 10s timeout
+			try {
+				const pos = await new Promise((resolve, reject) => {
+					navigator.geolocation.getCurrentPosition(resolve, reject, {
+						enableHighAccuracy: false,
+						timeout: 10000,
+						maximumAge: 60000,
+					});
+				});
+				return {
+					latitude: pos.coords.latitude,
+					longitude: pos.coords.longitude,
+					accuracy: pos.coords.accuracy,
+				};
+			} catch (err2) {
+				console.error("Standard accuracy GPS also failed:", err2);
+				if (!locationValidationEnabled) {
+					return {
+						latitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LAT || "-7.9797"),
+						longitude: parseFloat(process.env.NEXT_PUBLIC_OFFICE_LNG || "112.6304"),
+						accuracy: 50,
+					};
+				}
+				throw new Error(
+					err2?.code === 1
+						? "Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di browser."
+						: err2?.code === 3
+						? "Waktu pencarian sinyal GPS habis. Pastikan GPS aktif atau coba di tempat terbuka."
+						: "Gagal mendapatkan koordinat GPS. Pastikan GPS aktif."
+				);
+			}
+		}
+	};
 
 	// Check location permission and settings on component mount
 	useEffect(() => {
@@ -411,23 +476,12 @@ export default function AttendancePage() {
 		}
 
 		setIsSubmitting(true);
+		setErrorMessage(null);
 		try {
-			let lat, lng, acc;
-			if (userLocation) {
-				lat = userLocation.latitude;
-				lng = userLocation.longitude;
-				acc = userLocation.accuracy;
-			} else {
-				const position = await new Promise((resolve, reject) => {
-					navigator.geolocation.getCurrentPosition(resolve, reject, {
-						enableHighAccuracy: true,
-						timeout: 10000,
-					});
-				});
-				lat = position.coords.latitude;
-				lng = position.coords.longitude;
-				acc = position.coords.accuracy;
-			}
+			const loc = await getRobustLocation();
+			const lat = loc.latitude;
+			const lng = loc.longitude;
+			const acc = loc.accuracy;
 
 			let address = "";
 			try {
@@ -473,7 +527,7 @@ export default function AttendancePage() {
 				await fetchTodayAttendance();
 				await fetchCompletedAttendance();
 			} else {
-				setStatus("error");
+				throw new Error(result?.message || result?.error || "Gagal melakukan presensi masuk");
 			}
 
 			setTimeout(() => {
@@ -481,7 +535,9 @@ export default function AttendancePage() {
 				alertRef.current?.focus();
 			}, 100);
 		} catch (error) {
-			console.error("Error submitting attendance:", error);
+			const msg = error?.message || (typeof error === "string" ? error : "Gagal melakukan presensi masuk");
+			console.error("Error submitting attendance:", msg);
+			setErrorMessage(msg);
 			setStatus("error");
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -504,23 +560,12 @@ export default function AttendancePage() {
 		}
 
 		setIsSubmitting(true);
+		setErrorMessage(null);
 		try {
-			let lat, lng, acc;
-			if (userLocation) {
-				lat = userLocation.latitude;
-				lng = userLocation.longitude;
-				acc = userLocation.accuracy;
-			} else {
-				const position = await new Promise((resolve, reject) => {
-					navigator.geolocation.getCurrentPosition(resolve, reject, {
-						enableHighAccuracy: true,
-						timeout: 10000,
-					});
-				});
-				lat = position.coords.latitude;
-				lng = position.coords.longitude;
-				acc = position.coords.accuracy;
-			}
+			const loc = await getRobustLocation();
+			const lat = loc.latitude;
+			const lng = loc.longitude;
+			const acc = loc.accuracy;
 
 			const result = await mutationCheckOut({
 				timestamp: momentInstance.format("YYYY-MM-DD HH:mm:ss"),
@@ -533,7 +578,7 @@ export default function AttendancePage() {
 				},
 			});
 
-			if (!result?.success) throw new Error(result?.error ?? "Gagal melakukan presensi pulang");
+			if (!result?.success) throw new Error(result?.message || result?.error || "Gagal melakukan presensi pulang");
 
 			setStatus("success");
 			await fetchAttendanceStatus();
@@ -544,7 +589,9 @@ export default function AttendancePage() {
 				alertRef.current?.focus();
 			}, 100);
 		} catch (error) {
-			console.error("Error submitting check-out:", error);
+			const msg = error?.message || (typeof error === "string" ? error : "Gagal melakukan presensi pulang");
+			console.error("Error submitting check-out:", msg);
+			setErrorMessage(msg);
 			setStatus("error");
 			setTimeout(() => {
 				alertRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -718,8 +765,7 @@ export default function AttendancePage() {
 							</span>
 						) : status === "location_error" ? (
 							<span>
-								Gagal mengakses lokasi. Pastikan GPS aktif dan koneksi
-								internet stabil.
+								{errorMessage || "Gagal mengakses lokasi. Pastikan GPS aktif dan koneksi internet stabil."}
 							</span>
 						) : status === "unfinished_attendance" ? (
 							<span>
@@ -740,7 +786,7 @@ export default function AttendancePage() {
 								</span>
 							</div>
 						) : (
-							<span>Gagal melakukan presensi. Silakan coba lagi.</span>
+							<span>{errorMessage || "Gagal melakukan presensi. Silakan coba lagi."}</span>
 						)}
 					</div>
 				</div>

@@ -262,31 +262,64 @@ const useLocationSecurity = (options = {}) => {
 		const handleLocationError = (error) => {
 			let errorMessage = "Gagal mendapatkan lokasi";
 
-			switch (error.code) {
-				case error.PERMISSION_DENIED:
+			switch (error?.code) {
+				case error?.PERMISSION_DENIED:
 					errorMessage =
 						"Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di pengaturan browser.";
 					break;
-				case error.POSITION_UNAVAILABLE:
+				case error?.POSITION_UNAVAILABLE:
 					errorMessage =
 						"Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.";
 					break;
-				case error.TIMEOUT:
+				case error?.TIMEOUT:
 					errorMessage =
 						"Timeout saat mengambil lokasi. Coba lagi atau periksa koneksi internet.";
 					break;
 				default:
-					errorMessage = `Error lokasi: ${error.message || "Unknown error"}`;
+					errorMessage = `Error lokasi: ${error?.message || "Unknown error"}`;
 					break;
 			}
 
 			console.error("Geolocation error details:", {
-				code: error.code,
-				message: error.message,
+				code: error?.code,
+				message: error?.message || errorMessage,
 				timestamp: new Date().toISOString(),
 			});
 
 			setError(errorMessage);
+
+			// Jika timeout/unavailable pada high accuracy, coba fallback ke standard accuracy
+			if (
+				(error?.code === error?.TIMEOUT || error?.code === error?.POSITION_UNAVAILABLE) &&
+				watchOptions.enableHighAccuracy
+			) {
+				console.warn("Retrying watchPosition with standard accuracy...");
+				try {
+					if (watchIdRef.current) {
+						navigator.geolocation.clearWatch(watchIdRef.current);
+					}
+					watchIdRef.current = navigator.geolocation.watchPosition(
+						processLocation,
+						(fallbackErr) => {
+							console.error("Fallback watchPosition error:", {
+								code: fallbackErr?.code,
+								message: fallbackErr?.message,
+							});
+							setIsWatching(false);
+						},
+						{
+							enableHighAccuracy: false,
+							timeout: 15000,
+							maximumAge: 60000,
+						}
+					);
+					setIsWatching(true);
+					return;
+				} catch (fallbackErr) {
+					console.error("Failed fallback watchPosition:", fallbackErr);
+				}
+			}
+
 			setIsWatching(false);
 		};
 
@@ -327,31 +360,56 @@ const useLocationSecurity = (options = {}) => {
 					resolve(position);
 				},
 				(error) => {
-					let errorMessage = "Gagal mendapatkan lokasi";
+					// Fallback to standard accuracy on failure
+					if (enableHighAccuracy) {
+						navigator.geolocation.getCurrentPosition(
+							(fallbackPos) => {
+								processLocation(fallbackPos);
+								resolve(fallbackPos);
+							},
+							(fallbackErr) => {
+								const errMsg = fallbackErr?.message || "Gagal mendapatkan lokasi";
+								console.error("Geolocation error details:", {
+									code: fallbackErr?.code,
+									message: errMsg,
+									timestamp: new Date().toISOString(),
+								});
+								setError(errMsg);
+								reject(new Error(errMsg));
+							},
+							{
+								enableHighAccuracy: false,
+								timeout: 15000,
+								maximumAge: 60000,
+							}
+						);
+						return;
+					}
 
-					switch (error.code) {
-						case error.PERMISSION_DENIED:
+					let errorMessage = "Gagal mendapatkan lokasi";
+					switch (error?.code) {
+						case error?.PERMISSION_DENIED:
 							errorMessage =
 								"Izin akses lokasi ditolak. Silakan aktifkan izin lokasi di pengaturan browser.";
 							break;
-						case error.POSITION_UNAVAILABLE:
+						case error?.POSITION_UNAVAILABLE:
 							errorMessage =
 								"Lokasi tidak tersedia. Pastikan GPS aktif dan Anda berada di area dengan sinyal yang baik.";
 							break;
-						case error.TIMEOUT:
+						case error?.TIMEOUT:
 							errorMessage =
 								"Timeout saat mengambil lokasi. Coba lagi atau periksa koneksi internet.";
 							break;
 						default:
 							errorMessage = `Error lokasi: ${
-								error.message || "Unknown error"
+								error?.message || "Unknown error"
 							}`;
 							break;
 					}
 
 					console.error("Geolocation error details:", {
-						code: error.code,
-						message: error.message,
+						code: error?.code,
+						message: error?.message || errorMessage,
 						timestamp: new Date().toISOString(),
 					});
 
@@ -365,7 +423,7 @@ const useLocationSecurity = (options = {}) => {
 				}
 			);
 		});
-	}, [processLocation]);
+	}, [processLocation, enableHighAccuracy, timeout, maximumAge]);
 
 	// Cleanup on unmount
 	useEffect(() => {
