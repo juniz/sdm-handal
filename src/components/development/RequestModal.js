@@ -31,6 +31,7 @@ export default function RequestModal({
 
 	const [errors, setErrors] = useState({});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [showConfirmClose, setShowConfirmClose] = useState(false);
 
 	const isEditing = !!request;
 
@@ -59,8 +60,63 @@ export default function RequestModal({
 				});
 			}
 			setErrors({});
+			setShowConfirmClose(false);
 		}
 	}, [isOpen, request, isEditing]);
+
+	// Escape key listener for accessible modal closing
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				if (showConfirmClose) {
+					setShowConfirmClose(false);
+				} else {
+					handleAttemptClose();
+				}
+			}
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, showConfirmClose, formData]);
+
+	const isFormDirty = () => {
+		if (isEditing && request) {
+			return (
+				formData.title !== (request.title || "") ||
+				formData.description !== (request.description || "") ||
+				formData.module_type_id !== (request.module_type_id || "") ||
+				formData.priority_id !== (request.priority_id || "") ||
+				formData.current_system_issues !== (request.current_system_issues || "") ||
+				formData.proposed_solution !== (request.proposed_solution || "") ||
+				formData.expected_completion_date !== (request.expected_completion_date || "")
+			);
+		}
+		return !!(
+			formData.title.trim() ||
+			formData.description.trim() ||
+			formData.module_type_id ||
+			formData.priority_id ||
+			formData.current_system_issues.trim() ||
+			formData.proposed_solution.trim()
+		);
+	};
+
+	const handleAttemptClose = () => {
+		if (isFormDirty()) {
+			setShowConfirmClose(true);
+		} else {
+			onClose();
+		}
+	};
+
+	const handleConfirmDiscard = () => {
+		setShowConfirmClose(false);
+		onClose();
+	};
 
 	const validateForm = () => {
 		const newErrors = {};
@@ -171,19 +227,31 @@ export default function RequestModal({
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+		<div
+			className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+			onClick={(e) => {
+				if (e.target === e.currentTarget) handleAttemptClose();
+			}}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="request-modal-title"
+		>
+			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-gray-200">
-					<h2 className="text-xl font-semibold text-gray-900">
+					<h2
+						id="request-modal-title"
+						className="text-xl font-semibold text-gray-900"
+					>
 						{isEditing
 							? "Edit Pengajuan Pengembangan"
 							: "Pengajuan Pengembangan Baru"}
 					</h2>
 					<button
-						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600 transition-colors"
+						onClick={handleAttemptClose}
+						className="text-gray-400 hover:text-gray-600 transition-colors p-1"
 						disabled={isSubmitting}
+						aria-label="Tutup formulir"
 					>
 						<X className="w-6 h-6" />
 					</button>
@@ -209,7 +277,7 @@ export default function RequestModal({
 										onChange={(e) =>
 											handleInputChange("module_type_id", e.target.value)
 										}
-										className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 ${
 											errors.module_type_id
 												? "border-red-300"
 												: "border-gray-300"
@@ -242,7 +310,7 @@ export default function RequestModal({
 										onChange={(e) =>
 											handleInputChange("priority_id", e.target.value)
 										}
-										className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+										className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 ${
 											errors.priority_id ? "border-red-300" : "border-gray-300"
 										}`}
 									>
@@ -301,7 +369,7 @@ export default function RequestModal({
 								value={formData.title}
 								onChange={(e) => handleInputChange("title", e.target.value)}
 								placeholder="Contoh: Sistem Manajemen Inventori untuk Gudang"
-								className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+								className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 ${
 									errors.title ? "border-red-300" : "border-gray-300"
 								}`}
 								maxLength={255}
@@ -332,7 +400,7 @@ export default function RequestModal({
 								}
 								placeholder="Jelaskan secara detail tentang aplikasi atau modul yang dibutuhkan, termasuk fitur-fitur utama yang diinginkan..."
 								rows={6}
-								className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${
+								className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 resize-vertical ${
 									errors.description ? "border-red-300" : "border-gray-300"
 								}`}
 								maxLength={5000}
@@ -365,7 +433,7 @@ export default function RequestModal({
 									}
 									placeholder="Jelaskan masalah atau keterbatasan sistem yang ada saat ini..."
 									rows={4}
-									className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${
+									className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 resize-vertical ${
 										errors.current_system_issues
 											? "border-red-300"
 											: "border-gray-300"
@@ -400,7 +468,7 @@ export default function RequestModal({
 									}
 									placeholder="Jelaskan solusi atau pendekatan yang Anda usulkan..."
 									rows={4}
-									className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-vertical ${
+									className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 resize-vertical ${
 										errors.proposed_solution
 											? "border-red-300"
 											: "border-gray-300"
@@ -440,7 +508,7 @@ export default function RequestModal({
 											e.target.value
 										)
 									}
-									className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+									className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 ${
 										errors.expected_completion_date
 											? "border-red-300"
 											: "border-gray-300"
@@ -465,12 +533,12 @@ export default function RequestModal({
 						</div>
 
 						{/* Info Box */}
-						<div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+						<div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
 							<div className="flex items-start gap-3">
-								<AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5" />
-								<div className="text-sm text-blue-800">
+								<AlertTriangle className="w-5 h-5 text-sky-600 mt-0.5" />
+								<div className="text-sm text-sky-900">
 									<h4 className="font-medium mb-1">Informasi Penting:</h4>
-									<ul className="list-disc list-inside space-y-1">
+									<ul className="list-disc list-inside space-y-1 text-sky-800">
 										<li>Pengajuan akan direview oleh tim IT</li>
 										<li>
 											Anda akan mendapat notifikasi setiap perubahan status
@@ -493,8 +561,8 @@ export default function RequestModal({
 				<div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
 					<button
 						type="button"
-						onClick={onClose}
-						className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+						onClick={handleAttemptClose}
+						className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
 						disabled={isSubmitting}
 					>
 						Batal
@@ -503,7 +571,7 @@ export default function RequestModal({
 						type="submit"
 						onClick={handleSubmit}
 						disabled={isSubmitting || isLoading}
-						className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium shadow-sm"
 					>
 						{isSubmitting ? (
 							<>
@@ -519,6 +587,46 @@ export default function RequestModal({
 					</button>
 				</div>
 			</div>
+
+			{/* Discard Confirmation Modal */}
+			{showConfirmClose && (
+				<div
+					className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+					onClick={(e) => e.stopPropagation()}
+					role="alertdialog"
+					aria-modal="true"
+					aria-labelledby="discard-dialog-title"
+					aria-describedby="discard-dialog-description"
+				>
+					<div className="bg-white rounded-lg max-w-md w-full p-6 shadow-2xl border border-gray-200">
+						<div className="flex items-center gap-3 mb-3 text-amber-600">
+							<AlertTriangle className="w-6 h-6 flex-shrink-0" />
+							<h3 id="discard-dialog-title" className="text-lg font-semibold text-gray-900">
+								Tutup Pengajuan?
+							</h3>
+						</div>
+						<p id="discard-dialog-description" className="text-sm text-gray-600 mb-6 leading-relaxed">
+							Ada data formulir yang telah Anda ketik. Jika ditutup sekarang, draft pengajuan Anda akan hilang.
+						</p>
+						<div className="flex items-center justify-end gap-3">
+							<button
+								type="button"
+								onClick={() => setShowConfirmClose(false)}
+								className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+							>
+								Lanjut Mengisi
+							</button>
+							<button
+								type="button"
+								onClick={handleConfirmDiscard}
+								className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
+							>
+								Buang Perubahan
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

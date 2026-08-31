@@ -36,26 +36,6 @@ export default function ProgressTracker({
 		"UAT",
 	].includes(request?.current_status);
 
-	// Debug logging
-	console.log("ProgressTracker Authorization Debug:", {
-		user: user,
-		request: request,
-		userIdentifier: userIdentifier,
-		userNik: user?.nik,
-		userUsername: user?.username,
-		userId: user?.id,
-		userDepartment: user?.departement_id,
-		userDepartemen: user?.departemen,
-		userJbtn: user?.jbtn,
-		userJabatan: user?.jabatan,
-		assignedDeveloper: request?.assigned_developer,
-		isUserFromIT,
-		isAssignedDeveloper,
-		canUpdateProgress,
-		canHaveProgress,
-		currentStatus: request?.current_status,
-	});
-
 	useEffect(() => {
 		if (request?.request_id) {
 			fetchProgress();
@@ -100,12 +80,15 @@ export default function ProgressTracker({
 		}
 	};
 
+	const [feedback, setFeedback] = useState(null);
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!canUpdateProgress || updating) return; // Prevent double submission
 
 		try {
 			setUpdating(true);
+			setFeedback(null);
 			// Get authentication token
 			const token = getClientToken();
 
@@ -141,7 +124,6 @@ export default function ProgressTracker({
 				// Call parent callback if provided (without duplicating API call)
 				if (onProgressUpdate) {
 					try {
-						// Just notify parent without making another API call
 						onProgressUpdate({
 							...formData,
 							success: true,
@@ -152,15 +134,21 @@ export default function ProgressTracker({
 					}
 				}
 
-				// Show success message
-				alert("Progress berhasil diupdate!");
+				setFeedback({ type: "success", message: "Progress berhasil diperbarui!" });
+				setTimeout(() => setFeedback(null), 4000);
 			} else {
 				console.error("Failed to update progress:", data.error);
-				alert("Gagal mengupdate progress: " + (data.error || "Unknown error"));
+				setFeedback({
+					type: "error",
+					message: "Gagal mengupdate progress: " + (data.error || "Unknown error"),
+				});
 			}
 		} catch (error) {
 			console.error("Error updating progress:", error);
-			alert("Terjadi kesalahan saat mengupdate progress");
+			setFeedback({
+				type: "error",
+				message: "Terjadi kesalahan saat mengupdate progress",
+			});
 		} finally {
 			setUpdating(false);
 		}
@@ -169,15 +157,15 @@ export default function ProgressTracker({
 	// Don't render if parent is still loading or essential data is missing
 	if (parentLoading || !request || !user) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
 				<div className="flex items-center gap-3 mb-4">
-					<TrendingUp className="w-5 h-5 text-blue-600" />
+					<TrendingUp className="w-5 h-5 text-sky-600" />
 					<h3 className="text-lg font-semibold text-gray-900">
 						Progress Pengembangan
 					</h3>
 					<Loader2 className="w-4 h-4 animate-spin text-gray-500" />
 				</div>
-				<div className="text-gray-600">Memuat data...</div>
+				<div className="text-gray-600 text-sm">Memuat data...</div>
 			</div>
 		);
 	}
@@ -188,15 +176,15 @@ export default function ProgressTracker({
 
 	if (loading) {
 		return (
-			<div className="bg-white rounded-lg border border-gray-200 p-6">
+			<div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
 				<div className="flex items-center gap-3 mb-4">
-					<TrendingUp className="w-5 h-5 text-blue-600" />
+					<TrendingUp className="w-5 h-5 text-sky-600" />
 					<h3 className="text-lg font-semibold text-gray-900">
 						Progress Pengembangan
 					</h3>
 					<Loader2 className="w-4 h-4 animate-spin text-gray-500" />
 				</div>
-				<div className="text-gray-600">Memuat data progress...</div>
+				<div className="text-gray-600 text-sm">Memuat data progress...</div>
 			</div>
 		);
 	}
@@ -204,9 +192,9 @@ export default function ProgressTracker({
 	const currentProgress = progressData?.current_progress || 0;
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-6">
+		<div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
 			<div className="flex items-center gap-3 mb-4">
-				<TrendingUp className="w-5 h-5 text-blue-600" />
+				<TrendingUp className="w-5 h-5 text-sky-600" />
 				<h3 className="text-lg font-semibold text-gray-900">
 					Progress Pengembangan
 				</h3>
@@ -216,57 +204,30 @@ export default function ProgressTracker({
 			<div className="mb-6">
 				<div className="flex items-center justify-between text-sm text-gray-600 mb-2">
 					<span>Progress Saat Ini</span>
-					<span className="font-semibold">{currentProgress}%</span>
+					<span className="font-semibold text-sky-700">{currentProgress}%</span>
 				</div>
-				<div className="w-full bg-gray-200 rounded-full h-3">
+				<div className="w-full bg-slate-100 rounded-full h-3">
 					<div
-						className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+						className="bg-sky-600 h-3 rounded-full transition-all duration-300"
 						style={{ width: `${currentProgress}%` }}
 					/>
 				</div>
 			</div>
 
-			{/* Debug Info */}
-			{!canUpdateProgress && (
-				<div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-					<h4 className="text-sm font-medium text-yellow-800 mb-2">
-						Debug: Form tidak muncul
-					</h4>
-					<div className="text-xs text-yellow-700">
-						<p>User Object: {user ? JSON.stringify(user, null, 2) : "null"}</p>
-						<p>
-							Request Object:{" "}
-							{request
-								? JSON.stringify(
-										{
-											request_id: request.request_id,
-											assigned_developer: request.assigned_developer,
-											current_status: request.current_status,
-											title: request.title,
-										},
-										null,
-										2
-								  )
-								: "null"}
-						</p>
-						<hr className="my-2" />
-						<p>User Identifier: {userIdentifier || "null"}</p>
-						<p>User NIK: {user?.nik || "null"}</p>
-						<p>User Username: {user?.username || "null"}</p>
-						<p>User ID: {user?.id || "null"}</p>
-						<p>User Department: {user?.departement_id || "null"}</p>
-						<p>User Departemen: {user?.departemen || "null"}</p>
-						<p>User Jabatan: {user?.jabatan || "null"}</p>
-						<p>Assigned Developer: {request?.assigned_developer || "null"}</p>
-						<p>Current Status: {request?.current_status || "null"}</p>
-						<p>Is User IT: {isUserFromIT ? "true" : "false"}</p>
-						<p>
-							Is Assigned Developer: {isAssignedDeveloper ? "true" : "false"}
-						</p>
-						<p>Can Update Progress: {canUpdateProgress ? "true" : "false"}</p>
-						<p>Can Have Progress: {canHaveProgress ? "true" : "false"}</p>
-						<p>Parent Loading: {parentLoading ? "true" : "false"}</p>
-					</div>
+			{feedback && (
+				<div
+					className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm font-medium ${
+						feedback.type === "success"
+							? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+							: "bg-red-50 text-red-800 border border-red-200"
+					}`}
+				>
+					{feedback.type === "success" ? (
+						<CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+					) : (
+						<Loader2 className="w-4 h-4 text-red-600 flex-shrink-0" />
+					)}
+					<span>{feedback.message}</span>
 				</div>
 			)}
 
@@ -292,7 +253,7 @@ export default function ProgressTracker({
 									}
 									className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
 									style={{
-										background: `linear-gradient(to right, #2563eb 0%, #2563eb ${formData.progress_percentage}%, #e5e7eb ${formData.progress_percentage}%, #e5e7eb 100%)`,
+										background: `linear-gradient(to right, #0284c7 0%, #0284c7 ${formData.progress_percentage}%, #e2e8f0 ${formData.progress_percentage}%, #e2e8f0 100%)`,
 									}}
 								/>
 								<input
@@ -307,9 +268,9 @@ export default function ProgressTracker({
 												parseInt(e.target.value) || currentProgress,
 										})
 									}
-									className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm"
+									className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none"
 								/>
-								<span className="text-sm text-gray-600">%</span>
+								<span className="text-sm text-gray-600 font-medium">%</span>
 							</div>
 							<div className="text-xs text-gray-500">
 								Progress tidak bisa dikurangi dari nilai saat ini (
@@ -331,7 +292,7 @@ export default function ProgressTracker({
 								})
 							}
 							rows={3}
-							className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
 							placeholder="Jelaskan progress yang telah dicapai..."
 							required
 						/>
@@ -340,7 +301,7 @@ export default function ProgressTracker({
 					<button
 						type="submit"
 						disabled={updating}
-						className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+						className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium shadow-sm"
 					>
 						{updating ? (
 							<>
@@ -367,12 +328,12 @@ export default function ProgressTracker({
 						{progressData.history.map((progress, index) => (
 							<div
 								key={index}
-								className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg"
+								className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100"
 							>
-								<CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+								<CheckCircle className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
 								<div className="flex-1">
 									<div className="flex items-center justify-between mb-1">
-										<span className="text-sm font-medium text-gray-900">
+										<span className="text-sm font-semibold text-gray-900">
 											{progress.progress_percentage}%
 										</span>
 										<span className="text-xs text-gray-500">
@@ -397,12 +358,12 @@ export default function ProgressTracker({
 										</div>
 									)}
 									{progress.progress_description && (
-										<p className="text-sm text-gray-600">
+										<p className="text-sm text-gray-600 leading-relaxed">
 											{progress.progress_description}
 										</p>
 									)}
 									{progress.milestone && (
-										<span className="inline-block mt-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+										<span className="inline-block mt-1 px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 text-xs rounded-full font-medium">
 											{progress.milestone}
 										</span>
 									)}
@@ -419,7 +380,7 @@ export default function ProgressTracker({
 					height: 20px;
 					width: 20px;
 					border-radius: 50%;
-					background: #2563eb;
+					background: #0284c7;
 					cursor: pointer;
 					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 				}
@@ -428,7 +389,7 @@ export default function ProgressTracker({
 					height: 20px;
 					width: 20px;
 					border-radius: 50%;
-					background: #2563eb;
+					background: #0284c7;
 					cursor: pointer;
 					border: none;
 					box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);

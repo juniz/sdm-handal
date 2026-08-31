@@ -12,27 +12,28 @@ import {
 	Building2,
 } from "lucide-react";
 import moment from "moment";
+import { formatStatusIndonesian } from "@/lib/development-helper";
 
 export default function RequestCard({ request, onView, onEdit, onDelete }) {
 	const getStatusBadge = (status, statusColor) => {
 		const colors = {
-			"#28a745": "bg-green-100 text-green-800 border-green-200",
-			"#dc3545": "bg-red-100 text-red-800 border-red-200",
-			"#ffc107": "bg-yellow-100 text-yellow-800 border-yellow-200",
-			"#17a2b8": "bg-blue-100 text-blue-800 border-blue-200",
-			"#fd7e14": "bg-orange-100 text-orange-800 border-orange-200",
-			"#6c757d": "bg-gray-100 text-gray-800 border-gray-200",
-			"#007bff": "bg-blue-100 text-blue-800 border-blue-200",
-			"#6f42c1": "bg-purple-100 text-purple-800 border-purple-200",
+			"#28a745": "bg-emerald-50 text-emerald-700 border-emerald-200",
+			"#dc3545": "bg-red-50 text-red-700 border-red-200",
+			"#ffc107": "bg-amber-50 text-amber-700 border-amber-200",
+			"#17a2b8": "bg-sky-50 text-sky-700 border-sky-200",
+			"#fd7e14": "bg-orange-50 text-orange-700 border-orange-200",
+			"#6c757d": "bg-slate-50 text-slate-700 border-slate-200",
+			"#007bff": "bg-sky-50 text-sky-700 border-sky-200",
+			"#6f42c1": "bg-indigo-50 text-indigo-700 border-indigo-200",
 		};
 
 		return (
 			<span
 				className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-					colors[statusColor] || colors["#6c757d"]
+					colors[statusColor] || "bg-slate-50 text-slate-700 border-slate-200"
 				}`}
 			>
-				{status}
+				{formatStatusIndonesian(status)}
 			</span>
 		);
 	};
@@ -170,7 +171,7 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 	};
 
 	return (
-		<div className="bg-white rounded-lg border border-gray-200 p-3 sm:p-4 hover:shadow-md transition-shadow overflow-hidden">
+		<div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 overflow-hidden">
 			{/* Header */}
 			<div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 sm:gap-4">
 				{/* Main Content */}
@@ -195,7 +196,7 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 
 							{/* Request Info */}
 							<div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1 sm:gap-2 mb-2 text-xs sm:text-sm text-gray-600">
-								<span className="font-mono font-medium text-blue-600 break-all">
+								<span className="font-mono font-medium text-sky-700 break-all">
 									{request.no_request}
 								</span>
 								<span className="hidden sm:inline">•</span>
@@ -298,20 +299,20 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 					<div className="flex items-center gap-2 w-full sm:w-auto lg:w-auto order-1 sm:order-2 lg:order-2">
 						<button
 							onClick={() => onView(request)}
-							className="flex items-center justify-center gap-1 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-1 sm:flex-initial"
+							className="flex items-center justify-center gap-1 px-3 py-1.5 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg transition-colors flex-1 sm:flex-initial text-sm font-medium"
 							title="Lihat Detail"
 						>
-							<Eye className="w-4 h-4" />
-							<span className="text-sm">Detail</span>
+							<Eye className="w-4 h-4 text-sky-600" />
+							<span>Detail</span>
 						</button>
 
 						{onEdit && (
 							<button
 								onClick={() => onEdit(request)}
-								className="flex items-center justify-center gap-1 px-3 py-1.5 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+								className="flex items-center justify-center gap-1 px-3 py-1.5 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors"
 								title="Edit Pengajuan"
 							>
-								<Edit className="w-4 h-4" />
+								<Edit className="w-4 h-4 text-slate-600" />
 								<span className="text-sm hidden sm:inline">Edit</span>
 							</button>
 						)}
@@ -319,10 +320,10 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 						{onDelete && (
 							<button
 								onClick={() => onDelete(request)}
-								className="flex items-center justify-center gap-1 px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+								className="flex items-center justify-center gap-1 px-3 py-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
 								title="Hapus Pengajuan"
 							>
-								<Trash2 className="w-4 h-4" />
+								<Trash2 className="w-4 h-4 text-red-600" />
 								<span className="text-sm hidden sm:inline">Hapus</span>
 							</button>
 						)}
@@ -347,9 +348,9 @@ export default function RequestCard({ request, onView, onEdit, onDelete }) {
 							{request.progress_percentage || 0}%
 						</span>
 					</div>
-					<div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2">
+					<div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2">
 						<div
-							className="bg-blue-600 h-1.5 sm:h-2 rounded-full transition-all"
+							className="bg-sky-600 h-1.5 sm:h-2 rounded-full transition-all"
 							style={{ width: `${request.progress_percentage || 0}%` }}
 						/>
 					</div>

@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import moment from "moment";
 import { getClientToken } from "@/lib/client-auth";
+import { formatStatusIndonesian } from "@/lib/development-helper";
 import {
 	ApprovalPanel,
 	AssignmentPanel,
@@ -48,6 +49,12 @@ export default function DevelopmentRequestDetail() {
 	const [newNote, setNewNote] = useState("");
 	const [isAddingNote, setIsAddingNote] = useState(false);
 	const [user, setUser] = useState(null);
+	const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+	const showToast = (message, type = "success") => {
+		setToast({ show: true, message, type });
+		setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3500);
+	};
 
 	useEffect(() => {
 		fetchRequestDetail();
@@ -93,13 +100,13 @@ export default function DevelopmentRequestDetail() {
 			const result = await response.json();
 
 			if (!response.ok) {
-				throw new Error(result.error || "Gagal mengambil data pengajuan");
+				throw new Error(result.error || "Gagal mengambil detail pengajuan");
 			}
 
 			setRequest(result.data);
-			setNotes(result.data.notes || []);
-			setAttachments(result.data.attachments || []);
-			setStatusHistory(result.data.statusHistory || []);
+			setNotes(result.data?.notes || []);
+			setAttachments(result.data?.attachments || []);
+			setStatusHistory(result.data?.statusHistory || []);
 			setError(null);
 		} catch (err) {
 			console.error("Error fetching request detail:", err);
@@ -110,7 +117,7 @@ export default function DevelopmentRequestDetail() {
 	};
 
 	const handleAddNote = async () => {
-		if (!newNote.trim()) return;
+		if (!newNote.trim() || isAddingNote) return;
 
 		setIsAddingNote(true);
 		try {
@@ -142,9 +149,10 @@ export default function DevelopmentRequestDetail() {
 
 			setNotes((prev) => [result.data, ...prev]);
 			setNewNote("");
+			showToast("Komentar berhasil ditambahkan", "success");
 		} catch (err) {
 			console.error("Error adding note:", err);
-			alert("Gagal menambahkan komentar: " + err.message);
+			showToast("Gagal menambahkan komentar: " + err.message, "error");
 		} finally {
 			setIsAddingNote(false);
 		}
@@ -182,10 +190,10 @@ export default function DevelopmentRequestDetail() {
 			await fetchRequestDetail();
 
 			// Show success message
-			alert(result.message);
+			showToast(result.message || "Approval berhasil diproses", "success");
 		} catch (err) {
 			console.error("Error in approval action:", err);
-			alert("Gagal memproses approval: " + err.message);
+			showToast("Gagal memproses approval: " + err.message, "error");
 			throw err; // Re-throw to let ApprovalPanel handle the error state
 		}
 	};
@@ -219,10 +227,10 @@ export default function DevelopmentRequestDetail() {
 			await fetchRequestDetail();
 
 			// Show success message
-			alert(result.message);
+			showToast(result.message || "Assignment berhasil disimpan", "success");
 		} catch (err) {
 			console.error("Error in assignment action:", err);
-			alert("Gagal memproses assignment: " + err.message);
+			showToast("Gagal memproses assignment: " + err.message, "error");
 			throw err; // Re-throw to let AssignmentPanel handle the error state
 		}
 	};
@@ -248,23 +256,23 @@ export default function DevelopmentRequestDetail() {
 
 	const getStatusBadge = (status, statusColor) => {
 		const colors = {
-			"#28a745": "bg-green-100 text-green-800 border-green-200",
-			"#dc3545": "bg-red-100 text-red-800 border-red-200",
-			"#ffc107": "bg-yellow-100 text-yellow-800 border-yellow-200",
-			"#17a2b8": "bg-blue-100 text-blue-800 border-blue-200",
-			"#fd7e14": "bg-orange-100 text-orange-800 border-orange-200",
-			"#6c757d": "bg-gray-100 text-gray-800 border-gray-200",
-			"#007bff": "bg-blue-100 text-blue-800 border-blue-200",
-			"#6f42c1": "bg-purple-100 text-purple-800 border-purple-200",
+			"#28a745": "bg-emerald-50 text-emerald-700 border-emerald-200",
+			"#dc3545": "bg-red-50 text-red-700 border-red-200",
+			"#ffc107": "bg-amber-50 text-amber-700 border-amber-200",
+			"#17a2b8": "bg-sky-50 text-sky-700 border-sky-200",
+			"#fd7e14": "bg-orange-50 text-orange-700 border-orange-200",
+			"#6c757d": "bg-slate-50 text-slate-700 border-slate-200",
+			"#007bff": "bg-sky-50 text-sky-700 border-sky-200",
+			"#6f42c1": "bg-indigo-50 text-indigo-700 border-indigo-200",
 		};
 
 		return (
 			<span
 				className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
-					colors[statusColor] || colors["#6c757d"]
+					colors[statusColor] || "bg-slate-50 text-slate-700 border-slate-200"
 				}`}
 			>
-				{status}
+				{formatStatusIndonesian(status)}
 			</span>
 		);
 	};
@@ -360,11 +368,69 @@ export default function DevelopmentRequestDetail() {
 
 	if (isLoading) {
 		return (
-			<div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-				<div className="flex justify-center items-center h-64">
-					<div className="text-center">
-						<RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-						<p className="text-gray-600">Memuat detail pengajuan...</p>
+			<div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-6">
+				{/* Header Shimmer */}
+				<div className="flex items-center gap-4 mb-6">
+					<div className="h-5 w-20 bg-slate-100 rounded animate-pulse" />
+					<div className="flex-1 space-y-2">
+						<div className="h-7 w-72 bg-slate-200 rounded animate-pulse" />
+						<div className="h-4 w-32 bg-slate-100 rounded animate-pulse" />
+					</div>
+					<div className="flex items-center gap-3">
+						<div className="h-9 w-20 bg-slate-100 rounded-lg animate-pulse" />
+						<div className="h-9 w-24 bg-slate-100 rounded-lg animate-pulse" />
+					</div>
+				</div>
+
+				{/* Status and Metadata Card Shimmer */}
+				<div className="bg-white rounded-lg border border-slate-200 p-6 space-y-4 shadow-sm">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+						<div className="flex items-center gap-3">
+							<div className="h-6 w-24 bg-slate-200 rounded-full animate-pulse" />
+							<div className="h-6 w-20 bg-slate-100 rounded-full animate-pulse" />
+						</div>
+						<div className="flex items-center gap-4">
+							<div className="h-4 w-28 bg-slate-100 rounded animate-pulse" />
+							<div className="h-4 w-28 bg-slate-100 rounded animate-pulse" />
+							<div className="h-4 w-36 bg-slate-100 rounded animate-pulse" />
+						</div>
+					</div>
+
+					<div className="pt-4 border-t border-slate-100 space-y-2">
+						<div className="flex justify-between">
+							<div className="h-4 w-36 bg-slate-100 rounded animate-pulse" />
+							<div className="h-4 w-12 bg-slate-200 rounded animate-pulse" />
+						</div>
+						<div className="h-3 w-full bg-slate-100 rounded-full animate-pulse" />
+					</div>
+				</div>
+
+				{/* Tabs & Content Shimmer */}
+				<div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+					<div className="border-b border-slate-200 px-6 py-4 flex gap-8">
+						<div className="h-5 w-20 bg-slate-200 rounded animate-pulse" />
+						<div className="h-5 w-24 bg-slate-100 rounded animate-pulse" />
+						<div className="h-5 w-24 bg-slate-100 rounded animate-pulse" />
+						<div className="h-5 w-24 bg-slate-100 rounded animate-pulse" />
+					</div>
+					<div className="p-6 space-y-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className="space-y-3">
+								<div className="h-5 w-40 bg-slate-200 rounded animate-pulse" />
+								<div className="h-4 w-56 bg-slate-100 rounded animate-pulse" />
+								<div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
+							</div>
+							<div className="space-y-3">
+								<div className="h-5 w-40 bg-slate-200 rounded animate-pulse" />
+								<div className="h-4 w-56 bg-slate-100 rounded animate-pulse" />
+								<div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
+							</div>
+						</div>
+						<div className="space-y-2 pt-4 border-t border-slate-100">
+							<div className="h-5 w-32 bg-slate-200 rounded animate-pulse" />
+							<div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+							<div className="h-4 w-5/6 bg-slate-100 rounded animate-pulse" />
+						</div>
 					</div>
 				</div>
 			</div>
@@ -379,10 +445,10 @@ export default function DevelopmentRequestDetail() {
 					<h3 className="text-lg font-semibold text-gray-900 mb-2">
 						Gagal Memuat Data
 					</h3>
-					<p className="text-gray-600 mb-4">{error}</p>
+					<p className="text-gray-600 mb-4 text-sm">{error}</p>
 					<button
 						onClick={fetchRequestDetail}
-						className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+						className="bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium shadow-sm"
 					>
 						Coba Lagi
 					</button>
@@ -430,7 +496,7 @@ export default function DevelopmentRequestDetail() {
 							onClick={() =>
 								router.push(`/dashboard/development/${params.id}/edit`)
 							}
-							className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+							className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors text-sm font-medium shadow-sm"
 						>
 							<Edit className="w-4 h-4" />
 							<span>Edit</span>
@@ -438,7 +504,7 @@ export default function DevelopmentRequestDetail() {
 					)}
 					<button
 						onClick={fetchRequestDetail}
-						className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+						className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
 					>
 						<RefreshCw className="w-4 h-4" />
 						<span>Refresh</span>
@@ -447,7 +513,7 @@ export default function DevelopmentRequestDetail() {
 			</div>
 
 			{/* Status and Priority */}
-			<div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+			<div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 shadow-sm">
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					<div className="flex items-center gap-4">
 						{getStatusBadge(request.current_status, request.status_color)}
@@ -486,13 +552,13 @@ export default function DevelopmentRequestDetail() {
 					<div className="mt-4 pt-4 border-t border-gray-200">
 						<div className="flex items-center justify-between text-sm text-gray-600 mb-2">
 							<span>Progress Pengembangan</span>
-							<span className="font-semibold text-blue-600">
+							<span className="font-semibold text-sky-700">
 								{request.progress_percentage || 0}%
 							</span>
 						</div>
-						<div className="w-full bg-gray-200 rounded-full h-3">
+						<div className="w-full bg-slate-100 rounded-full h-3">
 							<div
-								className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+								className="bg-sky-600 h-3 rounded-full transition-all duration-300"
 								style={{ width: `${request.progress_percentage || 0}%` }}
 							/>
 						</div>
@@ -505,29 +571,32 @@ export default function DevelopmentRequestDetail() {
 				)}
 			</div>
 
-			{/* Approval Panel - Only for IT Users */}
-			<ApprovalPanel
-				request={request}
-				user={user}
-				onApprovalAction={handleApprovalAction}
-				isLoading={isLoading}
-			/>
+			{/* Workflow Action Panels */}
+			<div className="space-y-6 mb-6">
+				{/* Approval Panel - Only for IT Reviewers */}
+				<ApprovalPanel
+					request={request}
+					user={user}
+					onApprovalAction={handleApprovalAction}
+					isLoading={isLoading}
+				/>
 
-			{/* Assignment Panel - Only for IT Users */}
-			<AssignmentPanel
-				request={request}
-				user={user}
-				onAssignmentAction={handleAssignmentAction}
-				isLoading={isLoading}
-			/>
+				{/* Assignment Panel - Only for IT Leads */}
+				<AssignmentPanel
+					request={request}
+					user={user}
+					onAssignmentAction={handleAssignmentAction}
+					isLoading={isLoading}
+				/>
 
-			{/* Progress Tracker - For assigned developer and IT users */}
-			<ProgressTracker
-				request={request}
-				user={user}
-				onProgressUpdate={handleProgressUpdate}
-				isLoading={isLoading}
-			/>
+				{/* Progress Tracker - For Assigned Developer & IT Team */}
+				<ProgressTracker
+					request={request}
+					user={user}
+					onProgressUpdate={handleProgressUpdate}
+					isLoading={isLoading}
+				/>
+			</div>
 
 			{/* Tabs */}
 			<div className="bg-white rounded-lg border border-gray-200 mb-6">
@@ -559,7 +628,7 @@ export default function DevelopmentRequestDetail() {
 								onClick={() => setActiveTab(tab.id)}
 								className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
 									activeTab === tab.id
-										? "border-blue-500 text-blue-600"
+										? "border-sky-600 text-sky-600"
 										: "border-transparent text-gray-500 hover:text-gray-700"
 								}`}
 							>
@@ -716,13 +785,13 @@ export default function DevelopmentRequestDetail() {
 										onChange={(e) => setNewNote(e.target.value)}
 										placeholder="Tulis komentar Anda..."
 										rows={4}
-										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+										className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
 									/>
 									<div className="flex justify-end">
 										<button
 											onClick={handleAddNote}
 											disabled={!newNote.trim() || isAddingNote}
-											className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+											className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium shadow-sm"
 										>
 											{isAddingNote ? (
 												<>
@@ -745,31 +814,31 @@ export default function DevelopmentRequestDetail() {
 								{notes.length === 0 ? (
 									<div className="text-center py-8">
 										<MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-										<p className="text-gray-500">Belum ada komentar</p>
+										<p className="text-gray-500 text-sm">Belum ada komentar</p>
 									</div>
 								) : (
 									notes.map((note) => (
 										<div
 											key={note.note_id}
-											className="bg-white border border-gray-200 rounded-lg p-4"
+											className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
 										>
 											<div className="flex items-start gap-3">
-												<div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-													<User className="w-4 h-4 text-blue-600" />
+												<div className="flex-shrink-0 w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
+													<User className="w-4 h-4 text-sky-600" />
 												</div>
 												<div className="flex-1">
 													<div className="flex items-center gap-2 mb-2">
-														<span className="font-medium text-gray-900">
+														<span className="font-medium text-gray-900 text-sm">
 															{note.created_by_name}
 														</span>
-														<span className="text-sm text-gray-500">
+														<span className="text-xs text-gray-500">
 															{formatDate(note.created_date)}
 														</span>
-														<span className="text-sm text-gray-400">
+														<span className="text-xs text-gray-400">
 															{getTimeAgo(note.created_date)}
 														</span>
 													</div>
-													<p className="text-gray-700 whitespace-pre-wrap">
+													<p className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">
 														{note.note}
 													</p>
 												</div>
@@ -787,7 +856,7 @@ export default function DevelopmentRequestDetail() {
 							{attachments.length === 0 ? (
 								<div className="text-center py-8">
 									<Paperclip className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-									<p className="text-gray-500">Belum ada lampiran</p>
+									<p className="text-gray-500 text-sm">Belum ada lampiran</p>
 								</div>
 							) : (
 								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -797,8 +866,8 @@ export default function DevelopmentRequestDetail() {
 											className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
 										>
 											<div className="flex items-center gap-3">
-												<div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-													<FileText className="w-5 h-5 text-gray-600" />
+												<div className="flex-shrink-0 w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+													<FileText className="w-5 h-5 text-slate-600" />
 												</div>
 												<div className="flex-1 min-w-0">
 													<p className="text-sm font-medium text-gray-900 truncate">
@@ -830,7 +899,7 @@ export default function DevelopmentRequestDetail() {
 							{statusHistory.length === 0 ? (
 								<div className="text-center py-8">
 									<Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-									<p className="text-gray-500">Belum ada riwayat perubahan</p>
+									<p className="text-gray-500 text-sm">Belum ada riwayat perubahan</p>
 								</div>
 							) : (
 								<div className="space-y-4">
@@ -839,26 +908,26 @@ export default function DevelopmentRequestDetail() {
 											key={history.history_id}
 											className="flex items-start gap-4 pb-4 border-b border-gray-200 last:border-b-0"
 										>
-											<div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-												<GitBranch className="w-4 h-4 text-blue-600" />
+											<div className="flex-shrink-0 w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
+												<GitBranch className="w-4 h-4 text-sky-600" />
 											</div>
 											<div className="flex-1">
 												<div className="flex items-center gap-2 mb-1">
-													<span className="font-medium text-gray-900">
+													<span className="font-medium text-gray-900 text-sm">
 														{history.changed_by_name}
 													</span>
-													<span className="text-sm text-gray-500">
+													<span className="text-xs text-gray-500">
 														mengubah status dari{" "}
-														<span className="font-medium">
+														<span className="font-medium text-gray-700">
 															{history.old_status}
 														</span>{" "}
 														ke{" "}
-														<span className="font-medium">
+														<span className="font-medium text-sky-700">
 															{history.new_status}
 														</span>
 													</span>
 												</div>
-												<p className="text-sm text-gray-500">
+												<p className="text-xs text-gray-500">
 													{formatDate(history.change_date)} (
 													{getTimeAgo(history.change_date)})
 												</p>
@@ -876,6 +945,30 @@ export default function DevelopmentRequestDetail() {
 					)}
 				</div>
 			</div>
+
+			{/* Toast Notification */}
+			{toast.show && (
+				<div
+					className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 text-white z-50 text-sm font-medium transition-all ${
+						toast.type === "success" ? "bg-emerald-600" : "bg-red-600"
+					}`}
+				>
+					{toast.type === "success" ? (
+						<CheckCircle className="w-4 h-4 flex-shrink-0" />
+					) : (
+						<AlertTriangle className="w-4 h-4 flex-shrink-0" />
+					)}
+					<span>{toast.message}</span>
+					<button
+						onClick={() =>
+							setToast({ show: false, message: "", type: "success" })
+						}
+						className="ml-2 hover:opacity-80 p-0.5"
+					>
+						<X className="w-4 h-4" />
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }

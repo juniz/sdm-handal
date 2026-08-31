@@ -65,9 +65,11 @@ export default function LogViewer({ logs = [], isConnected = false, isPaused = f
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
-                className={`px-2 py-0.5 text-[10px] font-mono rounded capitalize transition-colors ${
-                  selectedType === type ? "bg-sky-600 text-white font-bold" : "text-gray-400 hover:text-gray-200"
-                }`}
+                className={
+                  selectedType === type
+                    ? "px-2 py-0.5 text-[10px] font-mono rounded capitalize transition-colors bg-sky-600 text-white font-bold"
+                    : "px-2 py-0.5 text-[10px] font-mono rounded capitalize transition-colors text-slate-400 hover:text-slate-200"
+                }
               >
                 {type}
               </button>

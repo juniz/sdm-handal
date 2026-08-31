@@ -61,17 +61,45 @@ export const canDeleteRequest = (request, user) => {
  */
 export const getStatusBadgeClass = (statusColor) => {
 	const colors = {
-		"#28a745": "bg-green-100 text-green-800 border-green-200",
-		"#dc3545": "bg-red-100 text-red-800 border-red-200",
-		"#ffc107": "bg-yellow-100 text-yellow-800 border-yellow-200",
-		"#17a2b8": "bg-blue-100 text-blue-800 border-blue-200",
-		"#fd7e14": "bg-orange-100 text-orange-800 border-orange-200",
-		"#6c757d": "bg-gray-100 text-gray-800 border-gray-200",
-		"#007bff": "bg-blue-100 text-blue-800 border-blue-200",
-		"#6f42c1": "bg-purple-100 text-purple-800 border-purple-200",
+		"#28a745": "bg-emerald-50 text-emerald-700 border-emerald-200",
+		"#dc3545": "bg-red-50 text-red-700 border-red-200",
+		"#ffc107": "bg-amber-50 text-amber-700 border-amber-200",
+		"#17a2b8": "bg-sky-50 text-sky-700 border-sky-200",
+		"#fd7e14": "bg-orange-50 text-orange-700 border-orange-200",
+		"#6c757d": "bg-slate-50 text-slate-700 border-slate-200",
+		"#007bff": "bg-sky-50 text-sky-700 border-sky-200",
+		"#6f42c1": "bg-indigo-50 text-indigo-700 border-indigo-200",
 	};
 
-	return colors[statusColor] || colors["#6c757d"];
+	return colors[statusColor] || "bg-slate-50 text-slate-700 border-slate-200";
+};
+
+/**
+ * Format raw status key to localized Indonesian label
+ * @param {string} status - Raw status string
+ * @returns {string} - Localized Indonesian status label
+ */
+export const formatStatusIndonesian = (status) => {
+	if (!status) return "-";
+	const mapping = {
+		Draft: "Draf",
+		Submitted: "Diajukan",
+		"Under Review": "Sedang Ditinjau",
+		"Need Info": "Butuh Informasi",
+		Approved: "Disetujui",
+		Rejected: "Ditolak",
+		Assigned: "Ditugaskan",
+		"In Development": "Sedang Dikerjakan",
+		"Development Complete": "Selesai Dikerjakan",
+		"In Testing": "Sedang Diuji",
+		"Testing Complete": "Selesai Diuji",
+		"In Deployment": "Dalam Deployment",
+		UAT: "Uji Pengguna (UAT)",
+		Completed: "Selesai",
+		Overdue: "Terlambat",
+	};
+
+	return mapping[status] || status;
 };
 
 /**
