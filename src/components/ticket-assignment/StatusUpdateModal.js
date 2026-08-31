@@ -12,35 +12,57 @@ const StatusUpdateModal = ({
 	const [selectedStatus, setSelectedStatus] = useState("");
 	const [notes, setNotes] = useState("");
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [validationError, setValidationError] = useState("");
 
-	// Status yang bisa dipilih oleh IT
 	const availableStatuses = [
-		{ value: "In Progress", label: "In Progress", color: "yellow" },
-		{ value: "On Hold", label: "On Hold", color: "orange" },
-		{ value: "Resolved", label: "Resolved", color: "green" },
+		{
+			value: "In Progress",
+			label: "In Progress",
+			description: "Sedang dikerjakan oleh teknisi",
+			style: "text-amber-700 bg-amber-50 border-amber-200",
+		},
+		{
+			value: "On Hold",
+			label: "On Hold",
+			description: "Tertunda menunggu suku cadang/pihak luar",
+			style: "text-orange-700 bg-orange-50 border-orange-200",
+		},
+		{
+			value: "Resolved",
+			label: "Resolved",
+			description: "Perbaikan selesai, wajib isi catatan tindakan",
+			style: "text-emerald-700 bg-emerald-50 border-emerald-200",
+		},
 	];
 
 	useEffect(() => {
 		if (showModal && ticket) {
 			setSelectedStatus("");
 			setNotes("");
+			setValidationError("");
 		}
 	}, [showModal, ticket]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		setValidationError("");
 
 		if (!selectedStatus) {
-			showToast("Pilih status terlebih dahulu", "error");
+			setValidationError("Pilih status baru terlebih dahulu");
+			return;
+		}
+
+		if (selectedStatus === "Resolved" && !notes.trim()) {
+			setValidationError("Catatan tindakan wajib diisi saat status Resolved untuk audit mutu SIMRS");
 			return;
 		}
 
 		setIsSubmitting(true);
 		try {
-			await onUpdateStatus(ticket.ticket_id, selectedStatus, notes);
+			await onUpdateStatus(ticket.ticket_id, selectedStatus, notes.trim());
 			onClose();
 		} catch (error) {
-			// Error handling sudah dilakukan di parent component
+			// Handled by parent toast
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -50,21 +72,26 @@ const StatusUpdateModal = ({
 
 	return (
 		<AnimatePresence>
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+			<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
 				<motion.div
-					initial={{ opacity: 0, scale: 0.95 }}
+					initial={{ opacity: 0, scale: 0.96 }}
 					animate={{ opacity: 1, scale: 1 }}
-					exit={{ opacity: 0, scale: 0.95 }}
-					className="bg-white rounded-lg w-full max-w-md max-h-[90vh] overflow-hidden"
+					exit={{ opacity: 0, scale: 0.96 }}
+					className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden border border-slate-200 flex flex-col"
 				>
 					{/* Header */}
-					<div className="flex items-center justify-between p-4 sm:p-6 border-b">
-						<h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-							Update Status Ticket
-						</h3>
+					<div className="flex items-center justify-between p-5 border-b border-slate-100">
+						<div>
+							<h3 className="text-base sm:text-lg font-semibold text-slate-900">
+								Update Status Ticket
+							</h3>
+							<p className="text-xs text-slate-500 mt-0.5">
+								Pembaruan siklus perbaikan operasional IT
+							</p>
+						</div>
 						<button
 							onClick={onClose}
-							className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+							className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
 							disabled={isSubmitting}
 						>
 							<X className="w-5 h-5" />
@@ -72,119 +99,131 @@ const StatusUpdateModal = ({
 					</div>
 
 					{/* Content */}
-					<div className="p-4 sm:p-6 max-h-[calc(90vh-140px)] overflow-y-auto">
+					<div className="p-5 max-h-[calc(90vh-140px)] overflow-y-auto space-y-4">
 						{ticket && (
 							<>
-								{/* Ticket Info */}
-								<div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
-									<h4 className="font-medium text-gray-900 mb-1 text-sm sm:text-base">
-										{ticket.no_ticket || `#${ticket.ticket_id}`}
-									</h4>
-									<p className="text-sm text-gray-600 line-clamp-2">
+								{/* Ticket Info Card */}
+								<div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg">
+									<div className="flex items-center justify-between gap-2 mb-1">
+										<span className="font-semibold text-xs text-slate-800">
+											{ticket.no_ticket || `#${ticket.ticket_id}`}
+										</span>
+										<span className="text-xs font-medium px-2 py-0.5 rounded bg-white text-slate-700 border border-slate-200">
+											Status: {ticket.current_status}
+										</span>
+									</div>
+									<p className="text-xs text-slate-600 line-clamp-2">
 										{ticket.title}
 									</p>
-									<div className="mt-2 text-xs sm:text-sm text-gray-500">
-										Status saat ini:{" "}
-										<span className="font-medium">{ticket.current_status}</span>
-									</div>
 								</div>
 
 								{/* Form */}
-								<form
-									onSubmit={handleSubmit}
-									className="space-y-4 sm:space-y-6"
-								>
+								<form onSubmit={handleSubmit} className="space-y-4">
 									{/* Status Selection */}
 									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-3">
-											Status Baru <span className="text-red-500">*</span>
+										<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-2">
+											Status Baru <span className="text-rose-500">*</span>
 										</label>
-										<div className="grid grid-cols-1 gap-2 sm:gap-3">
-											{availableStatuses.map((status) => (
-												<label
-													key={status.value}
-													className={`flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors ${
-														selectedStatus === status.value
-															? "border-blue-500 bg-blue-50"
-															: "border-gray-200 hover:bg-gray-50"
-													}`}
-												>
-													<input
-														type="radio"
-														value={status.value}
-														checked={selectedStatus === status.value}
-														onChange={(e) => setSelectedStatus(e.target.value)}
-														className="sr-only"
-													/>
-													<div
-														className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full mr-3 ${
-															status.color === "yellow"
-																? "bg-yellow-400"
-																: status.color === "orange"
-																? "bg-orange-400"
-																: status.color === "green"
-																? "bg-green-400"
-																: "bg-gray-400"
+										<div className="space-y-2">
+											{availableStatuses.map((status) => {
+												const isSelected = selectedStatus === status.value;
+												return (
+													<label
+														key={status.value}
+														className={`flex items-start p-3 border rounded-lg cursor-pointer transition-all ${
+															isSelected
+																? "border-sky-500 bg-sky-50/60 ring-1 ring-sky-500"
+																: "border-slate-200 hover:bg-slate-50/80"
 														}`}
-													></div>
-													<span className="font-medium text-sm sm:text-base">
-														{status.label}
-													</span>
-													{selectedStatus === status.value && (
-														<CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500 ml-auto" />
-													)}
-												</label>
-											))}
+													>
+														<input
+															type="radio"
+															value={status.value}
+															checked={isSelected}
+															onChange={(e) => {
+																setSelectedStatus(e.target.value);
+																setValidationError("");
+															}}
+															className="sr-only"
+														/>
+														<div className="flex-1">
+															<div className="flex items-center justify-between">
+																<span className="font-medium text-sm text-slate-900">
+																	{status.label}
+																</span>
+																{isSelected && (
+																	<CheckCircle className="w-4 h-4 text-sky-600" />
+																)}
+															</div>
+															<p className="text-xs text-slate-500 mt-0.5">
+																{status.description}
+															</p>
+														</div>
+													</label>
+												);
+											})}
 										</div>
 									</div>
 
 									{/* Notes */}
 									<div>
-										<label className="block text-sm font-medium text-gray-700 mb-2">
-											Catatan (Opsional)
+										<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wide mb-1.5">
+											Catatan Perbaikan / Tindakan
+											{selectedStatus === "Resolved" ? (
+												<span className="text-rose-500 ml-1 font-bold">(Wajib Diisi)</span>
+											) : (
+												<span className="text-slate-400 font-normal ml-1">(Opsional)</span>
+											)}
 										</label>
 										<textarea
 											value={notes}
-											onChange={(e) => setNotes(e.target.value)}
-											className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+											onChange={(e) => {
+												setNotes(e.target.value);
+												setValidationError("");
+											}}
+											className={`w-full px-3 py-2 border rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 transition-colors ${
+												validationError && selectedStatus === "Resolved" && !notes.trim()
+													? "border-rose-300 focus:ring-rose-500 bg-rose-50/30"
+													: "border-slate-300 focus:ring-sky-500 focus:border-sky-500"
+											}`}
 											rows={3}
-											placeholder="Tambahkan catatan mengenai update status..."
+											placeholder={
+												selectedStatus === "Resolved"
+													? "Jelaskan langkah penyelesaian / tindakan perbaikan yang telah dilakukan..."
+													: "Tambahkan catatan penanganan atau kendala jika ada..."
+											}
 										/>
 									</div>
 
-									{/* Info Alert */}
-									<div className="flex items-start gap-2 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg">
-										<AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-										<div className="text-sm text-blue-800">
-											<p className="font-medium mb-1">Informasi:</p>
-											<ul className="text-xs sm:text-sm space-y-1">
-												<li>• In Progress: Ticket sedang dikerjakan</li>
-												<li>• On Hold: Ticket ditunda sementara</li>
-												<li>• Resolved: Masalah sudah diselesaikan</li>
-											</ul>
+									{/* Validation Error Message */}
+									{validationError && (
+										<div className="flex items-center gap-2 p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700">
+											<AlertCircle className="w-4 h-4 flex-shrink-0" />
+											<span>{validationError}</span>
 										</div>
-									</div>
+									)}
 								</form>
 							</>
 						)}
 					</div>
 
 					{/* Footer */}
-					<div className="flex gap-2 sm:gap-3 p-4 sm:p-6 border-t bg-gray-50">
+					<div className="flex gap-2.5 p-4 sm:p-5 border-t border-slate-100 bg-slate-50 mt-auto">
 						<button
 							type="button"
 							onClick={onClose}
-							className="flex-1 px-4 py-2 sm:py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+							className="flex-1 px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-100 transition-colors"
 							disabled={isSubmitting}
 						>
 							Batal
 						</button>
 						<button
+							type="button"
 							onClick={handleSubmit}
 							disabled={!selectedStatus || isSubmitting}
-							className="flex-1 px-4 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors text-sm sm:text-base"
+							className="flex-1 px-4 py-2 text-xs sm:text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 disabled:bg-slate-300 rounded-lg transition-colors shadow-sm"
 						>
-							{isSubmitting ? "Menyimpan..." : "Update Status"}
+							{isSubmitting ? "Menyimpan..." : "Simpan Status"}
 						</button>
 					</div>
 				</motion.div>

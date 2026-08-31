@@ -94,21 +94,21 @@ const TicketNotes = ({ ticketId }) => {
 	if (loading) {
 		return (
 			<div className="flex justify-center items-center py-8">
-				<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-				<span className="ml-2 text-gray-600">Memuat notes...</span>
+				<div className="animate-spin rounded-full h-6 w-6 border-2 border-sky-600 border-t-transparent"></div>
+				<span className="ml-2 text-xs text-slate-500 font-medium">Memuat catatan...</span>
 			</div>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="bg-red-50 border border-red-200 rounded-lg p-4">
+			<div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
 				<div className="flex items-center">
-					<div className="text-red-600">
+					<div className="text-rose-600">
 						<FileText className="w-5 h-5" />
 					</div>
 					<div className="ml-3">
-						<p className="text-sm text-red-700">{error}</p>
+						<p className="text-xs text-rose-700 font-medium">{error}</p>
 					</div>
 				</div>
 			</div>
@@ -117,9 +117,9 @@ const TicketNotes = ({ ticketId }) => {
 
 	if (notes.length === 0) {
 		return (
-			<div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-				<MessageSquare className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-				<p className="text-gray-600 text-sm">
+			<div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
+				<MessageSquare className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+				<p className="text-slate-600 text-xs">
 					Belum ada catatan untuk ticket ini
 				</p>
 			</div>
@@ -130,17 +130,17 @@ const TicketNotes = ({ ticketId }) => {
 		<div className="space-y-4">
 			{/* Notes Header */}
 			<div className="flex items-center justify-between">
-				<h4 className="font-semibold text-gray-900 flex items-center gap-2">
-					<MessageSquare className="w-4 h-4" />
+				<h4 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+					<MessageSquare className="w-4 h-4 text-slate-500" />
 					Catatan ({notes.length})
 				</h4>
 				{accessLevel === "owner" && (
-					<span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+					<span className="px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-200 text-xs rounded-md font-medium">
 						Pemilik Ticket
 					</span>
 				)}
 				{accessLevel === "it_staff" && (
-					<span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+					<span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs rounded-md font-medium">
 						Staff IT
 					</span>
 				)}
@@ -162,27 +162,18 @@ const TicketNotes = ({ ticketId }) => {
 							<div className="flex items-start justify-between mb-2">
 								<div className="flex items-center gap-2">
 									<TypeIcon className="w-4 h-4 flex-shrink-0" />
-									<div>
-										{/* <span className="text-sm font-medium">{typeLabel}</span> */}
-										<div className="flex items-center gap-2 text-xs opacity-75">
-											<User className="w-3 h-3" />
-											<span>{note.created_by_name || note.created_by}</span>
-										</div>
+									<div className="flex items-center gap-2 text-xs opacity-80">
+										<User className="w-3 h-3" />
+										<span>{note.created_by_name || note.created_by}</span>
 									</div>
 								</div>
 								<div className="text-xs opacity-75 text-right">
-									{/* <div className="flex items-center gap-1">
-										<Clock className="w-3 h-3" />
-										<span>{note.created_date}</span>
-									</div> */}
-									<div className="mt-1">
-										<span>{note.created_date_relative}</span>
-									</div>
+									<span>{note.created_date_relative}</span>
 								</div>
 							</div>
 
 							{/* Note Content */}
-							<div className="text-sm leading-relaxed">
+							<div className="text-xs sm:text-sm leading-relaxed">
 								<p className="whitespace-pre-wrap">{note.note}</p>
 							</div>
 						</div>

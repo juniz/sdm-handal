@@ -79,7 +79,7 @@ const CompletedTicketReport = ({ masterData, itEmployees, tickets, loading, filt
 			startY: 40,
 			theme: "grid",
 			styles: { fontSize: 8 },
-			headStyles: { fillColor: [59, 130, 246] }, // Blue-500
+			headStyles: { fillColor: [2, 132, 199] }, // Brand Cyan (#0284C7)
 		});
 
 		doc.save(`laporan_tiket_selesai_${moment().format("YYYYMMDD")}.pdf`);

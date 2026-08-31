@@ -189,7 +189,7 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 				columnWidth: "50%",
 			},
 		},
-		colors: ["#3b82f6"],
+		colors: ["#0284C7"],
 		dataLabels: {
 			enabled: true,
 			formatter: (val) => val + "%",
@@ -264,22 +264,22 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 						type="month"
 						value={monthValue}
 						onChange={handleMonthChange}
-						className="block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+						className="block w-full rounded-lg border-slate-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 text-xs sm:text-sm p-2 border bg-white"
 					/>
 				</div>
 			</div>
 
 			{/* Header Alert / Intro */}
-			<div className="rounded-xl bg-blue-50 border border-blue-100 p-4 flex gap-4">
+			<div className="rounded-xl bg-sky-50 border border-sky-100 p-4 flex gap-4">
 				<div className="flex-shrink-0 mt-0.5">
-					<Info className="h-5 w-5 text-blue-600" />
+					<Info className="h-5 w-5 text-sky-600" />
 				</div>
 				<div>
-					<h3 className="text-sm font-medium text-blue-900">
+					<h3 className="text-sm font-semibold text-sky-900">
 						Indikator Mutu Tambahan Unit SIMRS
 					</h3>
-					<p className="mt-1 text-sm text-blue-700 leading-relaxed text-justify">
-						Berdasarkan <strong>Peraturan Menteri Kesehatan (PMK) No. 30 Tahun 2022</strong>, indikator mutu unit SIMRS dapat dikategorikan sebagai <strong>Indikator Mutu Tambahan</strong> yang ditetapkan oleh fasilitas pelayanan kesehatan sesuai dengan kondisi dan kebutuhan. Meskipun SIMRS tidak termasuk dalam 13 Indikator Nasional Mutu (INM) Rumah Sakit, pengukurannya harus tetap mengikuti standar profil dan tahapan yang diatur dalam peraturan tersebut.
+					<p className="mt-1 text-xs sm:text-sm text-sky-800 leading-relaxed text-justify">
+						Berdasarkan <strong>Peraturan Menteri Kesehatan (PMK) No. 30 Tahun 2022</strong>, indikator mutu unit SIMRS dapat dikategorikan sebagai <strong>Indikator Mutu Tambahan</strong> yang ditetapkan oleh fasilitas pelayanan kesehatan sesuai dengan kondisi dan kebutuhan. Pengukurannya mengikuti standar profil profil N/D dan tahapan validasi yang diatur dalam regulasi tersebut.
 					</p>
 				</div>
 			</div>

@@ -5,6 +5,7 @@ import {
 	ChevronUp,
 	Search,
 	UserCheck,
+	RotateCcw,
 } from "lucide-react";
 
 const AssignmentFilterAccordion = ({
@@ -17,21 +18,62 @@ const AssignmentFilterAccordion = ({
 	itEmployees,
 	tickets,
 }) => {
+	// Count active filters
+	const activeFilterCount = [
+		filters.status,
+		filters.priority,
+		filters.category,
+		filters.assigned_to,
+		filters.search,
+	].filter(Boolean).length;
+
+	const handleResetFilters = (e) => {
+		e.stopPropagation();
+		setFilters({
+			status: "",
+			priority: "",
+			category: "",
+			assigned_to: "",
+			search: "",
+		});
+	};
+
 	return (
-		<div className="bg-white rounded-lg shadow-sm overflow-hidden">
+		<div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
 			<button
+				type="button"
 				onClick={() => setIsOpen(!isOpen)}
-				className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors"
+				className="w-full px-4 py-3.5 flex items-center justify-between bg-slate-50 hover:bg-slate-100/70 transition-colors"
 			>
-				<div className="flex items-center gap-2">
-					<Filter className="w-4 h-4 text-gray-500" />
-					<span className="font-medium text-sm">Filter Ticket Assignment</span>
+				<div className="flex items-center gap-2.5">
+					<Filter className="w-4 h-4 text-slate-500" />
+					<span className="font-semibold text-xs sm:text-sm text-slate-800">
+						Filter & Pencarian Ticket
+					</span>
+					{activeFilterCount > 0 && (
+						<span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+							{activeFilterCount} Aktif
+						</span>
+					)}
 				</div>
-				{isOpen ? (
-					<ChevronUp className="w-4 h-4 text-gray-500" />
-				) : (
-					<ChevronDown className="w-4 h-4 text-gray-500" />
-				)}
+				<div className="flex items-center gap-2">
+					{activeFilterCount > 0 && (
+						<span
+							role="button"
+							tabIndex={0}
+							onClick={handleResetFilters}
+							onKeyDown={(e) => e.key === "Enter" && handleResetFilters(e)}
+							className="text-xs font-medium text-slate-500 hover:text-rose-600 px-2 py-0.5 rounded hover:bg-slate-200/50 transition-colors"
+						>
+							Reset
+						</span>
+					)}
+					{isOpen ? (
+						<ChevronUp className="w-4 h-4 text-slate-500" />
+					) : (
+						<ChevronDown className="w-4 h-4 text-slate-500" />
+					)}
+				</div>
 			</button>
 
 			<AnimatePresence>
@@ -43,11 +85,11 @@ const AssignmentFilterAccordion = ({
 						transition={{ duration: 0.2 }}
 						className="overflow-hidden"
 					>
-						<div className="p-4 space-y-4">
+						<div className="p-4 sm:p-5 space-y-4 border-t border-slate-100">
 							{/* Filter Controls */}
-							<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
 								<div>
-									<label className="block text-sm text-gray-600 mb-1">
+									<label className="block text-xs font-medium text-slate-600 mb-1">
 										Status
 									</label>
 									<select
@@ -55,7 +97,7 @@ const AssignmentFilterAccordion = ({
 										onChange={(e) =>
 											setFilters({ ...filters, status: e.target.value })
 										}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+										className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs sm:text-sm text-slate-800"
 									>
 										<option value="">Semua Status</option>
 										{masterData.statuses?.map((status) => (
@@ -67,7 +109,7 @@ const AssignmentFilterAccordion = ({
 								</div>
 
 								<div>
-									<label className="block text-sm text-gray-600 mb-1">
+									<label className="block text-xs font-medium text-slate-600 mb-1">
 										Prioritas
 									</label>
 									<select
@@ -75,7 +117,7 @@ const AssignmentFilterAccordion = ({
 										onChange={(e) =>
 											setFilters({ ...filters, priority: e.target.value })
 										}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+										className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs sm:text-sm text-slate-800"
 									>
 										<option value="">Semua Prioritas</option>
 										{masterData.priorities?.map((priority) => (
@@ -90,7 +132,7 @@ const AssignmentFilterAccordion = ({
 								</div>
 
 								<div>
-									<label className="block text-sm text-gray-600 mb-1">
+									<label className="block text-xs font-medium text-slate-600 mb-1">
 										Kategori
 									</label>
 									<select
@@ -98,7 +140,7 @@ const AssignmentFilterAccordion = ({
 										onChange={(e) =>
 											setFilters({ ...filters, category: e.target.value })
 										}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+										className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs sm:text-sm text-slate-800"
 									>
 										<option value="">Semua Kategori</option>
 										{masterData.categories?.map((category) => (
@@ -113,8 +155,8 @@ const AssignmentFilterAccordion = ({
 								</div>
 
 								<div>
-									<label className="block text-sm text-gray-600 mb-1">
-										<UserCheck className="w-4 h-4 inline mr-1" />
+									<label className="block text-xs font-medium text-slate-600 mb-1">
+										<UserCheck className="w-3.5 h-3.5 inline mr-1 text-slate-400" />
 										Ditugaskan Ke
 									</label>
 									<select
@@ -122,7 +164,7 @@ const AssignmentFilterAccordion = ({
 										onChange={(e) =>
 											setFilters({ ...filters, assigned_to: e.target.value })
 										}
-										className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+										className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs sm:text-sm text-slate-800"
 									>
 										<option value="">Semua</option>
 										<option value="unassigned">Belum Ditugaskan</option>
@@ -135,53 +177,53 @@ const AssignmentFilterAccordion = ({
 								</div>
 
 								<div>
-									<label className="block text-sm text-gray-600 mb-1">
-										Cari
+									<label className="block text-xs font-medium text-slate-600 mb-1">
+										Cari Ticket
 									</label>
 									<div className="relative">
-										<Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+										<Search className="w-3.5 h-3.5 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
 										<input
 											type="text"
-											placeholder="Cari ticket..."
+											placeholder="No. ticket / judul..."
 											value={filters.search}
 											onChange={(e) =>
 												setFilters({ ...filters, search: e.target.value })
 											}
-											className="w-full pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+											className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-slate-800"
 										/>
 									</div>
 								</div>
 							</div>
 
-							{/* Summary Stats */}
-							<div className="border-t pt-4">
-								<div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-									<div className="p-3 bg-blue-50 rounded-lg">
-										<div className="text-lg font-semibold text-blue-600">
+							{/* Workload Summary Stats */}
+							<div className="border-t border-slate-100 pt-4">
+								<div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+									<div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+										<div className="text-lg font-bold text-slate-800">
 											{itEmployees?.length || 0}
 										</div>
-										<div className="text-xs text-blue-600">Pegawai IT</div>
+										<div className="text-xs text-slate-500 font-medium">Pegawai IT</div>
 									</div>
-									<div className="p-3 bg-orange-50 rounded-lg">
-										<div className="text-lg font-semibold text-orange-600">
+									<div className="p-3 bg-sky-50 border border-sky-100 rounded-lg">
+										<div className="text-lg font-bold text-sky-700">
 											{tickets?.filter(
 												(t) =>
 													!["Closed", "Resolved"].includes(t.current_status)
 											).length || 0}
 										</div>
-										<div className="text-xs text-orange-600">Ticket Aktif</div>
+										<div className="text-xs text-sky-600 font-medium">Ticket Aktif</div>
 									</div>
-									<div className="p-3 bg-green-50 rounded-lg">
-										<div className="text-lg font-semibold text-green-600">
+									<div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+										<div className="text-lg font-bold text-emerald-700">
 											{itEmployees?.filter((emp) => emp.active_tickets === 0)
 												.length || 0}
 										</div>
-										<div className="text-xs text-green-600">
-											Pegawai Tersedia
+										<div className="text-xs text-emerald-600 font-medium">
+											Teknisi Idle
 										</div>
 									</div>
-									<div className="p-3 bg-purple-50 rounded-lg">
-										<div className="text-lg font-semibold text-purple-600">
+									<div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+										<div className="text-lg font-bold text-slate-700">
 											{Math.round(
 												(itEmployees?.reduce(
 													(sum, emp) => sum + emp.active_tickets,
@@ -189,7 +231,7 @@ const AssignmentFilterAccordion = ({
 												) || 0) / (itEmployees?.length || 1)
 											)}
 										</div>
-										<div className="text-xs text-purple-600">
+										<div className="text-xs text-slate-500 font-medium">
 											Rata-rata Beban
 										</div>
 									</div>
