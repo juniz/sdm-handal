@@ -1,49 +1,32 @@
 import { NextResponse } from "next/server";
-import { select } from "@/lib/db-helper";
+import {
+	getAuthToken,
+	fetchTicketMasterData,
+} from "@/lib/ticket-assignment-gql-client";
 
 export async function GET(request) {
 	try {
+		const token = await getAuthToken(request);
 		const { searchParams } = new URL(request.url);
 		const type = searchParams.get("type");
 
-		if (type) {
-			// Jika diminta data spesifik
-			let data = [];
+		const masterData = await fetchTicketMasterData(token);
 
+		if (type) {
+			let data = [];
 			switch (type) {
 				case "categories":
-					data = await select({
-						table: "categories_ticket",
-						orderBy: "category_name",
-						order: "ASC",
-					});
+					data = masterData.categories;
 					break;
-
 				case "priorities":
-					data = await select({
-						table: "priorities_ticket",
-						orderBy: "priority_level",
-						order: "ASC",
-					});
+					data = masterData.priorities;
 					break;
-
 				case "statuses":
-					data = await select({
-						table: "statuses_ticket",
-						orderBy: "status_id",
-						order: "ASC",
-					});
+					data = masterData.statuses;
 					break;
-
 				case "departments":
-					data = await select({
-						table: "departemen",
-						fields: ["dep_id", "nama"],
-						orderBy: "nama",
-						order: "ASC",
-					});
+					data = masterData.departments;
 					break;
-
 				default:
 					return NextResponse.json(
 						{
@@ -60,46 +43,16 @@ export async function GET(request) {
 			});
 		}
 
-		// Jika tidak ada type, return semua data master
-		const [categories, priorities, statuses, departments] = await Promise.all([
-			select({
-				table: "categories_ticket",
-				orderBy: "category_name",
-				order: "ASC",
-			}),
-			select({
-				table: "priorities_ticket",
-				orderBy: "priority_level",
-				order: "ASC",
-			}),
-			select({
-				table: "statuses_ticket",
-				orderBy: "status_id",
-				order: "ASC",
-			}),
-			select({
-				table: "departemen",
-				fields: ["dep_id", "nama"],
-				orderBy: "nama",
-				order: "ASC",
-			}),
-		]);
-
 		return NextResponse.json({
 			status: "success",
-			data: {
-				categories,
-				priorities,
-				statuses,
-				departments,
-			},
+			data: masterData,
 		});
 	} catch (error) {
 		console.error("Error fetching master data:", error);
 		return NextResponse.json(
 			{
 				status: "error",
-				error: "Gagal mengambil data master",
+				error: error.message || "Gagal mengambil data master",
 			},
 			{ status: 500 }
 		);
