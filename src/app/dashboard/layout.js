@@ -26,6 +26,7 @@ import {
 	SlidersHorizontal,
 	Activity,
 	Shield,
+	ShieldAlert,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -73,6 +74,7 @@ const ICON_MAP = {
 	SlidersHorizontal,
 	Activity,
 	Shield,
+	ShieldAlert,
 };
 
 const groupAndSortMenus = (flatMenus) => {

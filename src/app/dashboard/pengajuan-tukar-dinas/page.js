@@ -122,14 +122,15 @@ export default function PengajuanTukarDinasPage() {
 				{/* Header */}
 				<div className="flex flex-col space-y-4 md:flex-row md:justify-between md:items-center md:space-y-0">
 					<div className="flex-1">
-						<h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-2">
-							<RefreshCcw className="w-6 h-6 md:w-8 md:h-8 text-blue-600 flex-shrink-0" />
+						<h1 className="text-2xl md:text-3xl font-bold text-slate-900 flex items-center gap-2.5">
+							<div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100 flex-shrink-0">
+								<RefreshCcw className="w-5 h-5 md:w-6 md:h-6" />
+							</div>
 							<span className="leading-tight">Pengajuan Tukar Dinas</span>
 						</h1>
-						<p className="text-sm md:text-base text-gray-600 mt-1 md:mt-2 leading-relaxed">
-							Kelola pengajuan tukar dinas/shift pegawai. Menampilkan pengajuan
-							dimana Anda adalah pemohon atau penanggung jawab. Pengajuan dengan
-							status proses dapat dihapus.
+						<p className="text-xs md:text-sm text-slate-500 mt-1 md:mt-1.5 leading-relaxed">
+							Kelola pengajuan tukar dinas dan shift kerja pegawai. Menampilkan pengajuan
+							dimana Anda terdaftar sebagai pemohon atau penanggung jawab.
 						</p>
 					</div>
 
@@ -137,7 +138,7 @@ export default function PengajuanTukarDinasPage() {
 						<div className="flex-shrink-0">
 							<Button
 								onClick={() => setShowFormDialog(true)}
-								className="w-full md:w-auto flex items-center justify-center gap-2 h-10 md:h-9 text-sm font-medium"
+								className="w-full md:w-auto flex items-center justify-center gap-2 h-10 md:h-9 text-xs sm:text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
 							>
 								<Plus className="w-4 h-4 flex-shrink-0" />
 								<span className="whitespace-nowrap">Ajukan Tukar Dinas</span>
@@ -160,6 +161,7 @@ export default function PengajuanTukarDinasPage() {
 						submitLoading={submitLoading}
 						pegawaiLoading={pegawaiLoading}
 						userLoading={userLoading}
+						currentUserNik={currentUserNik}
 					/>
 				</ErrorBoundary>
 
@@ -185,28 +187,30 @@ export default function PengajuanTukarDinasPage() {
 					componentName="PengajuanTable"
 					actionAttempted="Rendering data table"
 				>
-					<Card>
-						<CardHeader>
+					<Card className="border-slate-200 shadow-sm bg-white">
+						<CardHeader className="border-b border-slate-100 pb-4">
 							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-								<CardTitle>Data Pengajuan Tukar Dinas</CardTitle>
-								<div className="text-sm text-gray-600">
+								<CardTitle className="text-base sm:text-lg font-bold text-slate-900">
+									Data Pengajuan Tukar Dinas
+								</CardTitle>
+								<div className="text-xs text-slate-500">
 									Menampilkan {currentData.length} dari {filteredData.length}{" "}
 									pengajuan
 									{filteredData.length !== pengajuanData.length && (
-										<span className="text-blue-600 ml-1">
+										<span className="text-sky-600 ml-1 font-medium">
 											(difilter dari {pengajuanData.length} total)
 										</span>
 									)}
 								</div>
 							</div>
 						</CardHeader>
-						<CardContent>
+						<CardContent className="p-0 sm:p-6">
 							{filteredData.length === 0 ? (
 								<div className="text-center py-12">
-									<Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-									<p className="text-gray-500 mb-2">
+									<Clock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+									<p className="text-slate-500 text-sm font-medium mb-1">
 										{searchTerm || statusFilter !== "all"
-											? "Tidak ada pengajuan yang sesuai dengan filter"
+											? "Tidak ada pengajuan yang sesuai dengan kriteria filter"
 											: "Belum ada data pengajuan tukar dinas"}
 									</p>
 									{(searchTerm || statusFilter !== "all") && (
@@ -217,7 +221,7 @@ export default function PengajuanTukarDinasPage() {
 												setSearchTerm("");
 												setStatusFilter("all");
 											}}
-											className="mt-2"
+											className="mt-2 h-8 text-xs border-slate-200 text-slate-700"
 										>
 											Hapus Filter
 										</Button>

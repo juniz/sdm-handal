@@ -104,7 +104,7 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 						{loading
 							? "Memuat data pegawai..."
 							: value
-							? pegawai.find((item) => item.value === value)?.label
+							? (pegawai.find((item) => (item.value || "").toLowerCase() === (value || "").toLowerCase())?.label || value)
 							: "Pilih nama pegawai..."}
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
@@ -133,11 +133,12 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 								<CommandItem
 									key={item.value}
 									value={item.value}
-									onSelect={(currentValue) => {
+									onSelect={() => {
 										if (!isMountedRef.current || isClosingRef.current) return;
 										
 										try {
-											onValueChange(currentValue === value ? "" : currentValue);
+											const nextVal = (item.value || "").toLowerCase() === (value || "").toLowerCase() ? "" : item.value;
+											onValueChange(nextVal, item);
 											// Gunakan handleOpenChange untuk closing yang aman
 											handleOpenChange(false);
 										} catch (error) {
@@ -150,7 +151,7 @@ export function PegawaiCombobox({ value, onValueChange, disabled, error }) {
 										<Check
 											className={cn(
 												"mr-2 h-4 w-4",
-												value === item.value ? "opacity-100" : "opacity-0"
+												(value || "").toLowerCase() === (item.value || "").toLowerCase() ? "opacity-100" : "opacity-0"
 											)}
 										/>
 										{item.label}

@@ -26,6 +26,8 @@ import {
 	Clock,
 	CheckCircle,
 	XCircle,
+	FileText,
+	ShieldCheck,
 } from "lucide-react";
 import moment from "moment-timezone";
 
@@ -69,7 +71,7 @@ const PengajuanDialogs = ({
 	const handleUpdateDialogChange = useCallback((open) => {
 		if (!isMountedRef.current) return;
 		if (!open && isClosingRef.current.update) return;
-		
+
 		if (!open) {
 			isClosingRef.current.update = true;
 			requestAnimationFrame(() => {
@@ -88,7 +90,7 @@ const PengajuanDialogs = ({
 	const handleDetailDialogChange = useCallback((open) => {
 		if (!isMountedRef.current) return;
 		if (!open && isClosingRef.current.detail) return;
-		
+
 		if (!open) {
 			isClosingRef.current.detail = true;
 			requestAnimationFrame(() => {
@@ -107,7 +109,7 @@ const PengajuanDialogs = ({
 	const handleDeleteDialogChange = useCallback((open) => {
 		if (!isMountedRef.current) return;
 		if (!open && isClosingRef.current.delete) return;
-		
+
 		if (!open) {
 			isClosingRef.current.delete = true;
 			requestAnimationFrame(() => {
@@ -127,51 +129,48 @@ const PengajuanDialogs = ({
 	const getStatusBadge = (status) => {
 		const statusConfig = {
 			"Proses Pengajuan": {
-				variant: "secondary",
+				className: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50",
 				icon: Clock,
 				text: "Proses Pengajuan",
 			},
-			Disetujui: { variant: "default", icon: CheckCircle, text: "Disetujui" },
-			Ditolak: { variant: "destructive", icon: XCircle, text: "Ditolak" },
+			Disetujui: {
+				className: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50",
+				icon: CheckCircle,
+				text: "Disetujui",
+			},
+			Ditolak: {
+				className: "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50",
+				icon: XCircle,
+				text: "Ditolak",
+			},
 		};
 
 		const config = statusConfig[status] || statusConfig["Proses Pengajuan"];
 		const Icon = config.icon;
 
 		return (
-			<Badge variant={config.variant} className="flex items-center gap-1">
-				<Icon className="w-3 h-3" />
-				{config.text}
+			<Badge
+				variant="outline"
+				className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border ${config.className}`}
+			>
+				<Icon className="w-3 h-3 flex-shrink-0" />
+				<span>{config.text}</span>
 			</Badge>
 		);
 	};
 
 	const getShiftBadge = (shift) => {
 		const shiftConfig = {
-			Pagi: {
-				variant: "default",
-				text: "Pagi",
-				color: "bg-yellow-100 text-yellow-800",
-			},
-			Siang: {
-				variant: "secondary",
-				text: "Siang",
-				color: "bg-orange-100 text-orange-800",
-			},
-			Malam: {
-				variant: "outline",
-				text: "Malam",
-				color: "bg-blue-100 text-blue-800",
-			},
+			Pagi: "bg-amber-50 text-amber-800 border-amber-200",
+			Siang: "bg-orange-50 text-orange-800 border-orange-200",
+			Malam: "bg-indigo-50 text-indigo-800 border-indigo-200",
 		};
 
-		const config = shiftConfig[shift] || shiftConfig["Pagi"];
+		const style = shiftConfig[shift] || "bg-slate-100 text-slate-800 border-slate-200";
 
 		return (
-			<span
-				className={`px-2 py-1 rounded-md text-xs font-medium ${config.color}`}
-			>
-				{config.text}
+			<span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold border ${style}`}>
+				{shift || "-"}
 			</span>
 		);
 	};
@@ -180,25 +179,36 @@ const PengajuanDialogs = ({
 		<>
 			{/* Dialog Update Status */}
 			<Dialog open={showUpdateDialog} onOpenChange={handleUpdateDialogChange} modal={false}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Update Status Pengajuan</DialogTitle>
-						<DialogDescription>
-							Update status pengajuan tukar dinas
-						</DialogDescription>
+				<DialogContent className="max-w-md rounded-xl border-slate-200 p-0 overflow-hidden bg-white">
+					<DialogHeader className="p-5 pb-4 border-b border-slate-100">
+						<div className="flex items-center gap-3">
+							<div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100">
+								<ShieldCheck className="w-4 h-4" />
+							</div>
+							<div>
+								<DialogTitle className="text-base sm:text-lg font-bold text-slate-900">
+									Update Status Pengajuan
+								</DialogTitle>
+								<DialogDescription className="text-xs text-slate-500 mt-0.5">
+									Konfirmasi persetujuan atau penolakan tukar dinas
+								</DialogDescription>
+							</div>
+						</div>
 					</DialogHeader>
 
-					<div className="space-y-4">
-						<div>
-							<Label htmlFor="status">Status</Label>
+					<div className="p-5 space-y-4">
+						<div className="space-y-1.5">
+							<Label htmlFor="status" className="text-xs font-medium text-slate-700">
+								Status Persetujuan <span className="text-red-500">*</span>
+							</Label>
 							<Select
 								value={updateData.status}
 								onValueChange={(value) =>
 									setUpdateData({ ...updateData, status: value })
 								}
 							>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Pilih status" />
+								<SelectTrigger className="w-full h-10 bg-white border-slate-200 text-sm">
+									<SelectValue placeholder="Pilih status persetujuan" />
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem key="status-proses" value="Proses Pengajuan">
@@ -215,11 +225,13 @@ const PengajuanDialogs = ({
 						</div>
 
 						{updateData.status === "Ditolak" && (
-							<div>
-								<Label htmlFor="alasan_ditolak">Alasan Penolakan</Label>
+							<div className="space-y-1.5">
+								<Label htmlFor="alasan_ditolak" className="text-xs font-medium text-slate-700">
+									Alasan Penolakan <span className="text-red-500">*</span>
+								</Label>
 								<Textarea
 									id="alasan_ditolak"
-									placeholder="Jelaskan alasan penolakan..."
+									placeholder="Tuliskan alasan penolakan secara jelas (misal: bentrok jadwal unit, kuota tukar habis)..."
 									value={updateData.alasan_ditolak}
 									onChange={(e) =>
 										setUpdateData({
@@ -228,191 +240,151 @@ const PengajuanDialogs = ({
 										})
 									}
 									rows={3}
+									className="resize-none bg-white border-slate-200 text-sm focus:border-sky-500 focus:ring-sky-500/20"
 								/>
 							</div>
 						)}
 					</div>
 
-					<DialogFooter>
+					<DialogFooter className="p-4 bg-slate-50/50 border-t border-slate-100 flex gap-2 sm:justify-end">
 						<Button
 							variant="outline"
 							onClick={() => handleUpdateDialogChange(false)}
+							className="h-9 text-xs border-slate-200 text-slate-700"
 						>
 							Batal
 						</Button>
-						<Button onClick={onUpdateStatus}>Update Status</Button>
+						<Button
+							onClick={onUpdateStatus}
+							className="h-9 text-xs bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+						>
+							Simpan Perubahan
+						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 
-			{/* Dialog Detail Pengajuan */}
+			{/* Dialog Detail Pengajuan (Ticket Slip Style) */}
 			<Dialog open={showDetailDialog} onOpenChange={handleDetailDialogChange} modal={false}>
-				<DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-					<DialogHeader className="flex-shrink-0">
-						<DialogTitle>Detail Pengajuan Tukar Dinas</DialogTitle>
-						<DialogDescription>
-							Informasi lengkap pengajuan tukar dinas
-						</DialogDescription>
+				<DialogContent className="max-w-2xl max-h-[92vh] overflow-hidden flex flex-col p-0 rounded-xl border-slate-200 bg-white">
+					<DialogHeader className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex-shrink-0">
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+							<div className="flex items-center gap-3">
+								<div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100 flex-shrink-0">
+									<FileText className="w-5 h-5" />
+								</div>
+								<div>
+									<DialogTitle className="text-lg font-bold text-slate-900">
+										Detail Pengajuan Tukar Dinas
+									</DialogTitle>
+									<DialogDescription className="text-xs text-slate-500 mt-0.5">
+										No. Tiket:{" "}
+										<span className="font-mono font-semibold text-sky-700">
+											{selectedPengajuan?.no_pengajuan || `#${selectedPengajuan?.id}`}
+										</span>
+									</DialogDescription>
+								</div>
+							</div>
+							{selectedPengajuan && (
+								<div>{getStatusBadge(selectedPengajuan.status)}</div>
+							)}
+						</div>
 					</DialogHeader>
 
 					{selectedPengajuan && (
-						<div className="flex-1 overflow-y-auto space-y-6 pr-2">
-							{/* Informasi Pengajuan */}
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<div>
-									<Label className="text-sm font-medium text-gray-700">
-										No Pengajuan
-									</Label>
-									<div className="mt-1 p-2 bg-blue-50 rounded text-sm font-mono text-blue-600">
-										{selectedPengajuan.no_pengajuan ||
-											`#${selectedPengajuan.id}`}
-									</div>
+						<div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+							{/* Exchange Flow Visual Slip */}
+							<div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+								<div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+									Rincian Pertukaran Shift
 								</div>
-								<div>
-									<Label className="text-sm font-medium text-gray-700">
-										Status
-									</Label>
-									<div className="mt-1">
-										{getStatusBadge(selectedPengajuan.status)}
-									</div>
-								</div>
-							</div>
-
-							{/* Data Pemohon */}
-							<div className="border-t pt-4">
-								<h4 className="font-medium text-gray-900 mb-3">Data Pemohon</h4>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<Label className="text-sm font-medium text-gray-700">
-											NIK
-										</Label>
-										<div className="mt-1 p-2 bg-gray-50 rounded text-sm font-mono">
-											{selectedPengajuan.nik}
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+									{/* Dinas Asal */}
+									<div className="bg-white border border-slate-200 rounded-lg p-3 space-y-1.5 shadow-2xs">
+										<div className="text-[11px] font-medium text-slate-500">Dinas Asal (Pemohon)</div>
+										<div className="text-sm font-semibold text-slate-900">
+											{moment(selectedPengajuan.tgl_dinas).format("DD MMMM YYYY")}
+										</div>
+										<div className="flex items-center gap-2">
+											<span className="text-xs text-slate-500">Shift:</span>
+											{getShiftBadge(selectedPengajuan.shift1)}
 										</div>
 									</div>
-									<div>
-										<Label className="text-sm font-medium text-gray-700">
-											Nama
-										</Label>
-										<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-											{selectedPengajuan.nama_pemohon || selectedPengajuan.nik}
+
+									{/* Dinas Pengganti */}
+									<div className="bg-white border border-slate-200 rounded-lg p-3 space-y-1.5 shadow-2xs">
+										<div className="text-[11px] font-medium text-slate-500">Dinas Pengganti (Rekan)</div>
+										<div className="text-sm font-semibold text-slate-900">
+											{moment(selectedPengajuan.tgl_ganti).format("DD MMMM YYYY")}
+										</div>
+										<div className="flex items-center gap-2">
+											<span className="text-xs text-slate-500">Shift:</span>
+											{getShiftBadge(selectedPengajuan.shift2)}
 										</div>
 									</div>
 								</div>
 							</div>
 
-							{/* Detail Tukar Dinas */}
-							<div className="border-t pt-4">
-								<h4 className="font-medium text-gray-900 mb-3">
-									Detail Tukar Dinas
-								</h4>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div className="space-y-4">
-										<h5 className="font-medium text-gray-800">Dinas Asal</h5>
-										<div>
-											<Label className="text-sm font-medium text-gray-700">
-												Tanggal Dinas
-											</Label>
-											<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-												{moment(selectedPengajuan.tgl_dinas).format(
-													"DD MMMM YYYY"
-												)}
-											</div>
-										</div>
-										<div>
-											<Label className="text-sm font-medium text-gray-700">
-												Shift
-											</Label>
-											<div className="mt-1">
-												{getShiftBadge(selectedPengajuan.shift1)}
-											</div>
-										</div>
-									</div>
-
-									<div className="space-y-4">
-										<h5 className="font-medium text-gray-800">
-											Dinas Pengganti
-										</h5>
-										<div>
-											<Label className="text-sm font-medium text-gray-700">
-												Tanggal Dinas
-											</Label>
-											<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-												{moment(selectedPengajuan.tgl_ganti).format(
-													"DD MMMM YYYY"
-												)}
-											</div>
-										</div>
-										<div>
-											<Label className="text-sm font-medium text-gray-700">
-												Shift
-											</Label>
-											<div className="mt-1">
-												{getShiftBadge(selectedPengajuan.shift2)}
-											</div>
-										</div>
+							{/* Identitas Staf & Penanggung Jawab */}
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<div className="space-y-1 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+									<div className="text-[11px] font-medium text-slate-500">Pemohon (NIK / Nama)</div>
+									<div className="text-xs font-mono text-slate-600">{selectedPengajuan.nik}</div>
+									<div className="text-sm font-semibold text-slate-900">
+										{selectedPengajuan.nama_pemohon || selectedPengajuan.nik}
 									</div>
 								</div>
 
-								<div className="mt-4 space-y-4">
-									<div>
-										<Label className="text-sm font-medium text-gray-700">
-											Pegawai Pengganti
-										</Label>
-										<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-											{selectedPengajuan.nama_pengganti ||
-												selectedPengajuan.nik_ganti}
-										</div>
-									</div>
-
-									{selectedPengajuan.nama_pj && (
-										<div key="detail-pj">
-											<Label className="text-sm font-medium text-gray-700">
-												Penanggung Jawab
-											</Label>
-											<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-												{selectedPengajuan.nama_pj ||
-													(selectedPengajuan.nik_pj
-														? selectedPengajuan.nik_pj
-														: "-")}
-											</div>
-										</div>
-									)}
-
-									<div>
-										<Label className="text-sm font-medium text-gray-700">
-											Kepentingan/Alasan
-										</Label>
-										<div className="mt-1 p-3 bg-gray-50 rounded text-sm break-words">
-											{selectedPengajuan.kepentingan || "-"}
-										</div>
+								<div className="space-y-1 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+									<div className="text-[11px] font-medium text-slate-500">Rekan Pengganti (NIK / Nama)</div>
+									<div className="text-xs font-mono text-slate-600">{selectedPengajuan.nik_ganti}</div>
+									<div className="text-sm font-semibold text-slate-900">
+										{selectedPengajuan.nama_pengganti || selectedPengajuan.nik_ganti}
 									</div>
 								</div>
 							</div>
 
-							{/* Informasi Waktu */}
-							<div className="border-t pt-4 pb-4">
-								<h4 className="font-medium text-gray-900 mb-3">
-									Informasi Waktu
-								</h4>
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<div>
-										<Label className="text-sm font-medium text-gray-700">
-											Tanggal Pengajuan
-										</Label>
-										<div className="mt-1 p-2 bg-gray-50 rounded text-sm">
-											{moment(selectedPengajuan.tanggal).format("DD MMMM YYYY")}
-										</div>
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+								<div className="space-y-1 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+									<div className="text-[11px] font-medium text-slate-500">Penanggung Jawab / Atasan</div>
+									<div className="text-sm font-semibold text-slate-900">
+										{selectedPengajuan.nama_pj || (selectedPengajuan.nik_pj ? selectedPengajuan.nik_pj : "-")}
+									</div>
+								</div>
+
+								<div className="space-y-1 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
+									<div className="text-[11px] font-medium text-slate-500">Tanggal Pengajuan</div>
+									<div className="text-sm font-semibold text-slate-900">
+										{moment(selectedPengajuan.tanggal).format("DD MMMM YYYY")}
 									</div>
 								</div>
 							</div>
+
+							{/* Alasan / Kepentingan */}
+							<div className="space-y-1.5">
+								<div className="text-xs font-medium text-slate-700">Alasan / Keperluan:</div>
+								<div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs sm:text-sm text-slate-800 leading-relaxed break-words">
+									{selectedPengajuan.kepentingan || "-"}
+								</div>
+							</div>
+
+							{/* Alasan Penolakan jika Ditolak */}
+							{selectedPengajuan.status === "Ditolak" && selectedPengajuan.alasan_ditolak && (
+								<div className="space-y-1.5">
+									<div className="text-xs font-medium text-rose-700">Catatan Penolakan dari PJ:</div>
+									<div className="p-3 bg-rose-50 rounded-lg border border-rose-200 text-xs sm:text-sm text-rose-800 leading-relaxed break-words">
+										{selectedPengajuan.alasan_ditolak}
+									</div>
+								</div>
+							)}
 						</div>
 					)}
 
-					<DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
+					<DialogFooter className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50/50 flex-shrink-0 flex gap-2 sm:justify-end">
 						<Button
 							variant="outline"
 							onClick={() => handleDetailDialogChange(false)}
+							className="h-9 text-xs border-slate-200 text-slate-700"
 						>
 							Tutup
 						</Button>
@@ -424,16 +396,16 @@ const PengajuanDialogs = ({
 										alasan_ditolak: selectedPengajuan.alasan_ditolak || "",
 									});
 									handleDetailDialogChange(false);
-									// Delay membuka dialog update untuk menghindari race condition
 									setTimeout(() => {
 										if (isMountedRef.current) {
 											setShowUpdateDialog(true);
 										}
 									}, 250);
 								}}
+								className="h-9 text-xs bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
 							>
-								<Edit className="w-4 h-4 mr-1" />
-								Edit Status
+								<Edit className="w-3.5 h-3.5 mr-1" />
+								Update Status
 							</Button>
 						)}
 					</DialogFooter>
@@ -442,86 +414,67 @@ const PengajuanDialogs = ({
 
 			{/* Dialog Konfirmasi Hapus */}
 			<Dialog open={showDeleteDialog} onOpenChange={handleDeleteDialogChange} modal={false}>
-				<DialogContent className="max-w-md">
-					<DialogHeader>
+				<DialogContent className="max-w-md rounded-xl border-slate-200 p-0 overflow-hidden bg-white">
+					<DialogHeader className="p-5 pb-4 border-b border-slate-100">
 						<div className="flex items-center gap-3">
-							<div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-								<AlertTriangle className="w-6 h-6 text-red-600" />
+							<div className="w-10 h-10 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-center text-rose-600 flex-shrink-0">
+								<AlertTriangle className="w-5 h-5" />
 							</div>
 							<div>
-								<DialogTitle className="text-lg font-semibold text-gray-900">
-									Konfirmasi Hapus Pengajuan
+								<DialogTitle className="text-base sm:text-lg font-bold text-slate-900">
+									Hapus Pengajuan Tukar Dinas
 								</DialogTitle>
-								<DialogDescription className="text-sm text-gray-600 mt-1">
-									Tindakan ini tidak dapat dibatalkan
+								<DialogDescription className="text-xs text-slate-500 mt-0.5">
+									Tindakan ini permanen dan tidak dapat dibatalkan
 								</DialogDescription>
 							</div>
 						</div>
 					</DialogHeader>
 
 					{pengajuanToDelete && (
-						<div className="py-4">
-							<div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
+						<div className="p-5 space-y-3">
+							<div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
 								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium text-gray-700">
-										No Pengajuan:
-									</span>
-									<span className="text-sm font-mono text-red-600 bg-white px-2 py-1 rounded">
-										{pengajuanToDelete.no_pengajuan ||
-											`#${pengajuanToDelete.id}`}
+									<span className="text-slate-500">No. Pengajuan:</span>
+									<span className="font-mono font-semibold text-slate-900">
+										{pengajuanToDelete.no_pengajuan || `#${pengajuanToDelete.id}`}
 									</span>
 								</div>
-
 								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium text-gray-700">
-										Pemohon:
-									</span>
-									<span className="text-sm text-gray-900">
+									<span className="text-slate-500">Pemohon:</span>
+									<span className="font-semibold text-slate-900">
 										{pengajuanToDelete.nama_pemohon || pengajuanToDelete.nik}
 									</span>
 								</div>
-
 								<div className="flex items-center justify-between">
-									<span className="text-sm font-medium text-gray-700">
-										Tanggal:
-									</span>
-									<span className="text-sm text-gray-600">
+									<span className="text-slate-500">Tanggal Pengajuan:</span>
+									<span className="text-slate-700">
 										{moment(pengajuanToDelete.tanggal).format("DD MMM YYYY")}
 									</span>
 								</div>
 							</div>
 
-							<div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-								<div className="flex items-start gap-3">
-									<AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-									<div className="text-sm text-yellow-800">
-										<p className="font-medium mb-1">Peringatan:</p>
-										<p>
-											Pengajuan tukar dinas ini akan dihapus secara permanen dan
-											tidak dapat dikembalikan. Pastikan Anda yakin dengan
-											tindakan ini.
-										</p>
-									</div>
-								</div>
-							</div>
+							<p className="text-xs text-slate-500 leading-relaxed">
+								Apakah Anda yakin ingin membatalkan dan menghapus data pengajuan ini?
+							</p>
 						</div>
 					)}
 
-					<DialogFooter className="gap-2">
+					<DialogFooter className="p-4 bg-slate-50/50 border-t border-slate-100 flex gap-2 sm:justify-end">
 						<Button
 							variant="outline"
 							onClick={() => handleDeleteDialogChange(false)}
-							className="flex-1 sm:flex-none"
+							className="h-9 text-xs border-slate-200 text-slate-700"
 						>
 							Batal
 						</Button>
 						<Button
 							variant="destructive"
 							onClick={onDeleteConfirm}
-							className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700"
+							className="h-9 text-xs bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
 						>
-							<Trash2 className="w-4 h-4 mr-2" />
-							Ya, Hapus
+							<Trash2 className="w-3.5 h-3.5 mr-1" />
+							Hapus Pengajuan
 						</Button>
 					</DialogFooter>
 				</DialogContent>
@@ -531,3 +484,4 @@ const PengajuanDialogs = ({
 };
 
 export default PengajuanDialogs;
+

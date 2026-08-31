@@ -144,75 +144,11 @@ const usePengajuanTukarDinas = () => {
 
 	// Submit new pengajuan
 	const handleSubmit = async (formData) => {
-		// Retry mechanism for data loading
-		// let retryCount = 0;
-		// const maxRetries = 5;
-
-		// while (retryCount < maxRetries) {
-		// 	// Check if data is ready
-		// 	if (
-		// 		currentUserNik &&
-		// 		pegawaiData &&
-		// 		pegawaiData.length > 0 &&
-		// 		!userLoading &&
-		// 		!pegawaiLoading
-		// 	) {
-		// 		break;
-		// 	}
-
-		// 	// Show loading message
-		// 	if (retryCount === 0) {
-		// 		toast.info("Memuat data, silakan tunggu...");
-		// 	}
-
-		// 	// Wait 1 second before retry
-		// 	await new Promise((resolve) => setTimeout(resolve, 1000));
-		// 	retryCount++;
-		// }
-
-		// alert(currentUserNik);
-		// // Final validation after retries
-		// if (!currentUserNik) {
-		// 	toast.error(
-		// 		"Data pengguna tidak ditemukan setelah beberapa kali percobaan. Silakan refresh halaman."
-		// 	);
-		// 	return false;
-		// }
-
-		// if (!pegawaiData || pegawaiData.length === 0) {
-		// 	toast.error(
-		// 		"Data pegawai tidak ditemukan setelah beberapa kali percobaan. Silakan refresh halaman."
-		// 	);
-		// 	return false;
-		// }
-
-		// // Validate NIK tidak boleh sama
-		// if (currentUserNik === formData.nik_ganti) {
-		// 	toast.error("NIK pemohon dan NIK pengganti tidak boleh sama");
-		// 	return false;
-		// }
-
-		// // Validate NIK exists in database
-		// const nikValid = pegawaiData.find((p) => p.nik === currentUserNik);
-		// const nikGantiValid = pegawaiData.find((p) => p.nik === formData.nik_ganti);
-
-		// if (!nikValid) {
-		// 	toast.error("NIK pemohon tidak valid dalam database");
-		// 	return false;
-		// }
-
-		// if (!nikGantiValid) {
-		// 	toast.error("NIK pengganti tidak valid dalam database");
-		// 	return false;
-		// }
-
-		// if (
-		// 	formData.nik_pj &&
-		// 	!pegawaiData.find((p) => p.nik === formData.nik_pj)
-		// ) {
-		// 	toast.error("NIK penanggung jawab tidak valid dalam database");
-		// 	return false;
-		// }
+		// Validasi pemohon tidak boleh memilih dirinya sendiri sebagai pengganti
+		if (currentUserNik && formData.nik_ganti && currentUserNik === formData.nik_ganti) {
+			toast.error("NIK pemohon dan NIK rekan pengganti tidak boleh sama");
+			return false;
+		}
 
 		try {
 			setSubmitLoading(true);
@@ -345,14 +281,15 @@ const usePengajuanTukarDinas = () => {
 
 	// Filter data based on search term and status
 	const filteredData = pengajuanData.filter((item) => {
+		const searchLower = debouncedSearchTerm.toLowerCase();
 		const matchesSearch =
 			debouncedSearchTerm === "" ||
-			(item.nama_pemohon &&
-				item.nama_pemohon
-					.toLowerCase()
-					.includes(debouncedSearchTerm.toLowerCase())) ||
-			(item.nik &&
-				item.nik.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
+			(item.nama_pemohon && item.nama_pemohon.toLowerCase().includes(searchLower)) ||
+			(item.nama_pengganti && item.nama_pengganti.toLowerCase().includes(searchLower)) ||
+			(item.nama_pj && item.nama_pj.toLowerCase().includes(searchLower)) ||
+			(item.nik && item.nik.toLowerCase().includes(searchLower)) ||
+			(item.nik_ganti && item.nik_ganti.toLowerCase().includes(searchLower)) ||
+			(item.no_pengajuan && item.no_pengajuan.toLowerCase().includes(searchLower));
 
 		const matchesStatus =
 			statusFilter === "all" || item.status === statusFilter;

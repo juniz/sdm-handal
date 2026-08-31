@@ -51,6 +51,9 @@ export async function GET(request) {
 		const nama = searchParams.get("nama") || "";
 		const page = parseInt(searchParams.get("page") || "1", 10);
 		const limit = parseInt(searchParams.get("limit") || "10", 10);
+		const sortBy = searchParams.get("sort_by") || searchParams.get("sortBy") || "nama";
+		const sortOrder = searchParams.get("sort_order") || searchParams.get("sortOrder") || "asc";
+		const onlyAnomali = searchParams.get("only_anomali") === "true" || searchParams.get("onlyAnomali") === "true";
 
 		if (!bulan || !tahun) {
 			return NextResponse.json({ error: "Bulan dan tahun diperlukan" }, { status: 400 });
@@ -65,6 +68,9 @@ export async function GET(request) {
 				$nama: String
 				$page: Int
 				$limit: Int
+				$sortBy: String
+				$sortOrder: String
+				$onlyAnomali: Boolean
 			) {
 				rekapPengawasanList(
 					bulan: $bulan
@@ -74,6 +80,9 @@ export async function GET(request) {
 					nama: $nama
 					page: $page
 					limit: $limit
+					sortBy: $sortBy
+					sortOrder: $sortOrder
+					onlyAnomali: $onlyAnomali
 				) {
 					data {
 						id
@@ -87,6 +96,9 @@ export async function GET(request) {
 						total_hari_jadwal
 						hari_approved
 						hari_approved_bonus
+						hari_pending
+						hari_draft
+						hari_kosong
 						gap_hari
 						rata_skor_total
 						status_rekap
@@ -115,7 +127,10 @@ export async function GET(request) {
 			sttsKerja,
 			nama,
 			page,
-			limit
+			limit,
+			sortBy,
+			sortOrder,
+			onlyAnomali,
 		};
 
 		const data = await fetchGraphQL(query, variables, token);

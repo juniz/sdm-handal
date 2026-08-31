@@ -105,8 +105,8 @@ const PengajuanPagination = ({
 									onClick={() => goToPage(pageNum)}
 									className={`min-w-[40px] ${
 										currentPage === pageNum
-											? "bg-blue-600 hover:bg-blue-700 text-white"
-											: ""
+											? "bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+											: "border-slate-200 text-slate-700 hover:bg-slate-50"
 									}`}
 								>
 									{pageNum}
