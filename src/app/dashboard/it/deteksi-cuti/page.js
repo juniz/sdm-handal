@@ -21,6 +21,9 @@ import {
 	Check,
 	Loader2,
 	AlertTriangle,
+	ChevronLeft,
+	ChevronRight,
+	Info,
 } from "lucide-react";
 import moment from "moment";
 import "moment/locale/id";
@@ -53,6 +56,10 @@ export default function DeteksiCutiPage() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
+	// Pagination states
+	const [currentPage, setCurrentPage] = useState(1);
+	const [pageSize, setPageSize] = useState(25);
+
 	// Selection state
 	const [selectedKeys, setSelectedKeys] = useState(new Set());
 
@@ -73,6 +80,22 @@ export default function DeteksiCutiPage() {
 		}, 400);
 		return () => clearTimeout(timer);
 	}, [searchTerm]);
+
+	// Reset page on filter changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [tanggalAwal, tanggalAkhir, selectedDepartment, statusFilter, debouncedSearch, pageSize]);
+
+	// Close modal on Escape key
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape" && confirmModal.isOpen && !isProcessing) {
+				setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [confirmModal.isOpen, isProcessing]);
 
 	// Fetch departemen options
 	useEffect(() => {
@@ -144,6 +167,14 @@ export default function DeteksiCutiPage() {
 	const selectableItems = useMemo(() => {
 		return leaveData.filter((item) => item.status_bypass !== "approved_100");
 	}, [leaveData]);
+
+	// Pagination calculations
+	const totalItems = leaveData.length;
+	const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+	const paginatedData = useMemo(() => {
+		const start = (currentPage - 1) * pageSize;
+		return leaveData.slice(start, start + pageSize);
+	}, [leaveData, currentPage, pageSize]);
 
 	// Checkbox handlers
 	const handleToggleSelectAll = () => {
@@ -279,7 +310,7 @@ export default function DeteksiCutiPage() {
 			case "Tahunan":
 			case "Tahunan ke luar negeri":
 				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800">
+					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">
 						{label}
 					</span>
 				);
@@ -354,7 +385,7 @@ export default function DeteksiCutiPage() {
 				<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2.5">
-							<div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
+							<div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
 								<ShieldCheck className="w-6 h-6" />
 							</div>
 							<div>
@@ -372,16 +403,24 @@ export default function DeteksiCutiPage() {
 						<button
 							onClick={() => fetchData(false)}
 							disabled={isRefreshing || isProcessing}
-							className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium transition shadow-sm disabled:opacity-50"
+							className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium transition shadow-sm disabled:opacity-50 min-h-[42px]"
 						>
 							<RefreshCw
 								className={`w-4 h-4 text-slate-500 dark:text-slate-400 ${
-									isRefreshing ? "animate-spin text-blue-600 dark:text-blue-400" : ""
+									isRefreshing ? "animate-spin text-sky-600 dark:text-sky-400" : ""
 								}`}
 							/>
 							<span>{isRefreshing ? "Memuat..." : "Refresh"}</span>
 						</button>
 					</div>
+				</div>
+
+				{/* Contextual Help Banner */}
+				<div className="mt-4 p-3 rounded-xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-300">
+					<Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
+					<p className="leading-relaxed">
+						<strong>Tentang Bypass Cuti:</strong> Tindakan bypass otomatis mengatur status penilaian harian pegawai menjadi <strong>Disetujui (Approved)</strong> dengan skor absensi <strong>100</strong> dan skor kegiatan <strong>100</strong>, serta menyisipkan 1 riwayat kegiatan cuti default agar hak kinerja pegawai selama cuti resmi tetap terjaga penuh.
+					</p>
 				</div>
 			</div>
 
@@ -401,7 +440,7 @@ export default function DeteksiCutiPage() {
 								Shift kerja bertabrakan cuti
 							</p>
 						</div>
-						<div className="p-3.5 bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50 rounded-2xl text-blue-600 dark:text-blue-400">
+						<div className="p-3.5 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/50 rounded-2xl text-sky-600 dark:text-sky-400">
 							<Calendar className="w-6 h-6" />
 						</div>
 					</div>
@@ -451,46 +490,49 @@ export default function DeteksiCutiPage() {
 			{/* Filter Bar */}
 			<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
 				<div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-semibold text-sm">
-					<Filter className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+					<Filter className="w-4 h-4 text-sky-600 dark:text-sky-400" />
 					<span>Filter & Pencarian</span>
 				</div>
 
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
 					{/* Tanggal Awal */}
 					<div className="space-y-1">
-						<label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+						<label htmlFor="filter-tanggal-awal" className="text-xs font-medium text-slate-600 dark:text-slate-400">
 							Tanggal Awal
 						</label>
 						<input
+							id="filter-tanggal-awal"
 							type="date"
 							value={tanggalAwal}
 							onChange={(e) => setTanggalAwal(e.target.value)}
-							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 						/>
 					</div>
 
 					{/* Tanggal Akhir */}
 					<div className="space-y-1">
-						<label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+						<label htmlFor="filter-tanggal-akhir" className="text-xs font-medium text-slate-600 dark:text-slate-400">
 							Tanggal Akhir
 						</label>
 						<input
+							id="filter-tanggal-akhir"
 							type="date"
 							value={tanggalAkhir}
 							onChange={(e) => setTanggalAkhir(e.target.value)}
-							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 						/>
 					</div>
 
 					{/* Departemen */}
 					<div className="space-y-1">
-						<label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+						<label htmlFor="filter-departemen" className="text-xs font-medium text-slate-600 dark:text-slate-400">
 							Departemen
 						</label>
 						<select
+							id="filter-departemen"
 							value={selectedDepartment}
 							onChange={(e) => setSelectedDepartment(e.target.value)}
-							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 						>
 							<option value="ALL">Semua Departemen</option>
 							{departments.map((dept) => (
@@ -503,13 +545,14 @@ export default function DeteksiCutiPage() {
 
 					{/* Status Bypass */}
 					<div className="space-y-1">
-						<label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+						<label htmlFor="filter-status" className="text-xs font-medium text-slate-600 dark:text-slate-400">
 							Status Penilaian
 						</label>
 						<select
+							id="filter-status"
 							value={statusFilter}
 							onChange={(e) => setStatusFilter(e.target.value)}
-							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+							className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 						>
 							<option value="ALL">Semua Status</option>
 							<option value="perlu_bypass">Belum Diproses / Perlu Bypass</option>
@@ -523,15 +566,19 @@ export default function DeteksiCutiPage() {
 					<Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
 					<input
 						type="text"
+						id="filter-search"
+						aria-label="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan Cuti"
 						value={searchTerm}
 						onChange={(e) => setSearchTerm(e.target.value)}
 						placeholder="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan Cuti..."
-						className="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+						className="w-full pl-10 pr-12 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 					/>
 					{searchTerm && (
 						<button
+							type="button"
+							aria-label="Hapus kata kunci pencarian"
 							onClick={() => setSearchTerm("")}
-							className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+							className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
 						>
 							<X className="w-4 h-4" />
 						</button>
@@ -546,18 +593,18 @@ export default function DeteksiCutiPage() {
 						<button
 							onClick={handleToggleSelectAll}
 							disabled={selectableItems.length === 0}
-							className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition disabled:opacity-40"
+							className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 transition disabled:opacity-40 min-h-[38px]"
 						>
 							{selectedKeys.size > 0 && selectedKeys.size === selectableItems.length ? (
-								<CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+								<CheckSquare className="w-5 h-5 text-sky-600 dark:text-sky-400" />
 							) : (
 								<Square className="w-5 h-5 text-slate-400" />
 							)}
-							<span>Pilih Semua yang Belum Diproses</span>
+							<span>Pilih Semua Belum Diproses ({selectableItems.length})</span>
 						</button>
 
 						{selectedKeys.size > 0 && (
-							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+							<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300">
 								{selectedKeys.size} dipilih
 							</span>
 						)}
@@ -567,7 +614,7 @@ export default function DeteksiCutiPage() {
 						<button
 							onClick={handleBulkSelectedBypass}
 							disabled={selectedKeys.size === 0 || isProcessing}
-							className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+							className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]"
 						>
 							<Zap className="w-4 h-4" />
 							<span>Bypass Terpilih ({selectedKeys.size})</span>
@@ -576,7 +623,7 @@ export default function DeteksiCutiPage() {
 						<button
 							onClick={handleBulkAllUnbypassed}
 							disabled={summary.perlu_bypass === 0 || isProcessing || selectableItems.length === 0}
-							className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+							className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]"
 						>
 							<Layers className="w-4 h-4" />
 							<span>Bypass Semua Belum Diproses</span>
@@ -590,7 +637,7 @@ export default function DeteksiCutiPage() {
 				/* Loading skeleton */
 				<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center shadow-sm">
 					<div className="flex flex-col items-center justify-center space-y-3">
-						<Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
+						<Loader2 className="w-8 h-8 animate-spin text-sky-600 dark:text-sky-400" />
 						<p className="text-sm font-medium text-slate-600 dark:text-slate-400">
 							Memindai jadwal shift kerja dan pengajuan cuti pegawai...
 						</p>
@@ -607,7 +654,7 @@ export default function DeteksiCutiPage() {
 						<p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{error}</p>
 						<button
 							onClick={() => fetchData(false)}
-							className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition"
+							className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 text-white text-sm font-medium rounded-xl hover:bg-sky-700 transition min-h-[42px]"
 						>
 							<RefreshCw className="w-4 h-4" />
 							<span>Coba Lagi</span>
@@ -638,18 +685,21 @@ export default function DeteksiCutiPage() {
 							<table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
 								<thead className="bg-slate-50 dark:bg-slate-800/70 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
 									<tr>
-										<th scope="col" className="p-4 w-10 text-center">
-											<input
-												type="checkbox"
-												checked={
-													selectedKeys.size > 0 &&
-													selectedKeys.size === selectableItems.length &&
-													selectableItems.length > 0
-												}
-												onChange={handleToggleSelectAll}
-												disabled={selectableItems.length === 0}
-												className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40"
-											/>
+										<th scope="col" className="p-4 w-12 text-center">
+											<div className="flex items-center justify-center">
+												<input
+													type="checkbox"
+													aria-label="Pilih semua baris belum disetujui"
+													checked={
+														selectedKeys.size > 0 &&
+														selectedKeys.size === selectableItems.length &&
+														selectableItems.length > 0
+													}
+													onChange={handleToggleSelectAll}
+													disabled={selectableItems.length === 0}
+													className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer disabled:opacity-40 w-4 h-4"
+												/>
+											</div>
 										</th>
 										<th scope="col" className="py-3.5 px-4">
 											Pegawai
@@ -669,7 +719,7 @@ export default function DeteksiCutiPage() {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-									{leaveData.map((item) => {
+									{paginatedData.map((item) => {
 										const key = getItemKey(item);
 										const isSelected = selectedKeys.has(key);
 										const isApproved = item.status_bypass === "approved_100";
@@ -678,17 +728,20 @@ export default function DeteksiCutiPage() {
 											<tr
 												key={key}
 												className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition ${
-													isSelected ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
+													isSelected ? "bg-sky-50/40 dark:bg-sky-950/20" : ""
 												}`}
 											>
 												<td className="p-4 text-center">
-													<input
-														type="checkbox"
-														checked={isSelected}
-														onChange={() => handleToggleItem(item)}
-														disabled={isApproved}
-														className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-													/>
+													<div className="flex items-center justify-center">
+														<input
+															type="checkbox"
+															aria-label={`Pilih ${item.pegawai_nama} tanggal ${item.tanggal}`}
+															checked={isSelected}
+															onChange={() => handleToggleItem(item)}
+															disabled={isApproved}
+															className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed w-4 h-4"
+														/>
+													</div>
 												</td>
 												<td className="py-3.5 px-4">
 													<div className="font-semibold text-slate-900 dark:text-white">
@@ -712,7 +765,7 @@ export default function DeteksiCutiPage() {
 														{moment(item.tanggal).format("dddd")}
 													</div>
 													<div className="mt-1">
-														<span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+														<span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
 															<Clock className="w-3 h-3" />
 															Shift: {item.shift}
 														</span>
@@ -728,7 +781,7 @@ export default function DeteksiCutiPage() {
 												<td className="py-3.5 px-4">{getStatusPenilaianBadge(item)}</td>
 												<td className="py-3.5 px-4 text-center">
 													{isApproved ? (
-														<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-2.5 py-1 rounded-xl">
+														<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-xl min-h-[36px]">
 															<Check className="w-3.5 h-3.5" />
 															Selesai
 														</span>
@@ -736,7 +789,7 @@ export default function DeteksiCutiPage() {
 														<button
 															onClick={() => handleSingleBypass(item)}
 															disabled={isProcessing}
-															className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-50"
+															className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-50 min-h-[36px]"
 														>
 															<Zap className="w-3.5 h-3.5" />
 															<span>Bypass</span>
@@ -753,7 +806,7 @@ export default function DeteksiCutiPage() {
 
 					{/* Mobile Responsive Cards View */}
 					<div className="md:hidden space-y-3">
-						{leaveData.map((item) => {
+						{paginatedData.map((item) => {
 							const key = getItemKey(item);
 							const isSelected = selectedKeys.has(key);
 							const isApproved = item.status_bypass === "approved_100";
@@ -763,19 +816,22 @@ export default function DeteksiCutiPage() {
 									key={key}
 									className={`bg-white dark:bg-slate-900 border rounded-2xl p-4 shadow-sm space-y-3 transition ${
 										isSelected
-											? "border-blue-500 bg-blue-50/40 dark:bg-blue-950/20"
+											? "border-sky-500 bg-sky-50/40 dark:bg-sky-950/20"
 											: "border-slate-200 dark:border-slate-800"
 									}`}
 								>
 									<div className="flex items-start justify-between gap-3">
 										<div className="flex items-start gap-3">
-											<input
-												type="checkbox"
-												checked={isSelected}
-												onChange={() => handleToggleItem(item)}
-												disabled={isApproved}
-												className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40 disabled:cursor-not-allowed"
-											/>
+											<div className="min-w-[40px] min-h-[40px] flex items-center justify-center -ml-1">
+												<input
+													type="checkbox"
+													aria-label={`Pilih ${item.pegawai_nama} tanggal ${item.tanggal}`}
+													checked={isSelected}
+													onChange={() => handleToggleItem(item)}
+													disabled={isApproved}
+													className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 disabled:opacity-40 disabled:cursor-not-allowed w-4 h-4"
+												/>
+											</div>
 											<div>
 												<h4 className="font-semibold text-slate-900 dark:text-white text-sm">
 													{item.pegawai_nama}
@@ -808,7 +864,7 @@ export default function DeteksiCutiPage() {
 										<div>{getStatusPenilaianBadge(item)}</div>
 										<div>
 											{isApproved ? (
-												<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 rounded-lg">
+												<span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-2 rounded-xl min-h-[44px]">
 													<Check className="w-3.5 h-3.5" />
 													Selesai
 												</span>
@@ -816,7 +872,7 @@ export default function DeteksiCutiPage() {
 												<button
 													onClick={() => handleSingleBypass(item)}
 													disabled={isProcessing}
-													className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-50"
+													className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-50 min-h-[44px]"
 												>
 													<Zap className="w-3.5 h-3.5" />
 													<span>Bypass</span>
@@ -828,19 +884,82 @@ export default function DeteksiCutiPage() {
 							);
 						})}
 					</div>
+
+					{/* Pagination Controls */}
+					<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+						<div className="flex items-center gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+							<span>
+								Menampilkan{" "}
+								<strong className="text-slate-700 dark:text-slate-200">
+									{totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+								</strong>{" "}
+								-{" "}
+								<strong className="text-slate-700 dark:text-slate-200">
+									{Math.min(currentPage * pageSize, totalItems)}
+								</strong>{" "}
+								dari <strong className="text-slate-700 dark:text-slate-200">{totalItems}</strong> jadwal cuti
+							</span>
+
+							<div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
+								<label htmlFor="select-page-size" className="sr-only">
+									Jumlah data per halaman
+								</label>
+								<select
+									id="select-page-size"
+									value={pageSize}
+									onChange={(e) => setPageSize(Number(e.target.value))}
+									className="px-2 py-1 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-sky-500"
+								>
+									<option value={10}>10 / hal</option>
+									<option value={25}>25 / hal</option>
+									<option value={50}>50 / hal</option>
+									<option value={100}>100 / hal</option>
+								</select>
+							</div>
+						</div>
+
+						<div className="flex items-center gap-1.5">
+							<button
+								onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+								disabled={currentPage === 1}
+								aria-label="Halaman sebelumnya"
+								className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition min-w-[38px] min-h-[38px] flex items-center justify-center"
+							>
+								<ChevronLeft className="w-4 h-4" />
+							</button>
+
+							<span className="text-xs sm:text-sm font-medium px-3 text-slate-700 dark:text-slate-300">
+								Hal {currentPage} dari {totalPages}
+							</span>
+
+							<button
+								onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+								disabled={currentPage >= totalPages}
+								aria-label="Halaman berikutnya"
+								className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition min-w-[38px] min-h-[38px] flex items-center justify-center"
+							>
+								<ChevronRight className="w-4 h-4" />
+							</button>
+						</div>
+					</div>
 				</div>
 			)}
 
 			{/* Confirmation Modal */}
 			{confirmModal.isOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+				<div
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="confirm-modal-title"
+					className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+				>
 					<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
 						<div className="flex items-start gap-3">
-							<div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
+							<div className="p-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
 								<Zap className="w-6 h-6" />
 							</div>
 							<div className="space-y-1">
-								<h3 className="text-lg font-bold text-slate-900 dark:text-white">
+								<h3 id="confirm-modal-title" className="text-lg font-bold text-slate-900 dark:text-white">
 									{confirmModal.title}
 								</h3>
 								<p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
@@ -866,7 +985,7 @@ export default function DeteksiCutiPage() {
 								type="button"
 								onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
 								disabled={isProcessing}
-								className="px-4 py-2 text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+								className="px-4 py-2.5 text-xs sm:text-sm font-medium rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition min-h-[42px]"
 							>
 								Batal
 							</button>
@@ -874,7 +993,7 @@ export default function DeteksiCutiPage() {
 								type="button"
 								onClick={() => executeBypass(confirmModal.items)}
 								disabled={isProcessing}
-								className="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm disabled:opacity-50"
+								className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-sky-600 hover:bg-sky-700 text-white transition shadow-sm disabled:opacity-50 min-h-[42px]"
 							>
 								{isProcessing ? (
 									<>
