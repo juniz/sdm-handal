@@ -179,6 +179,7 @@ export async function GET(request) {
 
 		// 3. Process each leave request and expand into shift days
 		const allItems = [];
+		const processedDays = new Set();
 		let totalCutiShift = 0;
 		let countApproved100 = 0;
 		let countPerluBypass = 0;
@@ -194,6 +195,13 @@ export async function GET(request) {
 			let curr = start.clone();
 			while (curr.isSameOrBefore(end)) {
 				const dateStr = curr.format("YYYY-MM-DD");
+				const dayKey = `${pc.pegawai_id}_${dateStr}`;
+
+				if (processedDays.has(dayKey)) {
+					curr.add(1, "day");
+					continue;
+				}
+
 				const dayNumber = curr.date();
 				const monthStr = curr.format("MM");
 				const yearStr = curr.format("YYYY");
@@ -216,6 +224,8 @@ export async function GET(request) {
 					curr.add(1, "day");
 					continue;
 				}
+
+				processedDays.add(dayKey);
 
 				// Check daily evaluation status
 				const ph = penilaianMap.get(`${pc.pegawai_id}_${dateStr}`);

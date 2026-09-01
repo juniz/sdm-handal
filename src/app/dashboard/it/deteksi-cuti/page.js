@@ -138,7 +138,7 @@ export default function DeteksiCutiPage() {
 	}, [fetchData]);
 
 	// Item key helper
-	const getItemKey = (item) => `${item.pegawai_id}_${item.tanggal}`;
+	const getItemKey = (item) => `${item.pegawai_id}_${item.tanggal}_${item.no_pengajuan || ""}`;
 
 	// Selectable items (items that are NOT yet approved_100)
 	const selectableItems = useMemo(() => {
