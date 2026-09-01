@@ -28,6 +28,10 @@ import {
 import moment from "moment";
 import "moment/locale/id";
 import { toast } from "sonner";
+import {
+	fetchDeteksiCutiGql,
+	executeBypassCutiGql,
+} from "@/lib/deteksi-cuti-gql-client";
 
 moment.locale("id");
 
@@ -123,24 +127,50 @@ export default function DeteksiCutiPage() {
 			setError(null);
 
 			try {
-				const params = new URLSearchParams({
-					tanggal_awal: tanggalAwal,
-					tanggal_akhir: tanggalAkhir,
-					departemen: selectedDepartment,
-					status_filter: statusFilter,
-					search: debouncedSearch,
-				});
+				let resultData = null;
+				let summaryData = null;
 
-				const res = await fetch(`/api/it/deteksi-cuti?${params}`);
-				const result = await res.json();
+				try {
+					const filter = {
+						tanggalAwal,
+						tanggalAkhir,
+						departemen: selectedDepartment !== "ALL" ? selectedDepartment : undefined,
+						statusFilter: statusFilter !== "ALL" ? statusFilter : undefined,
+						searchTerm: debouncedSearch || undefined,
+					};
+					const gqlRes = await fetchDeteksiCutiGql(filter);
+					if (gqlRes) {
+						resultData = gqlRes.items || [];
+						summaryData = gqlRes.summary || {
+							total_cuti_shift: 0,
+							approved_100: 0,
+							perlu_bypass: 0,
+						};
+					}
+				} catch (gqlErr) {
+					console.warn("GraphQL fetch failed, falling back to REST:", gqlErr);
+					const params = new URLSearchParams({
+						tanggal_awal: tanggalAwal,
+						tanggal_akhir: tanggalAkhir,
+						departemen: selectedDepartment,
+						status_filter: statusFilter,
+						search: debouncedSearch,
+					});
 
-				if (!res.ok || !result.success) {
-					throw new Error(result.error || result.message || "Gagal memuat data deteksi cuti");
+					const res = await fetch(`/api/it/deteksi-cuti?${params}`);
+					const result = await res.json();
+
+					if (!res.ok || !result.success) {
+						throw new Error(result.error || result.message || "Gagal memuat data deteksi cuti");
+					}
+
+					resultData = result.data || [];
+					summaryData = result.summary;
 				}
 
-				setLeaveData(result.data || []);
-				if (result.summary) {
-					setSummary(result.summary);
+				setLeaveData(resultData || []);
+				if (summaryData) {
+					setSummary(summaryData);
 				}
 				// Clear invalid selections
 				setSelectedKeys(new Set());
@@ -213,29 +243,48 @@ export default function DeteksiCutiPage() {
 		const toastId = toast.loading(`Memproses bypass untuk ${itemsToProcess.length} data cuti...`);
 
 		try {
-			const payload = {
-				items: itemsToProcess.map((item) => ({
-					pegawai_id: item.pegawai_id,
-					tanggal: item.tanggal,
-					no_pengajuan: item.no_pengajuan,
-					urgensi: item.urgensi,
-					shift: item.shift,
-				})),
-			};
+			const formattedItems = itemsToProcess.map((item) => ({
+				pegawai_id: Number(item.pegawai_id),
+				tanggal: item.tanggal,
+				no_pengajuan: item.no_pengajuan || "",
+				urgensi: item.urgensi || "",
+				shift: item.shift || "",
+			}));
 
-			const res = await fetch("/api/it/deteksi-cuti", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(payload),
-			});
+			let successMessage = "Bypass penilaian berhasil diproses!";
 
-			const result = await res.json();
+			try {
+				const gqlRes = await executeBypassCutiGql(formattedItems);
+				if (!gqlRes || !gqlRes.success) {
+					throw new Error(gqlRes?.message || "GraphQL bypass failed");
+				}
+				if (gqlRes.message) {
+					successMessage = gqlRes.message;
+				}
+			} catch (gqlErr) {
+				console.warn("GraphQL bypass failed, falling back to REST:", gqlErr);
+				const payload = {
+					items: formattedItems,
+				};
 
-			if (!res.ok || !result.success) {
-				throw new Error(result.error || result.message || "Gagal memproses bypass penilaian");
+				const res = await fetch("/api/it/deteksi-cuti", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				});
+
+				const result = await res.json();
+
+				if (!res.ok || !result.success) {
+					throw new Error(result.error || result.message || "Gagal memproses bypass penilaian");
+				}
+
+				if (result.message) {
+					successMessage = result.message;
+				}
 			}
 
-			toast.success(result.message || "Bypass penilaian berhasil diproses!", {
+			toast.success(successMessage, {
 				id: toastId,
 			});
 
