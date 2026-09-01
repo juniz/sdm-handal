@@ -51,16 +51,21 @@ async function verifyAuth() {
 
 	const userDept = (userCheck[0]?.departemen || loggedInUser.departemen || "").toUpperCase();
 	const userDeptNama = (userCheck[0]?.departemen_nama || "").toUpperCase();
+	const userRole = (loggedInUser.role || loggedInUser.level || "").toUpperCase();
 
 	const isAllowed =
 		userDept.includes("IT") ||
 		userDept.includes("SDM") ||
 		userDept.includes("HRD") ||
 		userDept.includes("SPI") ||
+		userDept.includes("PENGAWAS") ||
 		userDeptNama.includes("IT") ||
 		userDeptNama.includes("SDM") ||
 		userDeptNama.includes("HRD") ||
 		userDeptNama.includes("SPI") ||
+		userDeptNama.includes("PENGAWAS") ||
+		userRole.includes("ADMIN") ||
+		userRole.includes("IT") ||
 		userDept === (process.env.NEXT_PUBLIC_DEPARTMENT_IT || "").toUpperCase() ||
 		userDept === (process.env.NEXT_PUBLIC_DEPARTMENT_SPI || "").toUpperCase();
 
@@ -128,32 +133,34 @@ export async function GET(request) {
 		}
 
 		// 2. Collect unique pegawai_ids and distinct month/year combinations for batch schedule loading
-		const pegawaiIds = [...new Set(leaveRequests.map((r) => r.pegawai_id))];
+		const pegawaiIds = [...new Set(leaveRequests.map((r) => r.pegawai_id))].filter(Boolean);
 
-		// Fetch existing daily evaluations for these employees in date range
-		const penilaianHarianList = await rawQuery(
-			`SELECT id, pegawai_id, DATE_FORMAT(tanggal, '%Y-%m-%d') as tanggal, shift_jadwal, sumber_absensi, ref_cuti_no,
-			        nilai_kondisi, skor_kegiatan, skor_absensi, skor_total, status, approved_at, approved_by, catatan_supervisor
-			 FROM penilaian_harian
-			 WHERE pegawai_id IN (?) AND tanggal >= ? AND tanggal <= ?`,
-			[pegawaiIds, tanggalAwal, tanggalAkhir]
-		);
+		let penilaianHarianList = [];
+		let jadwalPegawaiList = [];
+		let jadwalTambahanList = [];
 
-		// Build fast lookup map for penilaian_harian: key = `${pegawai_id}_${tanggal}`
-		const penilaianMap = new Map();
-		for (const ph of penilaianHarianList) {
-			penilaianMap.set(`${ph.pegawai_id}_${ph.tanggal}`, ph);
+		if (pegawaiIds.length > 0) {
+			const placeholders = pegawaiIds.map(() => "?").join(", ");
+
+			// Fetch existing daily evaluations for these employees in date range
+			penilaianHarianList = await rawQuery(
+				`SELECT id, pegawai_id, DATE_FORMAT(tanggal, '%Y-%m-%d') as tanggal, shift_jadwal, sumber_absensi, ref_cuti_no,
+				        nilai_kondisi, skor_kegiatan, skor_absensi, skor_total, status, approved_at, approved_by, catatan_supervisor
+				 FROM penilaian_harian
+				 WHERE pegawai_id IN (${placeholders}) AND tanggal >= ? AND tanggal <= ?`,
+				[...pegawaiIds, tanggalAwal, tanggalAkhir]
+			);
+
+			// Fetch all schedules for these employees
+			jadwalPegawaiList = await rawQuery(
+				`SELECT * FROM jadwal_pegawai WHERE id IN (${placeholders})`,
+				[...pegawaiIds]
+			);
+			jadwalTambahanList = await rawQuery(
+				`SELECT * FROM jadwal_tambahan WHERE id IN (${placeholders})`,
+				[...pegawaiIds]
+			);
 		}
-
-		// Fetch all schedules for these employees
-		const jadwalPegawaiList = await rawQuery(
-			`SELECT * FROM jadwal_pegawai WHERE id IN (?)`,
-			[pegawaiIds]
-		);
-		const jadwalTambahanList = await rawQuery(
-			`SELECT * FROM jadwal_tambahan WHERE id IN (?)`,
-			[pegawaiIds]
-		);
 
 		// Build lookup map for schedules: key = `${id}_${bulan}_${tahun}`
 		const scheduleMap = new Map();
@@ -269,7 +276,7 @@ export async function GET(request) {
 	} catch (error) {
 		console.error("Error in GET /api/it/deteksi-cuti:", error);
 		return NextResponse.json(
-			{ success: false, error: "Internal Server Error", message: error.message },
+			{ success: false, error: error.message || "Internal Server Error", message: error.message },
 			{ status: 500 }
 		);
 	}
