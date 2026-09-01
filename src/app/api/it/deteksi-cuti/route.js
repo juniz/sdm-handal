@@ -109,7 +109,7 @@ export async function GET(request) {
 		}
 
 		const leaveRequests = await rawQuery(
-			`SELECT pc.no_pengajuan, pc.nik, pc.tanggal_awal, pc.tanggal_akhir, pc.urgensi, pc.alamat_tujuan, pc.jml,
+			`SELECT pc.no_pengajuan, pc.nik, pc.tanggal_awal, pc.tanggal_akhir, pc.urgensi, pc.alamat, pc.jumlah,
 			        p.id as pegawai_id, p.nama as pegawai_nama, p.departemen as pegawai_departemen,
 			        d.nama as departemen_nama
 			 FROM pengajuan_cuti pc
