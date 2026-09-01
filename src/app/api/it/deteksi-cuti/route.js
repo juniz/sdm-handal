@@ -162,6 +162,12 @@ export async function GET(request) {
 			);
 		}
 
+		// Build fast lookup map for penilaian_harian: key = `${pegawai_id}_${tanggal}`
+		const penilaianMap = new Map();
+		for (const ph of penilaianHarianList) {
+			penilaianMap.set(`${ph.pegawai_id}_${ph.tanggal}`, ph);
+		}
+
 		// Build lookup map for schedules: key = `${id}_${bulan}_${tahun}`
 		const scheduleMap = new Map();
 		for (const jp of jadwalPegawaiList) {
