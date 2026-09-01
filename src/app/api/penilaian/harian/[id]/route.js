@@ -304,10 +304,12 @@ export async function POST(request, { params }) {
 				return NextResponse.json({ error: `Batas pengiriman telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat dikirim.` }, { status: 400 });
 			}
 
+			const isCuti = harian.sumber_absensi === "cuti";
 			const isDinasLuar = harian.nilai_kondisi === "izin_dinas_luar";
+			const isBypassed = isDinasLuar || isCuti;
 
-			// Validasi jam pulang berdasarkan jadwal shift (hanya jika bukan dinas luar kota)
-			if (!isDinasLuar) {
+			// Validasi jam pulang berdasarkan jadwal shift (hanya jika bukan dinas luar kota dan bukan cuti)
+			if (!isBypassed) {
 				try {
 					const evalDateStr = moment(harian.tanggal).format("YYYY-MM-DD");
 					const todayStr = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
@@ -379,7 +381,7 @@ export async function POST(request, { params }) {
 				where: { penilaian_id: id }
 			});
 
-			if (kegiatan.length === 0 && !isDinasLuar) {
+			if (kegiatan.length === 0 && !isBypassed) {
 				return NextResponse.json({ error: "Minimal harus ada 1 kegiatan harian sebelum dikirim" }, { status: 400 });
 			}
 
@@ -400,7 +402,7 @@ export async function POST(request, { params }) {
 			};
 
 			let skorKegiatan = 100;
-			if (!isDinasLuar) {
+			if (!isBypassed) {
 				const totalWeight = kegiatan.reduce((acc, curr) => acc + getWeight(curr.prioritas), 0);
 				const completedWeight = kegiatan.reduce((acc, curr) => acc + (curr.status_selesai === "selesai" ? getWeight(curr.prioritas) : 0), 0);
 				skorKegiatan = totalWeight > 0 ? (completedWeight / totalWeight) * 100 : 0;
@@ -411,11 +413,15 @@ export async function POST(request, { params }) {
 			const bobotKegiatan = paramKegiatan ? Number(paramKegiatan.bobot_persen) : 60;
 			const bobotAbsensi = 100 - bobotKegiatan;
 
-			const skorAbsensi = isDinasLuar ? 100 : Number(harian.skor_absensi);
-			const skorTotal = isDinasLuar 
+			const skorAbsensi = isBypassed ? 100 : Number(harian.skor_absensi);
+			const skorTotal = isBypassed 
 				? 100 
 				: (skorKegiatan * bobotKegiatan / 100) + (skorAbsensi * bobotAbsensi / 100);
-			const newStatus = isDinasLuar ? "approved" : "submitted";
+			const newStatus = isBypassed ? "approved" : "submitted";
+
+			const autoApprovalCatatan = isCuti
+				? `[Auto-Approved Sistem: Cuti ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_cuti_no || "-"}]`
+				: `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${harian.ref_izin_no || "-"}]`;
 
 			await update({
 				table: "penilaian_harian",
@@ -424,19 +430,24 @@ export async function POST(request, { params }) {
 					skor_absensi: skorAbsensi,
 					skor_total: skorTotal,
 					status: newStatus,
-					approved_at: isDinasLuar ? new Date() : null,
-					catatan_supervisor: isDinasLuar 
-						? (harian.catatan_supervisor || `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${harian.ref_izin_no || "-"}]`)
+					approved_at: isBypassed ? new Date() : null,
+					catatan_supervisor: isBypassed 
+						? (harian.catatan_supervisor || autoApprovalCatatan)
 						: harian.catatan_supervisor
 				},
 				where: { id: id }
 			});
 
+			let successMessage = "Penilaian berhasil dikirim untuk approval supervisor";
+			if (isCuti) {
+				successMessage = "Penilaian cuti berhasil disetujui otomatis";
+			} else if (isDinasLuar) {
+				successMessage = "Penilaian dinas luar kota berhasil disetujui otomatis";
+			}
+
 			return NextResponse.json({
 				success: true,
-				message: isDinasLuar
-					? "Penilaian dinas luar kota berhasil disetujui otomatis"
-					: "Penilaian berhasil dikirim untuk approval supervisor",
+				message: successMessage,
 				data: {
 					skor_kegiatan: skorKegiatan,
 					skor_total: skorTotal,
