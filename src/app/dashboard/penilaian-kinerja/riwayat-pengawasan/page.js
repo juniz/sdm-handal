@@ -9,6 +9,7 @@ import AuditSummaryCards from "./components/AuditSummaryCards";
 import AuditFilters from "./components/AuditFilters";
 import AuditTable from "./components/AuditTable";
 import AuditDetailDrawer from "./components/AuditDetailDrawer";
+import AuditActivityModal from "./components/AuditActivityModal";
 
 const MONTHS = [
 	{ value: "01", label: "Januari" },
@@ -40,20 +41,28 @@ export default function RiwayatPenilaianPengawasanPage() {
 	const [sortField, setSortField] = useState("nama");
 	const [sortDirection, setSortDirection] = useState("asc");
 
-	// Data State
-	const [rekapList, setRekapList] = useState([]);
-	const [meta, setMeta] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 1 });
-	const [summary, setSummary] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [errorMsg, setErrorMsg] = useState("");
-
-	// Filter Options State
+	// Master Data State
 	const [departemenList, setDepartemenList] = useState([]);
 	const [sttsKerjaList, setSttsKerjaList] = useState([]);
 
-	// Slide-over Panel State (Employee Detail Drawer)
-	const [panelOpen, setPanelOpen] = useState(false);
+	// Summary Statistics State
+	const [summary, setSummary] = useState(null);
+
+	// Rekap List Data State
+	const [rekapList, setRekapList] = useState([]);
+	const [meta, setMeta] = useState({
+		totalItems: 0,
+		itemCount: 0,
+		itemsPerPage: 10,
+		totalPages: 1,
+		currentPage: 1,
+	});
+	const [loading, setLoading] = useState(false);
+	const [errorMsg, setErrorMsg] = useState("");
+
+	// Slide-over Panel (Detail Pegawai) State
 	const [selectedEmp, setSelectedEmp] = useState(null);
+	const [panelOpen, setPanelOpen] = useState(false);
 	const [panelMonth, setPanelMonth] = useState(moment().format("MM"));
 	const [panelYear, setPanelYear] = useState(moment().format("YYYY"));
 	const [panelLoading, setPanelLoading] = useState(false);
@@ -61,7 +70,8 @@ export default function RiwayatPenilaianPengawasanPage() {
 	const [panelIsTambahanMap, setPanelIsTambahanMap] = useState({});
 	const [panelEvaluations, setPanelEvaluations] = useState([]);
 
-	// Inline Activity Inspection State
+	// Modal Activity Inspection State
+	const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
 	const [selectedDateStr, setSelectedDateStr] = useState("");
 	const [selectedEval, setSelectedEval] = useState(null);
 	const [selectedDayMeta, setSelectedDayMeta] = useState({ shift: "", isWorkDay: false });
@@ -309,33 +319,44 @@ export default function RiwayatPenilaianPengawasanPage() {
 		}
 	}, [selectedEmp, panelOpen, loadEmployeePanelData]);
 
-	// Inspect daily activity inline inside drawer
+	// Inspect daily activity in dedicated modal
 	const handleViewDayActivities = async (dateStr, dayEval, dayShift, isWorkDay) => {
 		if (!selectedEmp) return;
 		setSelectedDateStr(dateStr);
 		setSelectedEval(dayEval || null);
 		setSelectedDayMeta({ shift: dayShift || "", isWorkDay: Boolean(isWorkDay) });
-
-		if (!dayEval) {
-			setActivities([]);
-			setActivityLoading(false);
-			return;
-		}
-
+		setIsActivityModalOpen(true);
 		setActivityLoading(true);
+
 		try {
 			const res = await fetch(
 				`/api/penilaian/harian?tanggal=${dateStr}&pegawai_id=${selectedEmp.pegawai_id}`
 			);
-			if (!res.ok) throw new Error("Gagal memuat detail kegiatan harian");
-			const data = await res.json();
-			setActivities(data.data?.kegiatan || []);
+			if (res.ok) {
+				const result = await res.json();
+				if (result.data) {
+					setSelectedEval(result.data);
+					setActivities(result.data.kegiatan || []);
+				} else {
+					if (!dayEval) setSelectedEval(null);
+					setActivities([]);
+				}
+			} else {
+				setActivities([]);
+			}
 		} catch (err) {
 			console.error("Error loading activities:", err);
 			setActivities([]);
 		} finally {
 			setActivityLoading(false);
 		}
+	};
+
+	const handleCloseActivityModal = () => {
+		setIsActivityModalOpen(false);
+		setSelectedDateStr("");
+		setSelectedEval(null);
+		setActivities([]);
 	};
 
 	// Ratings label helper
@@ -460,7 +481,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 				onOpenDetail={handleOpenDetail}
 			/>
 
-			{/* Slide-over Panel (Employee Detail Drawer with Inline Activity Inspection & Traversal) */}
+			{/* Slide-over Panel (Employee Detail Drawer) */}
 			<AuditDetailDrawer
 				isOpen={panelOpen}
 				onClose={handleCloseDetail}
@@ -478,14 +499,44 @@ export default function RiwayatPenilaianPengawasanPage() {
 				panelIsTambahanMap={panelIsTambahanMap}
 				panelEvaluations={panelEvaluations}
 				selectedDateStr={selectedDateStr}
-				selectedEval={selectedEval}
-				selectedDayMeta={selectedDayMeta}
-				activities={activities}
-				activityLoading={activityLoading}
 				onSelectDay={handleViewDayActivities}
-				onCloseDayActivities={handleCloseDayActivities}
 				MONTHS={MONTHS}
 				YEARS={YEARS}
+			/>
+
+			{/* Standalone Daily Activity Details Modal */}
+			<AuditActivityModal
+				isOpen={isActivityModalOpen}
+				onClose={handleCloseActivityModal}
+				employee={selectedEmp}
+				dateStr={selectedDateStr}
+				dayEval={selectedEval}
+				dayMeta={selectedDayMeta}
+				activities={activities}
+				loading={activityLoading}
+				onEvaluationUpdated={async () => {
+					await loadData();
+					if (selectedEmp) {
+						await loadEmployeePanelData();
+					}
+					// Also refresh modal evaluation state
+					if (selectedDateStr && selectedEmp) {
+						try {
+							const res = await fetch(
+								`/api/penilaian/harian?tanggal=${selectedDateStr}&pegawai_id=${selectedEmp.pegawai_id}`
+							);
+							if (res.ok) {
+								const result = await res.json();
+								if (result.data) {
+									setSelectedEval(result.data);
+									setActivities(result.data.kegiatan || []);
+								}
+							}
+						} catch (e) {
+							console.error("Error refreshing modal data:", e);
+						}
+					}
+				}}
 			/>
 		</div>
 	);

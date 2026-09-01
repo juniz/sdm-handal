@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import moment from "moment";
-import { ShieldCheck, X, Loader2, Calendar as CalendarIcon, CheckCircle, XCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShieldCheck, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import AuditCalendarGrid from "./AuditCalendarGrid";
 
 const DEFAULT_MONTHS = [
@@ -38,13 +38,8 @@ export default function AuditDetailDrawer({
 	panelSchedule,
 	panelIsTambahanMap,
 	panelEvaluations = [],
-	selectedDateStr,
-	selectedEval,
-	selectedDayMeta = { shift: "", isWorkDay: false },
-	activities = [],
-	activityLoading = false,
+	selectedDateStr = "",
 	onSelectDay,
-	onCloseDayActivities,
 	MONTHS = DEFAULT_MONTHS,
 	YEARS = DEFAULT_YEARS,
 }) {
@@ -52,17 +47,13 @@ export default function AuditDetailDrawer({
 	useEffect(() => {
 		if (!isOpen) return;
 		const handleKeyDown = (e) => {
-			if (e.key === "Escape") {
-				if (selectedDateStr && onCloseDayActivities) {
-					onCloseDayActivities();
-				} else if (onClose) {
-					onClose();
-				}
+			if (e.key === "Escape" && onClose) {
+				onClose();
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isOpen, selectedDateStr, onClose, onCloseDayActivities]);
+	}, [isOpen, onClose]);
 
 	if (!isOpen || !selectedEmp) return null;
 
@@ -320,7 +311,7 @@ export default function AuditDetailDrawer({
 										Kalender Kegiatan Harian
 									</h4>
 									<span className="text-[10px] text-slate-500 font-medium">
-										Pilih tanggal untuk melihat rincian aktivitas inline
+										Klik tanggal untuk membuka modal rincian kegiatan
 									</span>
 								</div>
 								<AuditCalendarGrid
@@ -333,150 +324,6 @@ export default function AuditDetailDrawer({
 									onSelectDay={onSelectDay}
 								/>
 							</div>
-
-							{/* Inline Daily Activity Inspector */}
-							{selectedDateStr && (
-								<div className="bg-slate-50/80 border border-slate-200 rounded-2xl p-4 space-y-3.5 animate-fadeIn">
-									<div className="flex justify-between items-center border-b border-slate-200/80 pb-2.5">
-										<div className="flex items-center gap-2">
-											<CalendarIcon className="w-4 h-4 text-sky-600" />
-											<h4 className="font-bold text-sm text-slate-900 font-figtree">
-												Rincian Kegiatan: {formattedSelectedDate}
-											</h4>
-										</div>
-										<button
-											type="button"
-											onClick={onCloseDayActivities}
-											className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors cursor-pointer shadow-xs"
-										>
-											Tutup Rincian
-										</button>
-									</div>
-
-									{activityLoading ? (
-										<div className="flex flex-col justify-center items-center py-8 space-y-2">
-											<Loader2 className="h-6 w-6 text-sky-600 animate-spin" />
-											<span className="text-xs text-slate-500 font-medium">
-												Memuat rincian aktivitas harian...
-											</span>
-										</div>
-									) : (
-										<>
-											{/* Daily Attendance & Shift Summary */}
-											{selectedEval ? (
-												<div className="bg-white border border-slate-200/80 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs shadow-2xs">
-													<div>
-														<span className="text-[10px] font-bold text-slate-400 uppercase block font-figtree">
-															Shift Jadwal
-														</span>
-														<span className="font-extrabold text-slate-800 font-mono">
-															{selectedEval.shift_jadwal || "-"}
-														</span>
-													</div>
-													<div>
-														<span className="text-[10px] font-bold text-slate-400 uppercase block font-figtree">
-															Status Absensi
-														</span>
-														<span className="font-semibold text-slate-700 capitalize">
-															{selectedEval.nilai_kondisi || "-"}
-														</span>
-													</div>
-													<div>
-														<span className="text-[10px] font-bold text-slate-400 uppercase block font-figtree">
-															Skor Absensi
-														</span>
-														<span className="font-bold text-emerald-700 font-mono">
-															{selectedEval.skor_absensi ?? 0}
-														</span>
-													</div>
-													<div>
-														<span className="text-[10px] font-bold text-slate-400 uppercase block font-figtree">
-															Total Skor Harian
-														</span>
-														<span className="font-extrabold text-sky-800 font-figtree text-sm">
-															{Math.round(selectedEval.skor_total ?? 0)}
-														</span>
-													</div>
-												</div>
-											) : (
-												<div className="bg-white border border-rose-200/80 rounded-xl p-3.5 space-y-2 shadow-2xs">
-													<div className="flex items-center justify-between">
-														<span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded uppercase font-mono">
-															{selectedDayMeta?.isWorkDay ? "Hari Kosong / Belum Diisi" : "Hari Libur (OFF)"}
-														</span>
-														{selectedDayMeta?.shift && (
-															<span className="text-xs font-mono font-bold text-slate-600">
-																Shift: <strong className="text-slate-900">{selectedDayMeta.shift}</strong>
-															</span>
-														)}
-													</div>
-													<p className="text-xs text-rose-800">
-														{selectedDayMeta?.isWorkDay
-															? "Pegawai memiliki jadwal shift kerja pada tanggal ini, namun belum mengisi atau menyerahkan penilaian dan laporan kegiatan harian."
-															: "Tidak ada jadwal shift kerja (OFF) untuk pegawai pada tanggal ini."}
-													</p>
-												</div>
-											)}
-
-											{/* Daily Activities List */}
-											<div className="space-y-2">
-												<h5 className="font-bold text-xs text-slate-600 uppercase font-figtree tracking-wider">
-													Aktivitas & Output Kerja ({activities.length})
-												</h5>
-
-												{activities.length === 0 ? (
-													<div className="text-center py-6 bg-white rounded-xl border border-slate-200/80">
-														<p className="text-xs text-slate-500 font-medium">
-															Tidak ada rincian kegiatan tercatat untuk tanggal ini.
-														</p>
-													</div>
-												) : (
-													<div className="space-y-2">
-														{activities.map((act, idx) => {
-															const isDone =
-																act.status_selesai === "selesai" ||
-																act.status_selesai === 1 ||
-																act.status_selesai === "1" ||
-																act.status_selesai === true;
-															return (
-																<div
-																	key={act.id || idx}
-																	className="bg-white border border-slate-200/80 rounded-xl p-3 space-y-1.5 shadow-2xs"
-																>
-																	<div className="flex justify-between items-start gap-2">
-																		<span className="font-bold text-xs text-slate-800 font-figtree">
-																			{idx + 1}. {act.judul_kegiatan}
-																		</span>
-																		{isDone ? (
-																			<span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-full inline-flex items-center gap-1 font-mono shrink-0">
-																				<CheckCircle className="w-3 h-3 text-emerald-600" /> Selesai
-																			</span>
-																		) : (
-																			<span className="px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-200/80 rounded-full inline-flex items-center gap-1 font-mono shrink-0">
-																				<XCircle className="w-3 h-3 text-rose-600" /> Belum Selesai
-																			</span>
-																		)}
-																	</div>
-																	{act.penjabaran && (
-																		<p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 leading-relaxed">
-																			{act.penjabaran}
-																		</p>
-																	)}
-																	{!isDone && act.alasan_belum_selesai && (
-																		<p className="text-xs text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-100 italic">
-																			Alasan: {act.alasan_belum_selesai}
-																		</p>
-																	)}
-																</div>
-															);
-														})}
-													</div>
-												)}
-											</div>
-										</>
-									)}
-								</div>
-							)}
 						</>
 					)}
 				</div>

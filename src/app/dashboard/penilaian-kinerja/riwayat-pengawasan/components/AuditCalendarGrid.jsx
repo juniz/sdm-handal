@@ -73,34 +73,30 @@ export default function AuditCalendarGrid({
 				))}
 				{daysList.map((dayItem) => {
 					let boxBgClass = "bg-white";
-					let borderClass = "border-slate-200";
+					let borderClass = "border-slate-200 hover:border-slate-400";
 					let textClass = "text-slate-900";
 					let statusBadge = null;
-					let isClickable = false;
+					const isClickable = true;
 					const isSelected = selectedDateStr === dayItem.dateStr;
 
 					if (!dayItem.isWorkDay) {
 						boxBgClass = "bg-slate-50 text-slate-400";
-						borderClass = "border-slate-200/80";
+						borderClass = "border-slate-200/80 hover:border-slate-300";
 						textClass = "text-slate-400";
 						statusBadge = (
 							<span className="text-[9px] font-bold text-slate-400 font-mono tracking-wide">
 								OFF
 							</span>
 						);
-						if (!dayItem.isFuture) {
-							isClickable = true;
-						}
 					} else if (!dayItem.evaluation) {
 						if (dayItem.isFuture) {
 							boxBgClass = "bg-white text-slate-300";
-							borderClass = "border-slate-200 border-dashed";
+							borderClass = "border-slate-200 border-dashed hover:border-slate-400";
 							textClass = "text-slate-400";
 							statusBadge = (
 								<span className="text-[9px] font-bold text-slate-300 font-mono">-</span>
 							);
 						} else {
-							isClickable = true;
 							boxBgClass = "bg-rose-50/70 text-rose-900";
 							borderClass = "border-rose-200 hover:border-rose-400";
 							textClass = "text-rose-900";
@@ -112,7 +108,6 @@ export default function AuditCalendarGrid({
 						}
 					} else {
 						const status = dayItem.evaluation.status;
-						isClickable = true;
 						if (status === "approved") {
 							boxBgClass = "bg-emerald-50/70 text-emerald-950";
 							borderClass = "border-emerald-200 hover:border-emerald-400";
@@ -175,26 +170,22 @@ export default function AuditCalendarGrid({
 					return (
 						<div
 							key={dayItem.day}
-							role={isClickable ? "button" : undefined}
-							tabIndex={isClickable ? 0 : -1}
+							role="button"
+							tabIndex={0}
 							aria-label={`Tanggal ${dayItem.day}, Shift ${dayItem.shift || "OFF"}, Status ${dayItem.evaluation?.status || (dayItem.isWorkDay ? (dayItem.isFuture ? "belum" : "kosong") : "libur")}`}
 							onClick={() => {
-								if (isClickable && onSelectDay) {
+								if (onSelectDay) {
 									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, dayItem.shift, dayItem.isWorkDay);
 								}
 							}}
 							onKeyDown={(e) => {
-								if ((e.key === "Enter" || e.key === " ") && isClickable && onSelectDay) {
+								if ((e.key === "Enter" || e.key === " ") && onSelectDay) {
 									e.preventDefault();
 									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, dayItem.shift, dayItem.isWorkDay);
 								}
 							}}
-							className={`aspect-square rounded-xl border p-2 flex flex-col justify-between transition-all duration-150 ${boxBgClass} ${borderClass} ${
+							className={`aspect-square rounded-xl border p-2 flex flex-col justify-between transition-all duration-150 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-500 ${boxBgClass} ${borderClass} ${
 								isSelected ? "ring-2 ring-sky-600 ring-offset-1 shadow-sm" : ""
-							} ${
-								isClickable
-									? "cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-500"
-									: "pointer-events-none"
 							}`}
 						>
 							<div className="flex justify-between items-center w-full leading-none">

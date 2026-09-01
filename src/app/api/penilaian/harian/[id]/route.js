@@ -273,7 +273,7 @@ export async function POST(request, { params }) {
 		const body = await request.json();
 		const { action, catatan_supervisor } = body;
 
-		if (!action || !["submit", "approve", "revisi", "cancel"].includes(action)) {
+		if (!action || !["submit", "approve", "revisi", "cancel", "admin_revisi", "admin_draft", "cancel_approval"].includes(action)) {
 			return NextResponse.json({ error: "Aksi tidak valid" }, { status: 400 });
 		}
 
@@ -473,32 +473,36 @@ export async function POST(request, { params }) {
 			});
 		}
 
-		// 2. APPROVE / REVISI ACTIONS (Supervisor role required)
+		// 2. APPROVE / REVISI / CANCEL / RESET ACTIONS (Supervisor & Admin role)
 		const authorizedSupervisorId = await getSupervisorIdForEmployee(harian.pegawai_id);
+		const userDept = loggedInUser.departemen?.toUpperCase() || "";
+		const isAdmin = userDept === "IT" || userDept === "SDM";
+		const isAuthorizedSupervisor = Number(authorizedSupervisorId) === Number(loggedInUser.id);
 
-		// Prevent self-assessment
-		if (Number(harian.pegawai_id) === Number(loggedInUser.id)) {
+		// Prevent self-assessment approval unless admin
+		if (Number(harian.pegawai_id) === Number(loggedInUser.id) && !isAdmin) {
 			return NextResponse.json({ error: "Forbidden - Tidak dapat mengevaluasi diri sendiri" }, { status: 403 });
 		}
 
-		// Verify authorized supervisor
-		// Wait, IT department can override in emergency, but standard check:
-		const isIT = loggedInUser.departemen?.toUpperCase() === "IT";
-		if (Number(authorizedSupervisorId) !== Number(loggedInUser.id) && !isIT) {
-			return NextResponse.json({ error: "Forbidden - Anda bukan supervisor yang sah untuk pegawai ini" }, { status: 403 });
+		// Verify authorized supervisor or admin
+		if (!isAuthorizedSupervisor && !isAdmin) {
+			return NextResponse.json({ error: "Forbidden - Anda bukan supervisor yang sah atau administrator untuk pegawai ini" }, { status: 403 });
 		}
 
-		if (harian.status !== "submitted") {
-			return NextResponse.json({ error: "Penilaian harus berstatus 'submitted' untuk diproses" }, { status: 400 });
-		}
-
-		// Verify deadline 1x24 jam for supervisor approval
-		const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
-		if (isExpired) {
-			return NextResponse.json({ error: `Batas waktu persetujuan supervisor telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diproses.` }, { status: 400 });
-		}
-
+		// APPROVE ACTION
 		if (action === "approve") {
+			if (harian.status !== "submitted") {
+				return NextResponse.json({ error: "Penilaian harus berstatus 'submitted' untuk disetujui" }, { status: 400 });
+			}
+
+			// Verify deadline 1x24 jam for supervisor approval (admin can bypass if needed)
+			if (!isAdmin) {
+				const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
+				if (isExpired) {
+					return NextResponse.json({ error: `Batas waktu persetujuan supervisor telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diproses.` }, { status: 400 });
+				}
+			}
+
 			await update({
 				table: "penilaian_harian",
 				data: {
@@ -520,27 +524,52 @@ export async function POST(request, { params }) {
 			});
 		}
 
-		if (action === "revisi") {
+		// REVISI ACTION (Supervisor / Admin)
+		if (action === "revisi" || action === "admin_revisi") {
 			if (!catatan_supervisor || catatan_supervisor.trim() === "") {
-				return NextResponse.json({ error: "Catatan supervisor wajib diisi untuk mengembalikan penilaian" }, { status: 400 });
+				return NextResponse.json({ error: "Catatan revisi wajib diisi untuk mengembalikan penilaian" }, { status: 400 });
 			}
 
 			await update({
 				table: "penilaian_harian",
 				data: {
 					status: "revisi",
-					catatan_supervisor: catatan_supervisor,
-					revisi_is_read: false
+					catatan_supervisor: catatan_supervisor.trim(),
+					revisi_is_read: false,
+					approved_by: null,
+					approved_at: null
 				},
 				where: { id: id }
 			});
 
 			return NextResponse.json({
 				success: true,
-				message: "Penilaian harian dikembalikan ke pegawai untuk direvisi",
+				message: "Penilaian harian berhasil dikembalikan ke pegawai untuk direvisi",
 				data: {
 					status: "revisi",
-					catatan_supervisor: catatan_supervisor
+					catatan_supervisor: catatan_supervisor.trim()
+				}
+			});
+		}
+
+		// CANCEL APPROVAL / RESET TO DRAFT (Supervisor / Admin)
+		if (action === "admin_draft" || action === "cancel_approval") {
+			await update({
+				table: "penilaian_harian",
+				data: {
+					status: "draft",
+					catatan_supervisor: catatan_supervisor ? catatan_supervisor.trim() : harian.catatan_supervisor,
+					approved_by: null,
+					approved_at: null
+				},
+				where: { id: id }
+			});
+
+			return NextResponse.json({
+				success: true,
+				message: "Penilaian harian berhasil direset ke status Draf",
+				data: {
+					status: "draft"
 				}
 			});
 		}
