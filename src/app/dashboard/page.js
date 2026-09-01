@@ -41,6 +41,7 @@ const ADMIN_ACTIONS = [
 	{ title: "Hari Ini", description: "Monitor presensi seluruh pegawai", icon: Clock, href: "/dashboard/it/attendance-monitoring" },
 	{ title: "Bulanan", description: "Monitor presensi bulanan seluruh pegawai", icon: Calendar, href: "/dashboard/reports/monthly-attendance" },
 	{ title: "Pegawai Organik", description: "Lihat daftar pegawai organik", icon: Users, href: "/dashboard/pegawai-organik" },
+	{ title: "Deteksi Cuti", description: "Deteksi cuti & bypass penilaian kinerja", icon: Briefcase, href: "/dashboard/it/deteksi-cuti" },
 ];
 
 const QuickActions = ({ searchQuery = "" }) => {
