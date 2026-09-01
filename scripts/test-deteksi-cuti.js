@@ -119,7 +119,11 @@ function expandLeaveDates({ reqStart, reqEnd, queryStart, queryEnd, scheduleMap,
 			ref_cuti_no: ph ? ph.ref_cuti_no : null
 		};
 
-		if (statusFilter === "ALL" || statusFilter === statusBypass) {
+		if (
+			statusFilter === "ALL" ||
+			statusFilter === statusBypass ||
+			(statusFilter === "perlu_bypass" && statusBypass !== "approved_100")
+		) {
 			items.push(item);
 		}
 

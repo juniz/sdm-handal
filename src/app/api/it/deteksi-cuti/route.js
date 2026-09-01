@@ -245,7 +245,11 @@ export async function GET(request) {
 				};
 
 				// Check status filter
-				if (statusFilter === "ALL" || statusFilter === statusBypass) {
+				if (
+					statusFilter === "ALL" ||
+					statusFilter === statusBypass ||
+					(statusFilter === "perlu_bypass" && statusBypass !== "approved_100")
+				) {
 					allItems.push(item);
 				}
 
