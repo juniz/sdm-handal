@@ -102,3 +102,19 @@ export async function executeBypassCutiGql(items = []) {
   const data = await gql(mutation, { input: { items } });
   return data.bypassCuti;
 }
+
+export async function executeBypassManualGql(input = {}) {
+  const mutation = `
+    mutation BypassManualPegawai($input: BypassManualPegawaiInput!) {
+      bypassManualPegawai(input: $input) {
+        success
+        message
+        processedCount
+        processedDates
+      }
+    }
+  `;
+
+  const data = await gql(mutation, { input });
+  return data.bypassManualPegawai;
+}
