@@ -23,7 +23,8 @@ export default function AuditCalendarGrid({
 		const dateStr = `${panelYear}-${monthPadded}-${String(d).padStart(2, "0")}`;
 		const isFuture = moment(dateStr).isAfter(moment(), "day");
 		const shift = panelSchedule ? panelSchedule[`h${d}`] || "" : "";
-		const isWorkDay = shift !== "";
+		const shiftStr = String(shift).trim();
+		const isWorkDay = shiftStr !== "" && !["OFF", "Libur", "LIBUR", "-", "Cuti"].includes(shiftStr);
 		const isTambahan = panelIsTambahanMap ? Boolean(panelIsTambahanMap[`h${d}`]) : false;
 
 		// Timezone-safe and format-safe evaluation matching

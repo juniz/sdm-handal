@@ -63,15 +63,23 @@ export default function AuditDetailDrawer({
 	let workDaysCount = 0;
 	let kosongDays = 0;
 	let futureWorkDays = 0;
+	let pastWorkDays = 0;
 
 	for (let d = 1; d <= daysInMonth; d++) {
 		const dateStr = `${panelYear}-${monthPadded}-${String(d).padStart(2, "0")}`;
 		const isFuture = moment(dateStr).isAfter(moment(), "day");
 		const shift = panelSchedule ? panelSchedule[`h${d}`] || "" : "";
-		const isWorkDay = shift !== "";
+		const shiftStr = String(shift).trim();
+		const isWorkDay = shiftStr !== "" && !["OFF", "Libur", "LIBUR", "-", "Cuti"].includes(shiftStr);
 
 		if (isWorkDay) {
 			workDaysCount++;
+			if (isFuture) {
+				futureWorkDays++;
+			} else {
+				pastWorkDays++;
+			}
+
 			const evaluation = panelEvaluations.find((e) => {
 				if (!e?.tanggal) return false;
 				const raw = String(e.tanggal);
@@ -80,12 +88,8 @@ export default function AuditDetailDrawer({
 				return parsed === dateStr;
 			});
 
-			if (!evaluation) {
-				if (isFuture) {
-					futureWorkDays++;
-				} else {
-					kosongDays++;
-				}
+			if (!evaluation && !isFuture) {
+				kosongDays++;
 			}
 		}
 	}
@@ -95,7 +99,11 @@ export default function AuditDetailDrawer({
 	const draftOrRevisiDays = panelEvaluations.filter(
 		(e) => e.status === "draft" || e.status === "revisi"
 	).length;
-	const gapDays = futureWorkDays > 0 ? futureWorkDays : Math.max(0, workDaysCount - approvedDays);
+
+	const isCurrentMonth = moment().format("YYYY-MM") === `${panelYear}-${monthPadded}`;
+	const gapDays = isCurrentMonth
+		? futureWorkDays + Math.max(0, pastWorkDays - approvedDays)
+		: Math.max(0, workDaysCount - approvedDays);
 
 	const approvedEvals = panelEvaluations.filter((e) => e.status === "approved");
 	const avgScore =
