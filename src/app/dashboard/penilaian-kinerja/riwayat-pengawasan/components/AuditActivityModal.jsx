@@ -152,11 +152,11 @@ export default function AuditActivityModal({
 								Rincian Kegiatan Harian
 							</span>
 							{rawShift && (
-								<span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border ${
+								<span className={`text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-md border ${
 									isModalDinasLuar
-										? "bg-indigo-50 text-indigo-800 border-indigo-200"
+										? "bg-yellow-400 text-slate-950 border-yellow-500 font-black shadow-2xs"
 										: isModalCuti
-										? "bg-emerald-50 text-emerald-800 border-emerald-200"
+										? "bg-red-600 text-white border-red-700 font-black shadow-2xs"
 										: "bg-slate-100 text-slate-700 border-slate-200"
 								}`}>
 									Shift: {isModalDinasLuar ? "D (Dinas Luar Kota)" : isModalCuti ? "C (Cuti)" : rawShift}
@@ -265,17 +265,17 @@ export default function AuditActivityModal({
 							) : (
 								<div className={`bg-white border rounded-2xl p-4 space-y-2 shadow-xs ${
 									isModalDinasLuar
-										? "border-indigo-200/80"
+										? "border-amber-300 bg-amber-50/40"
 										: isModalCuti
-										? "border-emerald-200/80"
+										? "border-red-300 bg-red-50/40"
 										: "border-rose-200/80"
 								}`}>
 									<div className="flex items-center justify-between">
-										<span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md uppercase font-mono ${
+										<span className={`px-2.5 py-0.5 text-[10px] font-black rounded-md uppercase font-mono shadow-2xs ${
 											isModalDinasLuar
-												? "bg-indigo-100 text-indigo-800"
+												? "bg-yellow-400 text-slate-950"
 												: isModalCuti
-												? "bg-emerald-100 text-emerald-800"
+												? "bg-red-600 text-white"
 												: "bg-rose-100 text-rose-800"
 										}`}>
 											{isModalDinasLuar
@@ -292,11 +292,11 @@ export default function AuditActivityModal({
 											</span>
 										)}
 									</div>
-									<p className={`text-xs leading-relaxed ${
+									<p className={`text-xs leading-relaxed font-medium ${
 										isModalDinasLuar
-											? "text-indigo-800"
+											? "text-amber-950"
 											: isModalCuti
-											? "text-emerald-800"
+											? "text-red-950"
 											: "text-rose-800"
 									}`}>
 										{isModalDinasLuar

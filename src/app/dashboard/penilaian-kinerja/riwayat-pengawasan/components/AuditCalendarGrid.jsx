@@ -82,16 +82,22 @@ export default function AuditCalendarGrid({
 	return (
 		<div className="space-y-3">
 			{/* Shift Legend */}
-			<div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
-				<span className="font-bold text-slate-700 uppercase">Kode Shift:</span>
+			<div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+				<span className="font-bold text-slate-800 uppercase">Kode Shift:</span>
 				<div className="flex flex-wrap items-center gap-3">
 					<span><strong>P</strong> = Pagi</span>
 					<span><strong>S</strong> = Siang</span>
 					<span><strong>M</strong> = Malam</span>
 					<span><strong>OFF</strong> = Libur</span>
-					<span className="text-emerald-700"><strong>C</strong> = Cuti</span>
-					<span className="text-indigo-700"><strong>D</strong> = Dinas Luar Kota</span>
-					<span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-amber-500 rounded-full inline-block" /> Shift Tambahan</span>
+					<span className="inline-flex items-center gap-1">
+						<span className="min-w-[18px] h-[18px] px-1 bg-red-600 text-white font-black text-[10px] rounded flex items-center justify-center shadow-xs">C</span>
+						<strong className="text-red-700">Cuti</strong>
+					</span>
+					<span className="inline-flex items-center gap-1">
+						<span className="min-w-[18px] h-[18px] px-1 bg-yellow-400 text-slate-950 font-black text-[10px] rounded flex items-center justify-center shadow-xs">D</span>
+						<strong className="text-amber-800">Dinas Luar Kota</strong>
+					</span>
+					<span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-500 rounded-full inline-block" /> Shift Tambahan</span>
 				</div>
 			</div>
 
@@ -122,11 +128,11 @@ export default function AuditCalendarGrid({
 					const isSelected = selectedDateStr === dayItem.dateStr;
 
 					if (dayItem.isCuti && !dayItem.evaluation) {
-						boxBgClass = "bg-emerald-50/60 text-emerald-950";
-						borderClass = "border-emerald-200 hover:border-emerald-400";
-						textClass = "text-emerald-950";
+						boxBgClass = "bg-red-50/80 text-red-950";
+						borderClass = "border-red-300 hover:border-red-500";
+						textClass = "text-red-950";
 						statusBadge = (
-							<span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-800 rounded uppercase font-mono">
+							<span className="px-1.5 py-0.5 text-[8.5px] font-black bg-red-600 text-white rounded uppercase font-mono shadow-2xs">
 								CUTI
 							</span>
 						);
@@ -139,11 +145,11 @@ export default function AuditCalendarGrid({
 								<span className="text-[9px] font-bold text-slate-300 font-mono">-</span>
 							);
 						} else {
-							boxBgClass = "bg-indigo-50/60 text-indigo-950";
-							borderClass = "border-indigo-200 hover:border-indigo-400";
-							textClass = "text-indigo-950";
+							boxBgClass = "bg-amber-50/90 text-amber-950";
+							borderClass = "border-amber-300 hover:border-amber-500";
+							textClass = "text-amber-950";
 							statusBadge = (
-								<span className="px-1 py-0.5 text-[8px] font-bold bg-indigo-100 text-indigo-800 rounded uppercase font-mono">
+								<span className="px-1.5 py-0.5 text-[8.5px] font-black bg-yellow-400 text-slate-950 rounded uppercase font-mono shadow-2xs">
 									DINAS
 								</span>
 							);
@@ -259,20 +265,26 @@ export default function AuditCalendarGrid({
 								isSelected ? "ring-2 ring-sky-600 ring-offset-1 shadow-sm" : ""
 							}`}
 						>
-							<div className="flex justify-between items-center w-full leading-none">
+							<div className="flex justify-between items-start w-full leading-none">
 								<span className={`text-xs font-bold font-mono ${textClass}`}>
 									{dayItem.day}
 								</span>
 								{dayItem.isCuti ? (
-									<span className="px-1 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded font-mono leading-none" title="Cuti (C)">
+									<span
+										className="min-w-[22px] h-[22px] px-1 text-xs font-black bg-red-600 text-white rounded-md font-mono flex items-center justify-center shadow-xs leading-none ring-1 ring-red-700/50"
+										title="Cuti (C)"
+									>
 										C
 									</span>
 								) : dayItem.isDinasLuar ? (
-									<span className="px-1 py-0.5 text-[9px] font-black bg-indigo-100 text-indigo-800 rounded font-mono leading-none" title="Dinas Luar Kota (D)">
+									<span
+										className="min-w-[22px] h-[22px] px-1 text-xs font-black bg-yellow-400 text-slate-950 rounded-md font-mono flex items-center justify-center shadow-xs leading-none ring-1 ring-yellow-500"
+										title="Dinas Luar Kota (D)"
+									>
 										D
 									</span>
 								) : dayItem.isWorkDay ? (
-									<span className="text-[9px] font-extrabold text-slate-500 uppercase font-mono leading-none">
+									<span className="text-[10px] font-extrabold text-slate-500 uppercase font-mono leading-none pt-0.5">
 										{dayItem.shift}
 									</span>
 								) : null}
