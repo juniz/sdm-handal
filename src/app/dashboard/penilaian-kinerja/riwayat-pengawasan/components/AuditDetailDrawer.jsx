@@ -70,7 +70,43 @@ export default function AuditDetailDrawer({
 		const isFuture = moment(dateStr).isAfter(moment(), "day");
 		const shift = panelSchedule ? panelSchedule[`h${d}`] || "" : "";
 		const shiftStr = String(shift).trim();
-		const isWorkDay = shiftStr !== "" && !["OFF", "Libur", "LIBUR", "-", "Cuti"].includes(shiftStr);
+		const shiftUpper = shiftStr.toUpperCase();
+
+		const evaluation = panelEvaluations.find((e) => {
+			if (!e?.tanggal) return false;
+			const raw = String(e.tanggal);
+			if (raw.startsWith(dateStr)) return true;
+			const parsed = moment(e.tanggal).format("YYYY-MM-DD");
+			return parsed === dateStr;
+		});
+
+		const isDinasLuar =
+			shiftUpper === "D" ||
+			shiftUpper === "DL" ||
+			shiftUpper.includes("DINAS") ||
+			evaluation?.sumber_absensi === "izin_dinas" ||
+			evaluation?.sumber_absensi === "izin" ||
+			evaluation?.nilai_kondisi === "izin_dinas_luar" ||
+			evaluation?.nilai_kondisi === "izin_dinas" ||
+			(evaluation?.nilai_kondisi && String(evaluation.nilai_kondisi).toLowerCase().includes("dinas")) ||
+			(evaluation?.catatan_supervisor && String(evaluation.catatan_supervisor).toLowerCase().includes("dinas")) ||
+			evaluation?.shift_jadwal === "D" ||
+			(evaluation?.shift_jadwal && String(evaluation.shift_jadwal).toUpperCase().includes("DINAS"));
+
+		const isCuti =
+			!isDinasLuar &&
+			(shiftUpper === "C" ||
+				shiftUpper === "CT" ||
+				shiftUpper.startsWith("CUTI") ||
+				evaluation?.sumber_absensi === "cuti" ||
+				(evaluation?.nilai_kondisi && String(evaluation.nilai_kondisi).startsWith("cuti_")) ||
+				evaluation?.nilai_kondisi === "sakit" ||
+				(evaluation?.catatan_supervisor && String(evaluation.catatan_supervisor).toLowerCase().includes("cuti")) ||
+				evaluation?.shift_jadwal === "C" ||
+				(evaluation?.shift_jadwal && String(evaluation.shift_jadwal).toUpperCase().startsWith("CUTI")));
+
+		const isOff = shiftStr === "" || ["OFF", "LIBUR", "-", "0"].includes(shiftUpper);
+		const isWorkDay = !isOff && !isCuti;
 
 		if (isWorkDay) {
 			workDaysCount++;
@@ -79,14 +115,6 @@ export default function AuditDetailDrawer({
 			} else {
 				pastWorkDays++;
 			}
-
-			const evaluation = panelEvaluations.find((e) => {
-				if (!e?.tanggal) return false;
-				const raw = String(e.tanggal);
-				if (raw.startsWith(dateStr)) return true;
-				const parsed = moment(e.tanggal).format("YYYY-MM-DD");
-				return parsed === dateStr;
-			});
 
 			if (!evaluation && !isFuture) {
 				kosongDays++;

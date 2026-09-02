@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Filter, Search, X, Download, AlertTriangle } from "lucide-react";
+import { Filter, Search, X, Download, AlertTriangle, Printer } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const DEFAULT_MONTHS = [
@@ -38,6 +38,7 @@ export default function AuditFilters({
 	onlyAnomali = false,
 	setOnlyAnomali,
 	onExportCsv,
+	onPrintReport,
 	departemenList = [],
 	sttsKerjaList = [],
 	MONTHS = DEFAULT_MONTHS,
@@ -107,6 +108,17 @@ export default function AuditFilters({
 							))}
 						</select>
 					</div>
+					{onPrintReport && (
+						<button
+							type="button"
+							onClick={onPrintReport}
+							className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
+							title="Cetak Laporan Audit (A4 Landscape)"
+						>
+							<Printer className="w-3.5 h-3.5 text-white" />
+							<span>Cetak (A4)</span>
+						</button>
+					)}
 					{onExportCsv && (
 						<button
 							type="button"

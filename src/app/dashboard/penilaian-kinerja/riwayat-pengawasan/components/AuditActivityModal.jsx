@@ -60,6 +60,32 @@ export default function AuditActivityModal({
 	const formattedDate = moment(dateStr).format("DD MMMM YYYY");
 	const dayName = moment(dateStr).format("dddd");
 
+	const rawShift = dayEval?.shift_jadwal || dayMeta?.shift || "";
+	const rawShiftUpper = String(rawShift).toUpperCase();
+
+	// Prioritize Dinas Luar Kota detection
+	const isModalDinasLuar =
+		rawShiftUpper === "D" ||
+		rawShiftUpper === "DL" ||
+		rawShiftUpper.includes("DINAS") ||
+		dayEval?.sumber_absensi === "izin_dinas" ||
+		dayEval?.sumber_absensi === "izin" ||
+		dayEval?.nilai_kondisi === "izin_dinas_luar" ||
+		dayEval?.nilai_kondisi === "izin_dinas" ||
+		(dayEval?.nilai_kondisi && String(dayEval.nilai_kondisi).toLowerCase().includes("dinas")) ||
+		(dayEval?.catatan_supervisor && String(dayEval.catatan_supervisor).toLowerCase().includes("dinas"));
+
+	// Cuti detection only if not Dinas Luar
+	const isModalCuti =
+		!isModalDinasLuar &&
+		(rawShiftUpper === "C" ||
+			rawShiftUpper === "CT" ||
+			rawShiftUpper.startsWith("CUTI") ||
+			dayEval?.sumber_absensi === "cuti" ||
+			(dayEval?.nilai_kondisi && String(dayEval.nilai_kondisi).startsWith("cuti_")) ||
+			dayEval?.nilai_kondisi === "sakit" ||
+			(dayEval?.catatan_supervisor && String(dayEval.catatan_supervisor).toLowerCase().includes("cuti")));
+
 	const handleAction = async (actionType, customNote = "") => {
 		if (!dayEval?.id) return;
 		const noteToSend = customNote || catatanRevisi;
@@ -125,9 +151,15 @@ export default function AuditActivityModal({
 								<CalendarIcon className="w-3 h-3 text-sky-600" />
 								Rincian Kegiatan Harian
 							</span>
-							{dayMeta?.shift && (
-								<span className="text-[10px] font-bold text-slate-700 font-mono bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-									Shift: {dayMeta.shift}
+							{rawShift && (
+								<span className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-md border ${
+									isModalDinasLuar
+										? "bg-indigo-50 text-indigo-800 border-indigo-200"
+										: isModalCuti
+										? "bg-emerald-50 text-emerald-800 border-emerald-200"
+										: "bg-slate-100 text-slate-700 border-slate-200"
+								}`}>
+									Shift: {isModalDinasLuar ? "D (Dinas Luar Kota)" : isModalCuti ? "C (Cuti)" : rawShift}
 								</span>
 							)}
 							{dayEval && (
@@ -231,19 +263,47 @@ export default function AuditActivityModal({
 									</div>
 								</div>
 							) : (
-								<div className="bg-white border border-rose-200/80 rounded-2xl p-4 space-y-2 shadow-xs">
+								<div className={`bg-white border rounded-2xl p-4 space-y-2 shadow-xs ${
+									isModalDinasLuar
+										? "border-indigo-200/80"
+										: isModalCuti
+										? "border-emerald-200/80"
+										: "border-rose-200/80"
+								}`}>
 									<div className="flex items-center justify-between">
-										<span className="px-2.5 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded-md uppercase font-mono">
-											{dayMeta?.isWorkDay ? "Hari Kosong / Belum Diisi" : "Hari Libur (OFF)"}
+										<span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-md uppercase font-mono ${
+											isModalDinasLuar
+												? "bg-indigo-100 text-indigo-800"
+												: isModalCuti
+												? "bg-emerald-100 text-emerald-800"
+												: "bg-rose-100 text-rose-800"
+										}`}>
+											{isModalDinasLuar
+												? "Izin Dinas Luar Kota (D)"
+												: isModalCuti
+												? "Cuti Pegawai (C)"
+												: dayMeta?.isWorkDay
+												? "Hari Kosong / Belum Diisi"
+												: "Hari Libur (OFF)"}
 										</span>
-										{dayMeta?.shift && (
+										{rawShift && (
 											<span className="text-xs font-mono font-bold text-slate-600">
-												Shift: <strong className="text-slate-900">{dayMeta.shift}</strong>
+												Shift: <strong className="text-slate-900">{isModalDinasLuar ? "D (Dinas Luar Kota)" : isModalCuti ? "C (Cuti)" : rawShift}</strong>
 											</span>
 										)}
 									</div>
-									<p className="text-xs text-rose-800 leading-relaxed">
-										{dayMeta?.isWorkDay
+									<p className={`text-xs leading-relaxed ${
+										isModalDinasLuar
+											? "text-indigo-800"
+											: isModalCuti
+											? "text-emerald-800"
+											: "text-rose-800"
+									}`}>
+										{isModalDinasLuar
+											? "Pegawai terjadwal izin dinas luar kota pada tanggal ini."
+											: isModalCuti
+											? "Pegawai terjadwal cuti pada tanggal ini."
+											: dayMeta?.isWorkDay
 											? "Pegawai memiliki jadwal shift kerja pada tanggal ini, namun belum mengisi atau menyerahkan penilaian dan laporan kegiatan harian."
 											: "Tidak ada jadwal shift kerja (OFF) untuk pegawai pada tanggal ini."}
 									</p>

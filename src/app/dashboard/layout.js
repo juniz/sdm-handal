@@ -199,7 +199,7 @@ export default function DashboardLayout({ children }) {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 font-sans">
+		<div className="min-h-screen bg-slate-50 font-sans print:min-h-0 print:h-auto print:bg-white print:p-0 print:m-0">
 			{/* Backdrop overlay for mobile */}
 			{isSidebarOpen && (
 				<div
@@ -210,7 +210,7 @@ export default function DashboardLayout({ children }) {
 
 			{/* Sidebar - Persistent on desktop, off-canvas drawer on mobile */}
 			<aside
-				className={`fixed top-0 left-0 z-[100] w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+				className={`fixed top-0 left-0 z-[100] w-64 h-screen bg-primary-900 border-r border-slate-200/80 transition-transform duration-300 ease-in-out md:translate-x-0 print:hidden ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
 					}`}
 			>
 				<div className="h-full px-4 py-6 overflow-y-auto flex flex-col justify-between select-none">
@@ -320,7 +320,7 @@ export default function DashboardLayout({ children }) {
 			</aside>
 
 			{/* Mobile Header Bar */}
-			<div className="flex md:hidden items-center justify-between bg-white px-4 py-3.5 border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
+			<div className="flex md:hidden items-center justify-between bg-white px-4 py-3.5 border-b border-slate-200/80 sticky top-0 z-30 shadow-xs print:hidden">
 				<div className="flex items-center space-x-3">
 					<button
 						onClick={() => setIsSidebarOpen(true)}
@@ -344,9 +344,9 @@ export default function DashboardLayout({ children }) {
 			</div>
 
 			{/* Main Content Area */}
-			<div className="md:ml-64 min-h-screen transition-all duration-300 pb-24 md:pb-6">
+			<div className="md:ml-64 min-h-screen transition-all duration-300 pb-24 md:pb-6 print:m-0 print:p-0 print:w-full print:min-h-0">
 				{/* Top bar - Desktop only */}
-				<div className="hidden md:block mb-6 bg-white px-6 py-4 border-b border-slate-200/60">
+				<div className="hidden md:block mb-6 bg-white px-6 py-4 border-b border-slate-200/60 print:hidden">
 					<div className="flex justify-between items-center">
 						{/* Left: Brand / System Status */}
 						<div className="flex items-center space-x-3">
@@ -376,8 +376,8 @@ export default function DashboardLayout({ children }) {
 				</div>
 
 				{/* Page content */}
-				<main className="px-0 md:px-6">
-					<div className="bg-white md:rounded-xl md:border md:border-gray-200/60 md:shadow-xs overflow-hidden">
+				<main className="px-0 md:px-6 print:p-0 print:m-0">
+					<div className="bg-white md:rounded-xl md:border md:border-gray-200/60 md:shadow-xs overflow-hidden print:border-none print:shadow-none print:p-0 print:m-0">
 						{children}
 					</div>
 				</main>

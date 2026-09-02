@@ -42,7 +42,7 @@ export default function AuditSummaryCards({ summary, getRatingBadge }) {
 	const complianceColor = compliance >= 80 ? "bg-emerald-600" : compliance >= 50 ? "bg-amber-500" : "bg-rose-500";
 
 	return (
-		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:hidden">
 			{/* Card 1: Total Pegawai Terpantau */}
 			<div className="bg-white border border-slate-200/60 rounded-2xl p-5 shadow-xs space-y-2 transition-shadow duration-200 hover:shadow-md">
 				<div className="flex items-center justify-between">

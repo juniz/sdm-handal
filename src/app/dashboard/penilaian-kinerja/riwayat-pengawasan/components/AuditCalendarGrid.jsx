@@ -24,7 +24,7 @@ export default function AuditCalendarGrid({
 		const isFuture = moment(dateStr).isAfter(moment(), "day");
 		const shift = panelSchedule ? panelSchedule[`h${d}`] || "" : "";
 		const shiftStr = String(shift).trim();
-		const isWorkDay = shiftStr !== "" && !["OFF", "Libur", "LIBUR", "-", "Cuti"].includes(shiftStr);
+		const shiftUpper = shiftStr.toUpperCase();
 		const isTambahan = panelIsTambahanMap ? Boolean(panelIsTambahanMap[`h${d}`]) : false;
 
 		// Timezone-safe and format-safe evaluation matching
@@ -36,7 +36,47 @@ export default function AuditCalendarGrid({
 			return parsed === dateStr;
 		});
 
-		daysList.push({ day: d, dateStr, isFuture, isWorkDay, shift, isTambahan, evaluation });
+		// Detect Dinas Luar Kota first (higher specificity than general cuti)
+		const isDinasLuar =
+			shiftUpper === "D" ||
+			shiftUpper === "DL" ||
+			shiftUpper.includes("DINAS") ||
+			evaluation?.sumber_absensi === "izin_dinas" ||
+			evaluation?.sumber_absensi === "izin" ||
+			evaluation?.nilai_kondisi === "izin_dinas_luar" ||
+			evaluation?.nilai_kondisi === "izin_dinas" ||
+			(evaluation?.nilai_kondisi && String(evaluation.nilai_kondisi).toLowerCase().includes("dinas")) ||
+			(evaluation?.catatan_supervisor && String(evaluation.catatan_supervisor).toLowerCase().includes("dinas")) ||
+			evaluation?.shift_jadwal === "D" ||
+			(evaluation?.shift_jadwal && String(evaluation.shift_jadwal).toUpperCase().includes("DINAS"));
+
+		// Detect Cuti status only if not Dinas Luar
+		const isCuti =
+			!isDinasLuar &&
+			(shiftUpper === "C" ||
+				shiftUpper === "CT" ||
+				shiftUpper.startsWith("CUTI") ||
+				evaluation?.sumber_absensi === "cuti" ||
+				(evaluation?.nilai_kondisi && String(evaluation.nilai_kondisi).startsWith("cuti_")) ||
+				evaluation?.nilai_kondisi === "sakit" ||
+				(evaluation?.catatan_supervisor && String(evaluation.catatan_supervisor).toLowerCase().includes("cuti")) ||
+				evaluation?.shift_jadwal === "C" ||
+				(evaluation?.shift_jadwal && String(evaluation.shift_jadwal).toUpperCase().startsWith("CUTI")));
+
+		const isOff = shiftStr === "" || ["OFF", "LIBUR", "-", "0"].includes(shiftUpper);
+		const isWorkDay = !isOff && !isCuti;
+
+		daysList.push({
+			day: d,
+			dateStr,
+			isFuture,
+			isWorkDay,
+			shift,
+			isTambahan,
+			isCuti,
+			isDinasLuar,
+			evaluation,
+		});
 	}
 
 	return (
@@ -44,11 +84,13 @@ export default function AuditCalendarGrid({
 			{/* Shift Legend */}
 			<div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
 				<span className="font-bold text-slate-700 uppercase">Kode Shift:</span>
-				<div className="flex items-center gap-3">
+				<div className="flex flex-wrap items-center gap-3">
 					<span><strong>P</strong> = Pagi</span>
 					<span><strong>S</strong> = Siang</span>
 					<span><strong>M</strong> = Malam</span>
 					<span><strong>OFF</strong> = Libur</span>
+					<span className="text-emerald-700"><strong>C</strong> = Cuti</span>
+					<span className="text-indigo-700"><strong>D</strong> = Dinas Luar Kota</span>
 					<span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-amber-500 rounded-full inline-block" /> Shift Tambahan</span>
 				</div>
 			</div>
@@ -77,10 +119,36 @@ export default function AuditCalendarGrid({
 					let borderClass = "border-slate-200 hover:border-slate-400";
 					let textClass = "text-slate-900";
 					let statusBadge = null;
-					const isClickable = true;
 					const isSelected = selectedDateStr === dayItem.dateStr;
 
-					if (!dayItem.isWorkDay) {
+					if (dayItem.isCuti && !dayItem.evaluation) {
+						boxBgClass = "bg-emerald-50/60 text-emerald-950";
+						borderClass = "border-emerald-200 hover:border-emerald-400";
+						textClass = "text-emerald-950";
+						statusBadge = (
+							<span className="px-1 py-0.5 text-[8px] font-bold bg-emerald-100 text-emerald-800 rounded uppercase font-mono">
+								CUTI
+							</span>
+						);
+					} else if (dayItem.isDinasLuar && !dayItem.evaluation) {
+						if (dayItem.isFuture) {
+							boxBgClass = "bg-white text-slate-300";
+							borderClass = "border-slate-200 border-dashed hover:border-slate-400";
+							textClass = "text-slate-400";
+							statusBadge = (
+								<span className="text-[9px] font-bold text-slate-300 font-mono">-</span>
+							);
+						} else {
+							boxBgClass = "bg-indigo-50/60 text-indigo-950";
+							borderClass = "border-indigo-200 hover:border-indigo-400";
+							textClass = "text-indigo-950";
+							statusBadge = (
+								<span className="px-1 py-0.5 text-[8px] font-bold bg-indigo-100 text-indigo-800 rounded uppercase font-mono">
+									DINAS
+								</span>
+							);
+						}
+					} else if (!dayItem.isWorkDay && !dayItem.isCuti && !dayItem.isDinasLuar) {
 						boxBgClass = "bg-slate-50 text-slate-400";
 						borderClass = "border-slate-200/80 hover:border-slate-300";
 						textClass = "text-slate-400";
@@ -173,16 +241,18 @@ export default function AuditCalendarGrid({
 							key={dayItem.day}
 							role="button"
 							tabIndex={0}
-							aria-label={`Tanggal ${dayItem.day}, Shift ${dayItem.shift || "OFF"}, Status ${dayItem.evaluation?.status || (dayItem.isWorkDay ? (dayItem.isFuture ? "belum" : "kosong") : "libur")}`}
+							aria-label={`Tanggal ${dayItem.day}, Shift ${dayItem.isCuti ? "Cuti (C)" : dayItem.isDinasLuar ? "Dinas Luar Kota (D)" : dayItem.shift || "OFF"}, Status ${dayItem.evaluation?.status || (dayItem.isCuti ? "cuti" : dayItem.isDinasLuar ? "dinas" : dayItem.isWorkDay ? (dayItem.isFuture ? "belum" : "kosong") : "libur")}`}
 							onClick={() => {
 								if (onSelectDay) {
-									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, dayItem.shift, dayItem.isWorkDay);
+									const shiftDisplay = dayItem.isCuti ? "C" : dayItem.isDinasLuar ? "D" : dayItem.shift;
+									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, shiftDisplay, dayItem.isWorkDay);
 								}
 							}}
 							onKeyDown={(e) => {
 								if ((e.key === "Enter" || e.key === " ") && onSelectDay) {
 									e.preventDefault();
-									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, dayItem.shift, dayItem.isWorkDay);
+									const shiftDisplay = dayItem.isCuti ? "C" : dayItem.isDinasLuar ? "D" : dayItem.shift;
+									onSelectDay(dayItem.dateStr, dayItem.evaluation || null, shiftDisplay, dayItem.isWorkDay);
 								}
 							}}
 							className={`aspect-square rounded-xl border p-2 flex flex-col justify-between transition-all duration-150 cursor-pointer hover:shadow-md hover:-translate-y-0.5 active:scale-95 focus:outline-none focus:ring-2 focus:ring-sky-500 ${boxBgClass} ${borderClass} ${
@@ -193,11 +263,19 @@ export default function AuditCalendarGrid({
 								<span className={`text-xs font-bold font-mono ${textClass}`}>
 									{dayItem.day}
 								</span>
-								{dayItem.isWorkDay && (
-									<span className="text-[9px] font-extrabold text-slate-500 uppercase font-mono">
+								{dayItem.isCuti ? (
+									<span className="px-1 py-0.5 text-[9px] font-black bg-emerald-100 text-emerald-800 rounded font-mono leading-none" title="Cuti (C)">
+										C
+									</span>
+								) : dayItem.isDinasLuar ? (
+									<span className="px-1 py-0.5 text-[9px] font-black bg-indigo-100 text-indigo-800 rounded font-mono leading-none" title="Dinas Luar Kota (D)">
+										D
+									</span>
+								) : dayItem.isWorkDay ? (
+									<span className="text-[9px] font-extrabold text-slate-500 uppercase font-mono leading-none">
 										{dayItem.shift}
 									</span>
-								)}
+								) : null}
 							</div>
 							<div className="flex-1 flex items-center justify-center pt-1">{statusBadge}</div>
 							{dayItem.isWorkDay && dayItem.isTambahan && (

@@ -31,7 +31,7 @@ export default function AuditTable({
 	};
 
 	return (
-		<div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+		<div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden print:hidden">
 			{/* Table Header Section */}
 			<div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between sm:items-center gap-2 bg-slate-50/50">
 				<h3 className="font-bold text-slate-800 text-sm font-figtree flex items-center gap-2">

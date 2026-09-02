@@ -10,6 +10,7 @@ import AuditFilters from "./components/AuditFilters";
 import AuditTable from "./components/AuditTable";
 import AuditDetailDrawer from "./components/AuditDetailDrawer";
 import AuditActivityModal from "./components/AuditActivityModal";
+import AuditPrintLayout from "./components/AuditPrintLayout";
 
 const MONTHS = [
 	{ value: "01", label: "Januari" },
@@ -241,6 +242,43 @@ export default function RiwayatPenilaianPengawasanPage() {
 		}
 	};
 
+	// Print A4 Landscape handler (fetches full list if pagination active)
+	const [printList, setPrintList] = useState([]);
+	const handlePrintReport = async () => {
+		try {
+			if ((meta?.totalItems || 0) > rekapList.length) {
+				const params = new URLSearchParams({
+					bulan: month,
+					tahun: year,
+					departemen,
+					stts_kerja: sttsKerja,
+					nama: searchNama,
+					page: "1",
+					limit: "10000",
+					sort_by: sortField,
+					sort_order: sortDirection,
+					only_anomali: onlyAnomali ? "true" : "false",
+				});
+				const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
+				if (res.ok) {
+					const result = await res.json();
+					setPrintList(result.data || []);
+				} else {
+					setPrintList(rekapList);
+				}
+			} else {
+				setPrintList(rekapList);
+			}
+			setTimeout(() => {
+				window.print();
+			}, 150);
+		} catch (err) {
+			console.error("Print error:", err);
+			setPrintList(rekapList);
+			window.print();
+		}
+	};
+
 	// Employee traversal navigation in drawer
 	const currentEmpIndex = rekapList.findIndex(
 		(r) => (r.pegawai_id && r.pegawai_id === selectedEmp?.pegawai_id) || r.nik === selectedEmp?.nik
@@ -391,7 +429,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 	};
 
 	return (
-		<div className="w-full p-4 md:p-6 space-y-5 font-noto-sans bg-slate-50/50 min-h-screen text-slate-900">
+		<div className="w-full p-4 md:p-6 space-y-5 font-noto-sans bg-slate-50/50 min-h-screen text-slate-900 print:p-0 print:m-0 print:min-h-0 print:h-auto print:space-y-0 print:bg-white">
 			{/* Brand-Consistent Header */}
 			<AuditHeader
 				month={month}
@@ -463,6 +501,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 					setPage(1);
 				}}
 				onExportCsv={handleExportCsv}
+				onPrintReport={handlePrintReport}
 				departemenList={departemenList}
 				sttsKerjaList={sttsKerjaList}
 				MONTHS={MONTHS}
@@ -515,7 +554,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 				activities={activities}
 				loading={activityLoading}
 				onEvaluationUpdated={async () => {
-					await loadData();
+					await loadRekapData();
 					if (selectedEmp) {
 						await loadEmployeePanelData();
 					}
@@ -537,6 +576,17 @@ export default function RiwayatPenilaianPengawasanPage() {
 						}
 					}
 				}}
+			/>
+
+			{/* Formal A4 Landscape Printout Layout */}
+			<AuditPrintLayout
+				month={month}
+				year={year}
+				departemen={departemen}
+				sttsKerja={sttsKerja}
+				rekapList={printList.length > 0 ? printList : rekapList}
+				summary={summary}
+				MONTHS={MONTHS}
 			/>
 		</div>
 	);

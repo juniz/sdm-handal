@@ -358,13 +358,14 @@ export async function POST(request) {
 		let processedCount = 0;
 
 		for (const item of items) {
-			const { pegawai_id, tanggal, no_pengajuan, urgensi, shift } = item;
+			const { pegawai_id, tanggal, no_pengajuan, urgensi, shift, jenis_dispensasi } = item;
 			if (!pegawai_id || !tanggal) continue;
 
+			const isIzin = jenis_dispensasi === "izin_dinas" || String(urgensi).toLowerCase().includes("dinas");
 			const formattedDate = moment(tanggal).format("YYYY-MM-DD");
-			const nilaiKondisi = mapCutiToKondisi(urgensi);
-			const urgensiText = urgensi || "Tahunan";
-			const refCuti = no_pengajuan || "-";
+			const nilaiKondisi = isIzin ? "izin_dinas_luar" : mapCutiToKondisi(urgensi);
+			const urgensiText = urgensi || (isIzin ? "Dinas Luar Kota" : "Tahunan");
+			const refNo = no_pengajuan || "-";
 
 			// Check existing penilaian_harian
 			const existing = await selectFirst({
@@ -383,8 +384,9 @@ export async function POST(request) {
 						pegawai_id: pegawai_id,
 						tanggal: formattedDate,
 						shift_jadwal: shift || "Pagi",
-						sumber_absensi: "cuti",
-						ref_cuti_no: no_pengajuan || null,
+						sumber_absensi: isIzin ? "izin" : "cuti",
+						ref_cuti_no: isIzin ? null : (no_pengajuan || null),
+						ref_izin_no: isIzin ? (no_pengajuan || null) : null,
 						nilai_kondisi: nilaiKondisi,
 						skor_kegiatan: 100.0,
 						skor_absensi: 100.0,
@@ -392,7 +394,7 @@ export async function POST(request) {
 						status: "approved",
 						approved_at: new Date(),
 						approved_by: loggedInUser.id,
-						catatan_supervisor: `[Auto-Approved Sistem: Cuti ${urgensiText} - Ref: ${refCuti}]`,
+						catatan_supervisor: `[Auto-Approved Sistem: ${isIzin ? "Dinas Luar Kota" : `Cuti ${urgensiText}`} - Ref: ${refNo}]`,
 						dibuat_oleh: loggedInUser.id
 					}
 				});
@@ -402,8 +404,8 @@ export async function POST(request) {
 					table: "kegiatan_harian",
 					data: {
 						penilaian_id: insertResult.insertId,
-						judul_kegiatan: `Melaksanakan Cuti ${urgensiText}`,
-						penjabaran: `Cuti ${urgensiText} sesuai pengajuan resmi ${refCuti}`.trim(),
+						judul_kegiatan: isIzin ? "Melaksanakan Tugas Dinas Luar Kota" : `Melaksanakan Cuti ${urgensiText}`,
+						penjabaran: isIzin ? `Dinas luar kota resmi sesuai pengajuan ${refNo}`.trim() : `Cuti ${urgensiText} sesuai pengajuan resmi ${refNo}`.trim(),
 						prioritas: "tinggi",
 						status_selesai: "selesai",
 						urutan: 1,
@@ -415,8 +417,9 @@ export async function POST(request) {
 				await update({
 					table: "penilaian_harian",
 					data: {
-						sumber_absensi: "cuti",
-						ref_cuti_no: no_pengajuan || null,
+						sumber_absensi: isIzin ? "izin" : "cuti",
+						ref_cuti_no: isIzin ? null : (no_pengajuan || null),
+						ref_izin_no: isIzin ? (no_pengajuan || null) : null,
 						nilai_kondisi: nilaiKondisi,
 						skor_kegiatan: 100.0,
 						skor_absensi: 100.0,
@@ -424,7 +427,7 @@ export async function POST(request) {
 						status: "approved",
 						approved_at: new Date(),
 						approved_by: loggedInUser.id,
-						catatan_supervisor: `[Auto-Approved Sistem: Cuti ${urgensiText} - Ref: ${refCuti}]`
+						catatan_supervisor: `[Auto-Approved Sistem: ${isIzin ? "Dinas Luar Kota" : `Cuti ${urgensiText}`} - Ref: ${refNo}]`
 					},
 					where: { id: existing.id }
 				});
