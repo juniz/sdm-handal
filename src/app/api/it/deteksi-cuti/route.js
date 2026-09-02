@@ -90,35 +90,66 @@ export async function GET(request) {
 		const searchTerm = searchParams.get("search") || "";
 		const statusFilter = searchParams.get("status_filter") || "ALL";
 
-		// 1. Fetch active approved leave requests within the date range
-		let whereConditions = [
-			"pc.status = 'Disetujui'",
-			"pc.tanggal_awal <= ?",
-			"pc.tanggal_akhir >= ?"
-		];
-		let queryParams = [tanggalAkhir, tanggalAwal];
+		const tipeDispensasi = searchParams.get("tipe_dispensasi") || "ALL";
+
+		let baseQuery = `
+			SELECT 
+				no_pengajuan, nik, tanggal_awal, tanggal_akhir, urgensi, status,
+				pegawai_id, pegawai_nama, departemen as pegawai_departemen, departemen_nama, jenis_dispensasi
+			FROM (
+				SELECT 
+					pc.no_pengajuan, pc.nik, pc.tanggal_awal, pc.tanggal_akhir, pc.urgensi, pc.status,
+					p.id as pegawai_id, p.nama as pegawai_nama,
+					d.dep_id as departemen, d.nama as departemen_nama,
+					'cuti' as jenis_dispensasi
+				FROM pengajuan_cuti pc
+				JOIN pegawai p ON p.nik = pc.nik
+				LEFT JOIN departemen d ON d.dep_id = p.departemen
+				WHERE pc.tanggal_awal <= ? AND pc.tanggal_akhir >= ?
+					AND (LOWER(pc.status) LIKE '%setuju%' OR LOWER(pc.status) LIKE '%approved%' OR LOWER(pc.status) LIKE '%acc%')
+
+				UNION ALL
+
+				SELECT 
+					pi.no_pengajuan, pi.nik, pi.tanggal_awal, pi.tanggal_akhir, pi.urgensi, pi.status,
+					p.id as pegawai_id, p.nama as pegawai_nama,
+					d.dep_id as departemen, d.nama as departemen_nama,
+					'izin_dinas' as jenis_dispensasi
+				FROM pengajuan_izin pi
+				JOIN pegawai p ON p.nik = pi.nik
+				LEFT JOIN departemen d ON d.dep_id = p.departemen
+				WHERE pi.tanggal_awal <= ? AND pi.tanggal_akhir >= ?
+					AND (LOWER(pi.status) LIKE '%setuju%' OR LOWER(pi.status) LIKE '%approved%' OR LOWER(pi.status) LIKE '%acc%')
+					AND (
+						LOWER(TRIM(pi.urgensi)) LIKE '%dinas luar%'
+						OR LOWER(TRIM(pi.urgensi)) LIKE '%luar kota%'
+						OR LOWER(TRIM(pi.urgensi)) LIKE '%perjalanan dinas%'
+						OR LOWER(TRIM(pi.urgensi)) = 'dinas luar kota'
+					)
+			) as combined
+			WHERE 1=1
+		`;
+		const queryParams = [tanggalAkhir, tanggalAwal, tanggalAkhir, tanggalAwal];
+
+		if (tipeDispensasi === "CUTI") {
+			baseQuery += ` AND jenis_dispensasi = 'cuti'`;
+		} else if (tipeDispensasi === "DINAS_LUAR") {
+			baseQuery += ` AND jenis_dispensasi = 'izin_dinas'`;
+		}
 
 		if (departemenFilter && departemenFilter !== "ALL") {
-			whereConditions.push("p.departemen = ?");
+			baseQuery += ` AND pegawai_departemen = ?`;
 			queryParams.push(departemenFilter);
 		}
 
 		if (searchTerm) {
-			whereConditions.push("(p.nama LIKE ? OR p.nik LIKE ? OR pc.no_pengajuan LIKE ?)");
+			baseQuery += ` AND (pegawai_nama LIKE ? OR nik LIKE ? OR no_pengajuan LIKE ?)`;
 			queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`, `%${searchTerm}%`);
 		}
 
-		const leaveRequests = await rawQuery(
-			`SELECT pc.no_pengajuan, pc.nik, pc.tanggal_awal, pc.tanggal_akhir, pc.urgensi, pc.alamat, pc.jumlah,
-			        p.id as pegawai_id, p.nama as pegawai_nama, p.departemen as pegawai_departemen,
-			        d.nama as departemen_nama
-			 FROM pengajuan_cuti pc
-			 JOIN pegawai p ON p.nik = pc.nik
-			 LEFT JOIN departemen d ON d.dep_id = p.departemen
-			 WHERE ${whereConditions.join(" AND ")}
-			 ORDER BY p.nama ASC, pc.tanggal_awal ASC`,
-			queryParams
-		);
+		baseQuery += ` ORDER BY pegawai_nama ASC, tanggal_awal ASC`;
+
+		const leaveRequests = await rawQuery(baseQuery, queryParams);
 
 		if (!leaveRequests || leaveRequests.length === 0) {
 			return NextResponse.json({
@@ -216,11 +247,17 @@ export async function GET(request) {
 					shift = addSched ? addSched[`h${dayNumber}`] : "";
 				}
 
+				if (!shift || shift.trim() === "") {
+					if (!regSched && !scheduleMap.has(`tambahan_${pc.pegawai_id}_${monthStr}_${yearStr}`)) {
+						shift = curr.day() === 0 ? "OFF" : "P";
+					}
+				}
+
 				shift = (shift || "").trim();
 
 				// If shift is empty, "OFF", or "Libur", employee not scheduled to work
 				const shiftUpper = shift.toUpperCase();
-				if (!shift || shiftUpper === "OFF" || shiftUpper === "LIBUR") {
+				if (!shift || shiftUpper === "OFF" || shiftUpper === "LIBUR" || shiftUpper === "-") {
 					curr.add(1, "day");
 					continue;
 				}
@@ -234,8 +271,7 @@ export async function GET(request) {
 				if (ph) {
 					const isApproved100 =
 						ph.status === "approved" &&
-						Number(ph.skor_total) === 100 &&
-						ph.sumber_absensi === "cuti";
+						Number(ph.skor_total) === 100;
 
 					statusBypass = isApproved100 ? "approved_100" : "perlu_bypass";
 				}
@@ -248,6 +284,7 @@ export async function GET(request) {
 					countPerluBypass++;
 				}
 
+				const isIzin = pc.jenis_dispensasi === "izin_dinas";
 				const item = {
 					pegawai_id: pc.pegawai_id,
 					pegawai_nama: pc.pegawai_nama,
@@ -256,15 +293,17 @@ export async function GET(request) {
 					departemen_nama: pc.departemen_nama,
 					no_pengajuan: pc.no_pengajuan,
 					urgensi: pc.urgensi,
-					nilai_kondisi: mapCutiToKondisi(pc.urgensi),
+					nilai_kondisi: isIzin ? "izin_dinas_luar" : mapCutiToKondisi(pc.urgensi),
+					jenis_dispensasi: pc.jenis_dispensasi || (isIzin ? "izin_dinas" : "cuti"),
+					ref_cuti_no: isIzin ? null : (ph?.ref_cuti_no || pc.no_pengajuan),
+					ref_izin_no: isIzin ? (ph?.ref_izin_no || pc.no_pengajuan) : null,
 					tanggal: dateStr,
 					shift: shift,
 					status_bypass: statusBypass,
 					penilaian_id: ph ? ph.id : null,
 					penilaian_status: ph ? ph.status : null,
 					skor_total: ph ? Number(ph.skor_total) : null,
-					sumber_absensi: ph ? ph.sumber_absensi : null,
-					ref_cuti_no: ph ? ph.ref_cuti_no : null
+					sumber_absensi: ph ? ph.sumber_absensi : null
 				};
 
 				// Check status filter
