@@ -46,7 +46,47 @@ export async function GET(request) {
 		}
 
 		const loggedInUser = verified.payload;
-		const isAdmin = loggedInUser?.departemen?.toUpperCase() === "IT";
+
+		const userDeptCheck = await rawQuery(`
+			SELECT p.departemen, d.nama as departemen_nama
+			FROM pegawai p
+			LEFT JOIN departemen d ON p.departemen = d.dep_id
+			WHERE p.id = ?
+		`, [loggedInUser.id]);
+
+		const userDept = (userDeptCheck[0]?.departemen || loggedInUser?.departemen || "").toUpperCase();
+		const userDeptNama = (userDeptCheck[0]?.departemen_nama || "").toUpperCase();
+		const envIT = (process.env.NEXT_PUBLIC_DEPARTMENT_IT || "").toUpperCase();
+		const envSPI = (process.env.NEXT_PUBLIC_DEPARTMENT_SPI || "").toUpperCase();
+		const envKEU = (process.env.NEXT_PUBLIC_DEPARTMENT_KEU || "").toUpperCase();
+
+		const hasFullAccess =
+			userDept === "IT" ||
+			userDept === "KEU" ||
+			userDept === "KEUANGAN" ||
+			userDept === "SDM" ||
+			userDept === "HRD" ||
+			userDept === "SPI" ||
+			userDept === "DIR" ||
+			userDept === "DIREKSI" ||
+			(envIT && userDept === envIT) ||
+			(envSPI && userDept === envSPI) ||
+			(envKEU && userDept === envKEU) ||
+			userDept.includes("IT") ||
+			userDept.includes("KEU") ||
+			userDept.includes("SDM") ||
+			userDept.includes("HRD") ||
+			userDept.includes("SPI") ||
+			userDept.includes("DIR") ||
+			userDeptNama.includes("IT") ||
+			userDeptNama.includes("KEUANGAN") ||
+			userDeptNama.includes("KEU") ||
+			userDeptNama.includes("SDM") ||
+			userDeptNama.includes("HRD") ||
+			userDeptNama.includes("SUMBER DAYA MANUSIA") ||
+			userDeptNama.includes("SPI") ||
+			userDeptNama.includes("PENGAWAS") ||
+			userDeptNama.includes("DIREKSI");
 
 		const { searchParams } = new URL(request.url);
 		const bulan = searchParams.get("bulan");
@@ -119,8 +159,8 @@ export async function GET(request) {
 			}
 		`;
 
-		// If Admin (IT Department), return full dataset without supervisor filtering
-		if (isAdmin) {
+		// If Admin / Keuangan / SDM / SPI / Direksi, return full dataset without supervisor filtering
+		if (hasFullAccess) {
 			const variables = {
 				bulan: Number(bulan),
 				tahun: Number(tahun),
