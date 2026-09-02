@@ -79,6 +79,8 @@ export async function fetchDeteksiCutiGql(filter = {}) {
           skor_total
           sumber_absensi
           ref_cuti_no
+          ref_izin_no
+          jenis_dispensasi
         }
       }
     }

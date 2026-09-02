@@ -27,6 +27,7 @@ import {
 	UserCheck,
 	CalendarDays,
 	Sparkles,
+	Briefcase,
 } from "lucide-react";
 import moment from "moment";
 import "moment/locale/id";
@@ -64,6 +65,7 @@ export default function DeteksiCutiPage() {
 	);
 	const [selectedDepartment, setSelectedDepartment] = useState("ALL");
 	const [statusFilter, setStatusFilter] = useState("ALL");
+	const [tipeDispensasi, setTipeDispensasi] = useState("ALL");
 	const [searchTerm, setSearchTerm] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -121,7 +123,7 @@ export default function DeteksiCutiPage() {
 	// Reset page on filter changes (Tab 1)
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [tanggalAwal, tanggalAkhir, selectedDepartment, statusFilter, debouncedSearch, pageSize]);
+	}, [tanggalAwal, tanggalAkhir, selectedDepartment, statusFilter, tipeDispensasi, debouncedSearch, pageSize]);
 
 	// Close modals on Escape key
 	useEffect(() => {
@@ -199,6 +201,7 @@ export default function DeteksiCutiPage() {
 						tanggalAkhir,
 						departemen: selectedDepartment !== "ALL" ? selectedDepartment : undefined,
 						statusFilter: statusFilter !== "ALL" ? statusFilter : undefined,
+						tipeDispensasi: tipeDispensasi !== "ALL" ? tipeDispensasi : undefined,
 						searchTerm: debouncedSearch || undefined,
 					};
 					const gqlRes = await fetchDeteksiCutiGql(filter);
@@ -217,6 +220,7 @@ export default function DeteksiCutiPage() {
 						tanggal_akhir: tanggalAkhir,
 						departemen: selectedDepartment,
 						status_filter: statusFilter,
+						tipe_dispensasi: tipeDispensasi,
 						search: debouncedSearch,
 					});
 
@@ -246,7 +250,7 @@ export default function DeteksiCutiPage() {
 				setIsRefreshing(false);
 			}
 		},
-		[tanggalAwal, tanggalAkhir, selectedDepartment, statusFilter, debouncedSearch]
+		[tanggalAwal, tanggalAkhir, selectedDepartment, statusFilter, tipeDispensasi, debouncedSearch]
 	);
 
 	useEffect(() => {
@@ -260,6 +264,20 @@ export default function DeteksiCutiPage() {
 	const selectableItems = useMemo(() => {
 		return leaveData.filter((item) => item.status_bypass !== "approved_100");
 	}, [leaveData]);
+
+	// Helper breakdown summary for modals
+	const getBreakdownText = (items) => {
+		const cutiCount = items.filter((i) => i.jenis_dispensasi !== "izin_dinas").length;
+		const dinasCount = items.filter((i) => i.jenis_dispensasi === "izin_dinas").length;
+
+		if (cutiCount > 0 && dinasCount > 0) {
+			return `${items.length} data (${cutiCount} Cuti, ${dinasCount} Dinas Luar Kota)`;
+		} else if (dinasCount > 0) {
+			return `${dinasCount} data Dinas Luar Kota`;
+		} else {
+			return `${cutiCount} data Cuti`;
+		}
+	};
 
 	// Pagination calculations (Tab 1)
 	const totalItems = leaveData.length;
@@ -303,7 +321,7 @@ export default function DeteksiCutiPage() {
 		setIsProcessing(true);
 		setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
-		const toastId = toast.loading(`Memproses bypass untuk ${itemsToProcess.length} data cuti...`);
+		const toastId = toast.loading(`Memproses bypass untuk ${itemsToProcess.length} data cuti & dinas luar...`);
 
 		try {
 			const formattedItems = itemsToProcess.map((item) => ({
@@ -312,6 +330,7 @@ export default function DeteksiCutiPage() {
 				no_pengajuan: item.no_pengajuan || "",
 				urgensi: item.urgensi || "",
 				shift: item.shift || "",
+				jenis_dispensasi: item.jenis_dispensasi || "cuti",
 			}));
 
 			let successMessage = "Bypass penilaian berhasil diproses!";
@@ -366,10 +385,12 @@ export default function DeteksiCutiPage() {
 	// Prompt Single Bypass (Tab 1)
 	const handleSingleBypass = (item) => {
 		if (item.status_bypass === "approved_100") return;
+		const isDinas = item.jenis_dispensasi === "izin_dinas";
+		const tipeLabel = isDinas ? "Dinas Luar Kota" : "Cuti";
 		setConfirmModal({
 			isOpen: true,
-			title: "Konfirmasi Bypass Penilaian",
-			description: `Lakukan bypass penilaian harian 100% untuk ${item.pegawai_nama} pada tanggal ${moment(
+			title: `Konfirmasi Bypass ${tipeLabel}`,
+			description: `Lakukan bypass penilaian harian 100% untuk ${item.pegawai_nama} (${tipeLabel}) pada tanggal ${moment(
 				item.tanggal
 			).format("dddd, DD MMMM YYYY")} (Shift: ${item.shift})?`,
 			items: [item],
@@ -388,10 +409,11 @@ export default function DeteksiCutiPage() {
 			return;
 		}
 
+		const breakdown = getBreakdownText(itemsToProcess);
 		setConfirmModal({
 			isOpen: true,
 			title: "Konfirmasi Bypass Terpilih",
-			description: `Apakah Anda yakin ingin memproses bypass penilaian harian 100% untuk ${itemsToProcess.length} data cuti yang dipilih?`,
+			description: `Apakah Anda yakin ingin memproses bypass penilaian harian 100% untuk ${breakdown} yang dipilih?`,
 			items: itemsToProcess,
 			count: itemsToProcess.length,
 		});
@@ -402,14 +424,15 @@ export default function DeteksiCutiPage() {
 		const itemsToProcess = leaveData.filter((item) => item.status_bypass !== "approved_100");
 
 		if (itemsToProcess.length === 0) {
-			toast.info("Semua cuti dalam filter saat ini sudah Disetujui 100%");
+			toast.info("Semua cuti / dinas luar dalam filter saat ini sudah Disetujui 100%");
 			return;
 		}
 
+		const breakdown = getBreakdownText(itemsToProcess);
 		setConfirmModal({
 			isOpen: true,
 			title: "Konfirmasi Bypass Semua Belum Diproses",
-			description: `Apakah Anda yakin ingin memproses bypass 100% untuk seluruh ${itemsToProcess.length} jadwal cuti yang belum disetujui dalam rentang filter saat ini?`,
+			description: `Apakah Anda yakin ingin memproses bypass 100% untuk seluruh ${breakdown} yang belum disetujui dalam rentang filter saat ini?`,
 			items: itemsToProcess,
 			count: itemsToProcess.length,
 		});
@@ -519,10 +542,35 @@ export default function DeteksiCutiPage() {
 		}
 	};
 
+	// Dispensasi category badge (Cuti vs Dinas Luar Kota)
+	const getDispensasiBadge = (item) => {
+		if (item.jenis_dispensasi === "izin_dinas") {
+			return (
+				<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
+					<Briefcase className="w-3 h-3" />
+					DINAS LUAR
+				</span>
+			);
+		}
+		return (
+			<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">
+				<Calendar className="w-3 h-3" />
+				CUTI
+			</span>
+		);
+	};
+
 	// Urgensi / Leave Type badge styles
 	const getUrgensiBadge = (urgensi) => {
 		const label = urgensi || "Lainnya";
 		switch (urgensi) {
+			case "Dinas Luar Kota":
+			case "Dinas Luar":
+				return (
+					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
+						{label}
+					</span>
+				);
 			case "Tahunan":
 			case "Tahunan ke luar negeri":
 				return (
@@ -606,10 +654,10 @@ export default function DeteksiCutiPage() {
 							</div>
 							<div>
 								<h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-									Deteksi Cuti Pegawai & Bypass Penilaian
+									Deteksi Cuti & Dinas Luar Pegawai
 								</h1>
 								<p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-									Scan jadwal cuti kerja atau bypass penilaian harian pegawai secara khusus (100% Disetujui).
+									Scan jadwal cuti kerja & dinas luar kota atau bypass penilaian harian pegawai secara khusus (100% Disetujui).
 								</p>
 							</div>
 						</div>
@@ -658,7 +706,7 @@ export default function DeteksiCutiPage() {
 						}`}
 					>
 						<Calendar className="w-4 h-4" />
-						<span>Deteksi Cuti Terjadwal</span>
+						<span>Deteksi Cuti & Dinas Luar</span>
 					</button>
 					<button
 						type="button"
@@ -678,31 +726,31 @@ export default function DeteksiCutiPage() {
 				</div>
 			</div>
 
-			{/* TAB 1: DETEKSI CUTI TERJADWAL */}
+			{/* TAB 1: DETEKSI CUTI & DINAS LUAR TERJADWAL */}
 			{activeTab === "deteksi" && (
 				<div className="space-y-6">
 					{/* Contextual Help Banner */}
 					<div className="p-3.5 rounded-xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-300">
 						<Info className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5" />
 						<p className="leading-relaxed">
-							<strong>Tentang Deteksi Cuti:</strong> Fitur ini memindai pengajuan cuti resmi yang telah disetujui dan bertabrakan dengan jadwal shift kerja. Tindakan bypass otomatis mengatur penilaian harian menjadi <strong>Disetujui (Approved)</strong> dengan skor absensi <strong>100</strong> dan skor kegiatan <strong>100</strong>.
+							<strong>Tentang Deteksi Cuti & Dinas Luar:</strong> Fitur ini memindai pengajuan cuti resmi serta izin dinas luar kota yang telah disetujui dan bertabrakan dengan jadwal shift kerja. Tindakan bypass otomatis mengatur penilaian harian menjadi <strong>Disetujui (Approved)</strong> dengan skor absensi <strong>100</strong> dan skor kegiatan <strong>100</strong>.
 						</p>
 					</div>
 
 					{/* KPI Summary Cards */}
 					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-						{/* Total Hari Cuti Terjadwal */}
+						{/* Total Hari Cuti & Dinas Luar Terjadwal */}
 						<div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm relative overflow-hidden">
 							<div className="flex items-center justify-between">
 								<div className="space-y-1">
 									<p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-										Total Hari Cuti Terjadwal
+										Total Jadwal Cuti & Dinas Luar
 									</p>
 									<h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">
 										{summary.total_cuti_shift || 0}
 									</h2>
 									<p className="text-xs text-slate-400 dark:text-slate-500">
-										Shift kerja bertabrakan cuti
+										Shift bertabrakan cuti / dinas luar
 									</p>
 								</div>
 								<div className="p-3.5 bg-sky-50 dark:bg-sky-950/60 border border-sky-100 dark:border-sky-900/50 rounded-2xl text-sky-600 dark:text-sky-400">
@@ -759,7 +807,7 @@ export default function DeteksiCutiPage() {
 							<span>Filter & Pencarian</span>
 						</div>
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
 							{/* Tanggal Awal */}
 							<div className="space-y-1">
 								<label htmlFor="filter-tanggal-awal" className="text-xs font-medium text-slate-600 dark:text-slate-400">
@@ -808,6 +856,23 @@ export default function DeteksiCutiPage() {
 								</select>
 							</div>
 
+							{/* Tipe Dispensasi */}
+							<div className="space-y-1">
+								<label htmlFor="filter-tipe-dispensasi" className="text-xs font-medium text-slate-600 dark:text-slate-400">
+									Tipe Dispensasi
+								</label>
+								<select
+									id="filter-tipe-dispensasi"
+									value={tipeDispensasi}
+									onChange={(e) => setTipeDispensasi(e.target.value)}
+									className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
+								>
+									<option value="ALL">Semua Tipe</option>
+									<option value="cuti">Hanya Cuti</option>
+									<option value="izin_dinas">Hanya Dinas Luar Kota</option>
+								</select>
+							</div>
+
 							{/* Status Bypass */}
 							<div className="space-y-1">
 								<label htmlFor="filter-status" className="text-xs font-medium text-slate-600 dark:text-slate-400">
@@ -832,10 +897,10 @@ export default function DeteksiCutiPage() {
 							<input
 								type="text"
 								id="filter-search"
-								aria-label="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan Cuti"
+								aria-label="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan"
 								value={searchTerm}
 								onChange={(e) => setSearchTerm(e.target.value)}
-								placeholder="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan Cuti..."
+								placeholder="Cari berdasarkan NIK, Nama Pegawai, atau No. Pengajuan..."
 								className="w-full pl-10 pr-12 py-2.5 text-sm bg-slate-50 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition min-h-[42px]"
 							/>
 							{searchTerm && (
@@ -903,7 +968,7 @@ export default function DeteksiCutiPage() {
 							<div className="flex flex-col items-center justify-center space-y-3">
 								<Loader2 className="w-8 h-8 animate-spin text-sky-600 dark:text-sky-400" />
 								<p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-									Memindai jadwal shift kerja dan pengajuan cuti pegawai...
+									Memindai jadwal shift kerja, cuti, dan izin dinas luar pegawai...
 								</p>
 							</div>
 						</div>
@@ -912,7 +977,7 @@ export default function DeteksiCutiPage() {
 							<div className="max-w-md mx-auto space-y-3">
 								<AlertTriangle className="w-10 h-10 text-rose-500 mx-auto" />
 								<h3 className="text-base font-bold text-slate-900 dark:text-white">
-									Gagal Mengambil Data Deteksi Cuti
+									Gagal Mengambil Data Deteksi Cuti & Dinas Luar
 								</h3>
 								<p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">{error}</p>
 								<button
@@ -931,10 +996,10 @@ export default function DeteksiCutiPage() {
 									<Calendar className="w-8 h-8" />
 								</div>
 								<h3 className="text-base font-bold text-slate-900 dark:text-white">
-									Tidak Ada Cuti Terjadwal Ditemukan
+									Tidak Ada Cuti / Dinas Luar Terjadwal Ditemukan
 								</h3>
 								<p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-									Tidak ditemukan pengajuan cuti yang disetujui pada hari kerja dalam rentang tanggal dan kriteria filter yang dipilih.
+									Tidak ditemukan pengajuan cuti atau izin dinas luar kota yang disetujui pada hari kerja dalam rentang tanggal dan kriteria filter yang dipilih.
 								</p>
 							</div>
 						</div>
@@ -969,7 +1034,7 @@ export default function DeteksiCutiPage() {
 													Tanggal & Shift
 												</th>
 												<th scope="col" className="py-3.5 px-4">
-													Info Cuti
+													Info Dispensasi
 												</th>
 												<th scope="col" className="py-3.5 px-4">
 													Status Penilaian
@@ -1033,10 +1098,13 @@ export default function DeteksiCutiPage() {
 															</div>
 														</td>
 														<td className="py-3.5 px-4 space-y-1">
-															<div>{getUrgensiBadge(item.urgensi)}</div>
+															<div className="flex items-center gap-1.5 flex-wrap">
+																{getDispensasiBadge(item)}
+																{item.urgensi && getUrgensiBadge(item.urgensi)}
+															</div>
 															<div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
 																<FileText className="w-3 h-3" />
-																{item.no_pengajuan || "-"}
+																{item.ref_izin_no || item.ref_cuti_no || item.no_pengajuan || "-"}
 															</div>
 														</td>
 														<td className="py-3.5 px-4">{getStatusPenilaianBadge(item)}</td>
@@ -1100,9 +1168,16 @@ export default function DeteksiCutiPage() {
 														<p className="text-xs text-slate-500 dark:text-slate-400">
 															NIK: {item.nik}
 														</p>
+														<div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
+															<FileText className="w-3 h-3" />
+															{item.ref_izin_no || item.ref_cuti_no || item.no_pengajuan || "-"}
+														</div>
 													</div>
 												</div>
-												<div>{getUrgensiBadge(item.urgensi)}</div>
+												<div className="flex flex-col items-end gap-1">
+													{getDispensasiBadge(item)}
+													{item.urgensi && getUrgensiBadge(item.urgensi)}
+												</div>
 											</div>
 
 											<div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100 dark:border-slate-800">
@@ -1158,7 +1233,7 @@ export default function DeteksiCutiPage() {
 										<strong className="text-slate-700 dark:text-slate-200">
 											{Math.min(currentPage * pageSize, totalItems)}
 										</strong>{" "}
-										dari <strong className="text-slate-700 dark:text-slate-200">{totalItems}</strong> jadwal cuti
+										dari <strong className="text-slate-700 dark:text-slate-200">{totalItems}</strong> jadwal cuti & dinas luar
 									</span>
 
 									<div className="flex items-center gap-1.5 pl-2 border-l border-slate-200 dark:border-slate-800">
@@ -1518,7 +1593,7 @@ export default function DeteksiCutiPage() {
 							<ul className="list-disc list-inside space-y-0.5 text-slate-500 dark:text-slate-400 pl-1">
 								<li>Penilaian harian otomatis dibuat/diupdate ke status Disetujui (Approved).</li>
 								<li>Skor absensi dan kegiatan harian diatur ke 100%.</li>
-								<li>Tercatat sumber absensi cuti & referensi nomor pengajuan resmi.</li>
+								<li>Tercatat sumber absensi cuti / dinas luar & referensi nomor pengajuan resmi.</li>
 							</ul>
 						</div>
 
