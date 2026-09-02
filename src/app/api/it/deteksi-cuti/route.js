@@ -95,12 +95,12 @@ export async function GET(request) {
 		let baseQuery = `
 			SELECT 
 				no_pengajuan, nik, tanggal_awal, tanggal_akhir, urgensi, status,
-				pegawai_id, pegawai_nama, departemen as pegawai_departemen, departemen_nama, jenis_dispensasi
+				pegawai_id, pegawai_nama, pegawai_departemen, departemen_nama, jenis_dispensasi
 			FROM (
 				SELECT 
 					pc.no_pengajuan, pc.nik, pc.tanggal_awal, pc.tanggal_akhir, pc.urgensi, pc.status,
 					p.id as pegawai_id, p.nama as pegawai_nama,
-					d.dep_id as departemen, d.nama as departemen_nama,
+					COALESCE(p.departemen, d.dep_id) as pegawai_departemen, d.nama as departemen_nama,
 					'cuti' as jenis_dispensasi
 				FROM pengajuan_cuti pc
 				JOIN pegawai p ON p.nik = pc.nik
@@ -113,7 +113,7 @@ export async function GET(request) {
 				SELECT 
 					pi.no_pengajuan, pi.nik, pi.tanggal_awal, pi.tanggal_akhir, pi.urgensi, pi.status,
 					p.id as pegawai_id, p.nama as pegawai_nama,
-					d.dep_id as departemen, d.nama as departemen_nama,
+					COALESCE(p.departemen, d.dep_id) as pegawai_departemen, d.nama as departemen_nama,
 					'izin_dinas' as jenis_dispensasi
 				FROM pengajuan_izin pi
 				JOIN pegawai p ON p.nik = pi.nik
@@ -138,8 +138,8 @@ export async function GET(request) {
 		}
 
 		if (departemenFilter && departemenFilter !== "ALL") {
-			baseQuery += ` AND pegawai_departemen = ?`;
-			queryParams.push(departemenFilter);
+			baseQuery += ` AND (pegawai_departemen = ? OR departemen_nama = ?)`;
+			queryParams.push(departemenFilter, departemenFilter);
 		}
 
 		if (searchTerm) {
