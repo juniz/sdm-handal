@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import moment from "moment";
 import { select, selectFirst, insert, rawQuery } from "@/lib/db-helper";
-import { getPenilaianInputLimitDays, isPenilaianLimitEnabled } from "@/lib/penilaian-config";
+import { getPenilaianInputLimitDays } from "@/lib/penilaian-config";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
