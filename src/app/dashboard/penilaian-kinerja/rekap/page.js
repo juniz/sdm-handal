@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import moment from "moment";
+import * as XLSX from "xlsx";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { 
@@ -17,7 +18,8 @@ import {
 	FileBarChart,
 	TrendingUp,
 	SlidersHorizontal,
-	X
+	X,
+	FileSpreadsheet
 } from "lucide-react";
 
 export default function AdminRekapBulananPage() {
@@ -32,6 +34,7 @@ export default function AdminRekapBulananPage() {
 	const [errorMsg, setErrorMsg] = useState("");
 	const [successMsg, setSuccessMsg] = useState("");
 	const [actionLoadingId, setActionLoadingId] = useState(null);
+	const [exportingExcel, setExportingExcel] = useState(false);
 
 	// Parameter shift tambahan state
 	const [paramShiftTambahan, setParamShiftTambahan] = useState(null);
@@ -289,6 +292,69 @@ export default function AdminRekapBulananPage() {
 		document.body.removeChild(link);
 	};
 
+	const exportToExcel = async () => {
+		setExportingExcel(true);
+		setErrorMsg("");
+		setSuccessMsg("");
+		try {
+			const res = await fetch(`/api/penilaian/rekap?bulan=${currentMonth}&tahun=${currentYear}&departemen=${selectedDept}&nama=${encodeURIComponent(debouncedSearchName)}&status=${selectedStatusFilter}&page=1&limit=10000`);
+			const data = await res.json();
+			if (!res.ok) throw new Error(data.error || "Gagal mengunduh format Excel");
+
+			const items = data.data || [];
+			if (items.length === 0) {
+				setErrorMsg("Tidak ada data rekapitulasi untuk diunduh.");
+				return;
+			}
+
+			const sortedRows = [...items].sort((a, b) => {
+				const deptCompare = (a.nama_departemen || "").localeCompare(b.nama_departemen || "", "id", { sensitivity: "base" });
+				if (deptCompare !== 0) return deptCompare;
+				return (a.nama || "").localeCompare(b.nama || "", "id", { sensitivity: "base" });
+			});
+
+			const totalJasaDasar = sortedRows.reduce((acc, r) => acc + (Number(r.nominal_jasa_dasar) || 0), 0);
+			const totalPengurang = sortedRows.reduce((acc, r) => acc + (Number(r.pengurang_jasa) || 0), 0);
+			const totalJasaTambahan = sortedRows.reduce((acc, r) => acc + (Number(r.nominal_jasa_tambahan) || 0), 0);
+			const totalJasaFinal = sortedRows.reduce((acc, r) => acc + (Number(r.nominal_jasa_final) || 0), 0);
+
+			const selectedDeptLabel = selectedDept === "ALL" ? "Semua Departemen" : (departments.find(d => String(d.dep_id) === String(selectedDept))?.nama || selectedDept);
+
+			const sheetData = [
+				["REKAPITULASI JASA PELAYANAN PEGAWAI"],
+				[`Periode: ${moment(`${currentYear}-${currentMonth}-01`).format("MMMM YYYY")}`],
+				[`Unit / Departemen: ${selectedDeptLabel}`],
+				[`Waktu Unduh: ${moment().format("DD/MM/YYYY HH:mm")}`],
+				[],
+				["No", "NIK", "Nama Pegawai", "Departemen", "Jasa Dasar (Rp)", "Pengurang (Rp)", "Insentif Tambahan (Rp)", "Jasa Final (Rp)"],
+				...sortedRows.map((row, idx) => [
+					idx + 1,
+					row.nik,
+					row.nama,
+					row.nama_departemen,
+					Number(row.nominal_jasa_dasar) || 0,
+					Number(row.pengurang_jasa) || 0,
+					Number(row.nominal_jasa_tambahan) || 0,
+					Number(row.nominal_jasa_final) || 0
+				]),
+				["TOTAL", "", "", "", totalJasaDasar, totalPengurang, totalJasaTambahan, totalJasaFinal]
+			];
+
+			const ws = XLSX.utils.aoa_to_sheet(sheetData);
+			ws["!cols"] = [{ wch: 6 }, { wch: 18 }, { wch: 35 }, { wch: 25 }, { wch: 20 }, { wch: 18 }, { wch: 22 }, { wch: 20 }];
+			ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
+
+			const wb = XLSX.utils.book_new();
+			XLSX.utils.book_append_sheet(wb, ws, "Rekap Jasa");
+			const deptSlug = selectedDept === "ALL" ? "Semua" : selectedDept;
+			XLSX.writeFile(wb, `Rekap_Jasa_Pegawai_${currentYear}_${currentMonth}_${deptSlug}.xlsx`);
+		} catch (err) {
+			setErrorMsg(err.message || "Gagal mengunduh format Excel");
+		} finally {
+			setExportingExcel(false);
+		}
+	};
+
 	const triggerPrint = () => {
 		window.print();
 	};
@@ -367,6 +433,18 @@ export default function AdminRekapBulananPage() {
 						>
 							<Download className="h-4 w-4" />
 							Export CSV
+						</button>
+						<button 
+							onClick={exportToExcel}
+							disabled={exportingExcel || loading}
+							className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] transition-all duration-200 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
+						>
+							{exportingExcel ? (
+								<Loader2 className="h-4 w-4 animate-spin" />
+							) : (
+								<FileSpreadsheet className="h-4 w-4" />
+							)}
+							{exportingExcel ? "Menyiapkan Excel..." : "Download Excel"}
 						</button>
 						<button 
 							onClick={triggerPrint}
