@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import { selectFirst, select, insert, update, delete_, rawQuery } from "@/lib/db-helper";
 import moment from "moment-timezone";
-import { is24hLimitEnabled } from "@/lib/penilaian-config";
+import { getPenilaianInputLimitDays, isPenilaianLimitEnabled } from "@/lib/penilaian-config";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -39,9 +39,10 @@ async function getSupervisorIdForEmployee(employeeId) {
 	return supervisorResult.length > 0 ? supervisorResult[0].supervisor_id : null;
 }
 
-// Helper check 1x24 jam deadline
-async function checkDeadlinePassed(pegawaiId, tanggal) {
-	if (!is24hLimitEnabled()) return false;
+// Helper check deadline input / persetujuan
+async function checkDeadlinePassed(pegawaiId, tanggal, isApproval = false) {
+	const limitDays = getPenilaianInputLimitDays();
+	if (limitDays <= 0) return false;
 	try {
 		const evalDateStr = moment(tanggal).format("YYYY-MM-DD");
 		const monthStr = moment(evalDateStr).format("MM");
@@ -50,20 +51,12 @@ async function checkDeadlinePassed(pegawaiId, tanggal) {
 
 		const schedule = await selectFirst({
 			table: "jadwal_pegawai",
-			where: {
-				id: pegawaiId,
-				bulan: monthStr,
-				tahun: yearStr
-			}
+			where: { id: pegawaiId, bulan: monthStr, tahun: yearStr }
 		});
 
 		const scheduleTambahan = await selectFirst({
 			table: "jadwal_tambahan",
-			where: {
-				id: pegawaiId,
-				bulan: monthStr,
-				tahun: yearStr
-			}
+			where: { id: pegawaiId, bulan: monthStr, tahun: yearStr }
 		});
 
 		let shift = schedule ? (schedule[`h${dayStr}`] || "") : "";
@@ -77,24 +70,22 @@ async function checkDeadlinePassed(pegawaiId, tanggal) {
 				table: "jam_masuk",
 				where: { shift: shift }
 			});
-			if (shiftInfo) {
-				const jamMasuk = shiftInfo.jam_masuk;
-				const jamPulang = shiftInfo.jam_pulang;
-				if (jamPulang < jamMasuk) {
-					isNightShift = true;
-				}
+			if (shiftInfo && shiftInfo.jam_pulang < shiftInfo.jam_masuk) {
+				isNightShift = true;
 			}
 		}
 
-		// Batas 1x24 jam dihitung dari 23:59:59 hari berikutnya setelah tanggal kerja.
-		// Jika shift malam (lintas midnight), dihitung dari 23:59:59 hari kedua setelah tanggal kerja (hari setelah pulang).
-		const daysToAdd = isNightShift ? 2 : 1;
+		let daysToAdd = isNightShift ? limitDays + 1 : limitDays;
+		if (isApproval) {
+			daysToAdd += 1;
+		}
+
 		const deadline = moment.tz(evalDateStr, "Asia/Jakarta").add(daysToAdd, "days").endOf("day");
 		const now = moment().tz("Asia/Jakarta");
 
 		return now.isAfter(deadline);
 	} catch (err) {
-		console.error("Gagal memeriksa deadline 1x24 jam:", err);
+		console.error("Gagal memeriksa deadline input:", err);
 		return false;
 	}
 }
@@ -138,10 +129,10 @@ export async function PUT(request, { params }) {
 			return NextResponse.json({ error: "Penilaian yang sudah dikirim atau disetujui tidak dapat diubah" }, { status: 400 });
 		}
 
-		// Verify deadline 1x24 jam
+		// Verify deadline
 		const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
 		if (isExpired) {
-			return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diubah.` }, { status: 400 });
+			return NextResponse.json({ error: `Batas pengisian telah lewat (> ${getPenilaianInputLimitDays()} hari). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diubah.` }, { status: 400 });
 		}
 
 		const body = await request.json();
@@ -298,10 +289,10 @@ export async function POST(request, { params }) {
 				return NextResponse.json({ error: "Penilaian sudah dikirim atau disetujui" }, { status: 400 });
 			}
 
-			// Verify deadline 1x24 jam
+			// Verify deadline
 			const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
 			if (isExpired) {
-				return NextResponse.json({ error: `Batas pengiriman telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat dikirim.` }, { status: 400 });
+				return NextResponse.json({ error: `Batas pengiriman telah lewat (> ${getPenilaianInputLimitDays()} hari). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat dikirim.` }, { status: 400 });
 			}
 
 			const isCuti = harian.sumber_absensi === "cuti";
@@ -506,11 +497,11 @@ export async function POST(request, { params }) {
 				return NextResponse.json({ error: "Penilaian harus berstatus 'submitted' untuk disetujui" }, { status: 400 });
 			}
 
-			// Verify deadline 1x24 jam for supervisor approval (admin can bypass if needed)
+			// Verify deadline for supervisor approval (admin can bypass if needed)
 			if (!isAdmin) {
-				const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal);
+				const isExpired = await checkDeadlinePassed(harian.pegawai_id, harian.tanggal, true);
 				if (isExpired) {
-					return NextResponse.json({ error: `Batas waktu persetujuan supervisor telah lewat (> 1x24 jam). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diproses.` }, { status: 400 });
+					return NextResponse.json({ error: `Batas waktu persetujuan supervisor telah lewat (> ${getPenilaianInputLimitDays()} hari). Laporan tanggal ${moment(harian.tanggal).format("DD/MM/YYYY")} tidak dapat diproses.` }, { status: 400 });
 				}
 			}
 

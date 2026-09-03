@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 import moment from "moment";
 import { select, selectFirst, insert, rawQuery } from "@/lib/db-helper";
-import { is24hLimitEnabled } from "@/lib/penilaian-config";
+import { getPenilaianInputLimitDays, isPenilaianLimitEnabled } from "@/lib/penilaian-config";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -420,8 +420,9 @@ export async function POST(request) {
 			return NextResponse.json({ error: "Tanggal ini bukan hari kerja per jadwal Anda" }, { status: 400 });
 		}
 
-		// Verify deadline 1x24 jam
-		if (is24hLimitEnabled()) {
+		// Verify deadline pengisian
+		const limitDays = getPenilaianInputLimitDays();
+		if (limitDays > 0) {
 			let isNightShift = false;
 			if (shift && shift !== "OFF" && shift !== "Libur") {
 				const shiftInfo = await selectFirst({
@@ -433,10 +434,10 @@ export async function POST(request) {
 				}
 			}
 
-			const daysToAdd = isNightShift ? 2 : 1;
+			const daysToAdd = isNightShift ? limitDays + 1 : limitDays;
 			const deadline = moment(tanggal).add(daysToAdd, "days").endOf("day");
 			if (moment().isAfter(deadline)) {
-				return NextResponse.json({ error: `Batas pengisian telah lewat (> 1x24 jam). Penilaian tanggal ${moment(tanggal).format("DD/MM/YYYY")} tidak dapat dibuat.` }, { status: 400 });
+				return NextResponse.json({ error: `Batas pengisian telah lewat (> ${limitDays} hari). Penilaian tanggal ${moment(tanggal).format("DD/MM/YYYY")} tidak dapat dibuat.` }, { status: 400 });
 			}
 		}
 
