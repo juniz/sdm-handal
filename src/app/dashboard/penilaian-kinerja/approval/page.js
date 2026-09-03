@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import OptimizedPhotoDisplay from "@/components/OptimizedPhotoDisplay";
 import { Map, MapMarker, MarkerContent, MarkerTooltip } from "@/components/ui/mapcn";
-import { is24hLimitEnabled } from "@/lib/penilaian-config";
+import { getPenilaianInputLimitDays } from "@/lib/penilaian-config";
 
 export default function SupervisorApprovalPage() {
 	const [pendingList, setPendingList] = useState([]);
@@ -34,9 +34,10 @@ export default function SupervisorApprovalPage() {
 	const [actionLoading, setActionLoading] = useState(false);
 
 	const isApprovalDeadlinePassed = (record) => {
-		if (!is24hLimitEnabled()) return false;
+		const limitDays = getPenilaianInputLimitDays();
+		if (limitDays <= 0) return false;
 		if (!record || !record.tanggal) return false;
-		const deadline = moment(record.tanggal).add(2, "days").endOf("day");
+		const deadline = moment(record.tanggal).add(limitDays + 1, "days").endOf("day");
 		return moment().isAfter(deadline);
 	};
 
@@ -246,7 +247,7 @@ export default function SupervisorApprovalPage() {
 									<div>
 										<h4 className="font-bold text-sm font-figtree">Batas Waktu Approval Lewat</h4>
 										<p className="text-xs mt-0.5 font-medium leading-relaxed">
-											Batas waktu persetujuan supervisor telah lewat (&gt; 1x24 jam dari tanggal kerja). Laporan tidak dapat disetujui atau dikembalikan lagi.
+											Batas waktu persetujuan supervisor telah lewat (&gt; {getPenilaianInputLimitDays()} hari dari tanggal kerja). Laporan tidak dapat disetujui atau dikembalikan lagi.
 										</p>
 									</div>
 								</div>
@@ -435,7 +436,7 @@ export default function SupervisorApprovalPage() {
 							{isApprovalDeadlinePassed(selectedEval) ? (
 								<div className="text-xs text-rose-600 font-bold font-figtree flex items-center gap-1.5">
 									<AlertCircle className="h-4 w-4" />
-									Telah melewati batas waktu approval (&gt; 1x24 jam)
+									Telah melewati batas waktu approval (&gt; {getPenilaianInputLimitDays()} hari)
 								</div>
 							) : (
 								<button 

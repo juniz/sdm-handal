@@ -19,7 +19,7 @@ import {
 	RotateCcw,
 	Briefcase
 } from "lucide-react";
-import { is24hLimitEnabled } from "@/lib/penilaian-config";
+import { getPenilaianInputLimitDays } from "@/lib/penilaian-config";
 
 function DailyInputContent() {
 	const [selectedDate, setSelectedDate] = useState(null); // resolved on mount to handle night shifts
@@ -584,7 +584,8 @@ function DailyInputContent() {
 	const estSkorTotal = isBypassedLeaveOrDuty ? 100 : Math.round((estSkorKegiatan * 0.6) + (estSkorAbsensi * 0.4));
 
 	const checkIsDeadlinePassed = () => {
-		if (!is24hLimitEnabled()) return false;
+		const limitDays = getPenilaianInputLimitDays();
+		if (limitDays <= 0) return false;
 		if (!selectedDate) return false;
 		let isNightShift = false;
 		if (scheduleInfo.hasSchedule && scheduleInfo.shift && scheduleInfo.shift !== "OFF" && scheduleInfo.shift !== "Libur") {
@@ -593,7 +594,7 @@ function DailyInputContent() {
 				isNightShift = true;
 			}
 		}
-		const daysToAdd = isNightShift ? 2 : 1;
+		const daysToAdd = isNightShift ? limitDays + 1 : limitDays;
 		const deadline = moment(selectedDate).add(daysToAdd, "days").endOf("day");
 		return moment().isAfter(deadline);
 	};
@@ -707,7 +708,7 @@ function DailyInputContent() {
 					<div>
 						<h4 className="font-bold text-sm font-figtree">Batas Waktu Pengisian Lewat</h4>
 						<p className="text-xs mt-0.5 font-medium leading-relaxed">
-							Batas pengisian telah lewat (&gt; 1x24 jam dari tanggal kerja). Laporan tanggal {selectedDate ? moment(selectedDate).format("DD/MM/YYYY") : ""} tidak dapat diubah atau dikirim.
+							Batas pengisian telah lewat (&gt; {getPenilaianInputLimitDays()} hari dari tanggal kerja). Laporan tanggal {selectedDate ? moment(selectedDate).format("DD/MM/YYYY") : ""} tidak dapat diubah atau dikirim.
 						</p>
 					</div>
 				</div>
@@ -1209,7 +1210,7 @@ function DailyInputContent() {
 													</>
 												) : isDeadlinePassed ? (
 													<>
-														Penilaian harian ini telah dikunci karena <strong className="text-rose-600">batas waktu pengisian telah lewat (&gt; 1x24 jam)</strong>. Perubahan tidak dapat dilakukan lagi.
+														Penilaian harian ini telah dikunci karena <strong className="text-rose-600">batas waktu pengisian telah lewat (&gt; {getPenilaianInputLimitDays()} hari)</strong>. Perubahan tidak dapat dilakukan lagi.
 													</>
 												) : harianRecord?.status === "submitted" ? (
 													<>
