@@ -11,6 +11,8 @@ export default function AuditPrintLayout({
 	rekapList = [],
 	summary,
 	MONTHS = [],
+	sortField = "nama",
+	sortDirection = "asc",
 }) {
 	const monthLabel =
 		MONTHS.find((m) => m.value === month)?.label ||
@@ -21,6 +23,36 @@ export default function AuditPrintLayout({
 		summary?.compliancePercentage != null
 			? Math.round(summary.compliancePercentage)
 			: 0;
+
+	// Sort list to match active table sort
+	const sortedList = React.useMemo(() => {
+		const list = [...(rekapList || [])];
+		if (!sortField) return list;
+		const orderMultiplier = sortDirection?.toLowerCase() === "desc" ? -1 : 1;
+		list.sort((a, b) => {
+			const numericFields = [
+				"total_hari_jadwal",
+				"hari_approved",
+				"hari_approved_bonus",
+				"hari_pending",
+				"hari_draft",
+				"hari_kosong",
+				"gap_hari",
+				"rata_skor_total",
+			];
+			if (numericFields.includes(sortField)) {
+				const valA = Number(a[sortField] ?? 0);
+				const valB = Number(b[sortField] ?? 0);
+				return (valA - valB) * orderMultiplier;
+			}
+			const valA = String(a[sortField] || "").toLowerCase();
+			const valB = String(b[sortField] || "").toLowerCase();
+			if (valA < valB) return -1 * orderMultiplier;
+			if (valA > valB) return 1 * orderMultiplier;
+			return 0;
+		});
+		return list;
+	}, [rekapList, sortField, sortDirection]);
 
 	return (
 		<div className="hidden print:block font-noto-sans text-slate-900 bg-white p-0 m-0 w-full">
@@ -100,7 +132,7 @@ export default function AuditPrintLayout({
 					</tr>
 				</thead>
 				<tbody>
-					{rekapList.map((row, idx) => (
+					{sortedList.map((row, idx) => (
 						<tr
 							key={row.id || row.pegawai_id || row.nik || idx}
 							className={`border-b border-slate-300 ${idx % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}

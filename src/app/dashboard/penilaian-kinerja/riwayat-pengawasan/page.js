@@ -246,36 +246,34 @@ export default function RiwayatPenilaianPengawasanPage() {
 	const [printList, setPrintList] = useState([]);
 	const handlePrintReport = async () => {
 		try {
-			if ((meta?.totalItems || 0) > rekapList.length) {
-				const params = new URLSearchParams({
-					bulan: month,
-					tahun: year,
-					departemen,
-					stts_kerja: sttsKerja,
-					nama: searchNama,
-					page: "1",
-					limit: "10000",
-					sort_by: sortField,
-					sort_order: sortDirection,
-					only_anomali: onlyAnomali ? "true" : "false",
-				});
-				const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
-				if (res.ok) {
-					const result = await res.json();
-					setPrintList(result.data || []);
-				} else {
-					setPrintList(rekapList);
-				}
+			const params = new URLSearchParams({
+				bulan: month,
+				tahun: year,
+				departemen,
+				stts_kerja: sttsKerja,
+				nama: searchNama,
+				page: "1",
+				limit: "10000",
+				sort_by: sortField,
+				sort_order: sortDirection,
+				only_anomali: onlyAnomali ? "true" : "false",
+			});
+			const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
+			if (res.ok) {
+				const result = await res.json();
+				setPrintList(result.data || []);
 			} else {
 				setPrintList(rekapList);
 			}
 			setTimeout(() => {
 				window.print();
-			}, 150);
+			}, 200);
 		} catch (err) {
 			console.error("Print error:", err);
 			setPrintList(rekapList);
-			window.print();
+			setTimeout(() => {
+				window.print();
+			}, 100);
 		}
 	};
 
@@ -587,6 +585,8 @@ export default function RiwayatPenilaianPengawasanPage() {
 				rekapList={printList.length > 0 ? printList : rekapList}
 				summary={summary}
 				MONTHS={MONTHS}
+				sortField={sortField}
+				sortDirection={sortDirection}
 			/>
 		</div>
 	);
