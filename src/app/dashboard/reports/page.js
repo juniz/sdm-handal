@@ -29,7 +29,7 @@ export default function ReportsPage() {
 			features: [
 				"Perangkingan berdasarkan skor kinerja",
 				"Statistik tepat waktu vs terlambat",
-				"Top 10 pegawai terbaik dan terburuk",
+				"Daftar pegawai terbaik & evaluasi terburuk berpaginasi",
 				"Filter per departemen dan bulan",
 				"Export data ke CSV",
 			],

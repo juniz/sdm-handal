@@ -26,6 +26,8 @@ import {
 	Medal,
 	Award,
 	ChevronDown,
+	ChevronLeft,
+	ChevronRight,
 	Building2,
 	RefreshCw,
 	X,
@@ -54,6 +56,10 @@ export default function MonthlyAttendanceReport() {
 		limit: 50,
 		offset: 0,
 	});
+	const [worstPagination, setWorstPagination] = useState({
+		limit: 10,
+		offset: 0,
+	});
 	const [departmentSearch, setDepartmentSearch] = useState("");
 	const [filteredDepartments, setFilteredDepartments] = useState([]);
 
@@ -66,6 +72,8 @@ export default function MonthlyAttendanceReport() {
 					department: filters.department,
 					limit: pagination.limit.toString(),
 					offset: pagination.offset.toString(),
+					worst_limit: worstPagination.limit.toString(),
+					worst_offset: worstPagination.offset.toString(),
 				});
 
 				// Only add search param if it's not empty
@@ -91,7 +99,13 @@ export default function MonthlyAttendanceReport() {
 				setSearchLoading(false);
 			}
 		},
-		[appliedFilters, pagination.limit, pagination.offset]
+		[
+			appliedFilters,
+			pagination.limit,
+			pagination.offset,
+			worstPagination.limit,
+			worstPagination.offset,
+		]
 	);
 
 	// Initial load
@@ -104,7 +118,7 @@ export default function MonthlyAttendanceReport() {
 		if (!loading) {
 			fetchData();
 		}
-	}, [appliedFilters, pagination, fetchData]);
+	}, [appliedFilters, pagination, worstPagination, fetchData]);
 
 	// Filter departments based on search
 	useEffect(() => {
@@ -123,12 +137,14 @@ export default function MonthlyAttendanceReport() {
 		if (key !== "search") {
 			setAppliedFilters((prev) => ({ ...prev, [key]: value }));
 			setPagination((prev) => ({ ...prev, offset: 0 }));
+			setWorstPagination((prev) => ({ ...prev, offset: 0 }));
 		}
 	};
 
 	const handleSearch = () => {
 		setAppliedFilters(formFilters);
 		setPagination((prev) => ({ ...prev, offset: 0 }));
+		setWorstPagination((prev) => ({ ...prev, offset: 0 }));
 	};
 
 	const handleClearSearch = () => {
@@ -139,6 +155,7 @@ export default function MonthlyAttendanceReport() {
 		setFormFilters(clearedFilters);
 		setAppliedFilters(clearedFilters);
 		setPagination((prev) => ({ ...prev, offset: 0 }));
+		setWorstPagination((prev) => ({ ...prev, offset: 0 }));
 	};
 
 	const handleResetFilters = () => {
@@ -150,11 +167,20 @@ export default function MonthlyAttendanceReport() {
 		setFormFilters(defaultFilters);
 		setAppliedFilters(defaultFilters);
 		setPagination((prev) => ({ ...prev, offset: 0 }));
+		setWorstPagination((prev) => ({ ...prev, offset: 0 }));
 		setDepartmentSearch("");
 	};
 
 	const handlePageChange = (newOffset) => {
 		setPagination((prev) => ({ ...prev, offset: newOffset }));
+	};
+
+	const handleWorstPageChange = (newOffset) => {
+		setWorstPagination((prev) => ({ ...prev, offset: newOffset }));
+	};
+
+	const handleWorstLimitChange = (newLimit) => {
+		setWorstPagination({ limit: parseInt(newLimit, 10), offset: 0 });
 	};
 
 	const getScoreColor = (score) => {
@@ -950,72 +976,309 @@ export default function MonthlyAttendanceReport() {
 							<CardHeader className="pb-3 md:pb-4">
 								<CardTitle className="flex items-center gap-2 text-base md:text-lg">
 									<TrendingDown className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
-									10 Pegawai dengan Keterlambatan Terbanyak
+									Pegawai dengan Keterlambatan Terbanyak
 								</CardTitle>
 								<p className="text-xs md:text-sm text-gray-600">
-									Pegawai yang memerlukan perhatian khusus dalam hal
-									kedisiplinan presensi
+									Daftar seluruh pegawai dengan riwayat keterlambatan atau evaluasi kedisiplinan presensi
 								</p>
 							</CardHeader>
-							<CardContent className="pt-0">
-								<div className="space-y-3 md:space-y-4">
-									{data?.worstPerformers?.map((item, index) => (
-										<div
-											key={index}
-											className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg border gap-3 md:gap-0"
-										>
-											<div className="flex items-center gap-3 md:gap-4">
-												<div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-white shadow-sm">
-													<span className="text-xs md:text-sm font-semibold text-red-600">
-														#{index + 1}
-													</span>
-												</div>
-												<div>
-													<h3 className="font-semibold text-sm md:text-base text-gray-900">
-														{item.nama}
-													</h3>
-													<p className="text-xs md:text-sm text-gray-600">
-														{item.nik} • {item.departemen_nama}
-													</p>
-												</div>
-											</div>
-											<div className="flex justify-between md:justify-end md:gap-4">
-												<div className="text-center">
-													<p className="text-xs text-gray-600">Jadwal</p>
-													<p className="text-sm md:text-lg font-bold text-blue-600">
-														{item.jumlah_jadwal_masuk || 0}
-													</p>
-												</div>
-												<div className="text-center">
-													<p className="text-xs text-gray-600">
-														Total Terlambat
-													</p>
-													<p className="text-sm md:text-lg font-bold text-red-600">
-														{item.total_terlambat}
-													</p>
-												</div>
-												<div className="text-center">
-													<p className="text-xs text-gray-600">
+							<CardContent>
+								{/* Loading State */}
+								{searchLoading && (
+									<div className="flex items-center justify-center py-8">
+										<div className="flex items-center gap-2 text-sm text-gray-600">
+											<RefreshCw className="h-4 w-4 animate-spin" />
+											Memuat data...
+										</div>
+									</div>
+								)}
+
+								{/* Empty State */}
+								{!searchLoading && (!data?.worstPerformers || data.worstPerformers.length === 0) && (
+									<div className="py-12 text-center">
+										<TrendingDown className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+										<p className="text-sm font-medium text-gray-700">
+											Tidak ada data keterlambatan ditemukan
+										</p>
+										<p className="text-xs text-gray-500 mt-1">
+											Semua pegawai presensi tepat waktu atau belum ada data untuk filter yang dipilih.
+										</p>
+									</div>
+								)}
+
+								{/* Mobile Card View */}
+								{!searchLoading && data?.worstPerformers && data.worstPerformers.length > 0 && (
+									<div className="block md:hidden space-y-3">
+										{data.worstPerformers.map((item) => (
+											<Card
+												key={item.pegawai_id || item.nik}
+												className="border border-red-100 bg-red-50/20"
+											>
+												<CardContent className="p-3 pt-3">
+													<div className="flex items-start justify-between mb-2">
+														<div className="flex items-center gap-2">
+															<span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+																#{item.ranking}
+															</span>
+															<div>
+																<h3 className="font-semibold text-sm text-gray-900">
+																	{item.nama}
+																</h3>
+																<p className="text-xs text-gray-600 font-mono">
+																	{item.nik}
+																</p>
+															</div>
+														</div>
+														<Badge
+															className={`text-xs ${getScoreColor(
+																item.skor_kinerja
+															)}`}
+														>
+															{item.skor_kinerja}
+														</Badge>
+													</div>
+													<div className="text-xs text-gray-600 mb-2">
+														<p>
+															{item.jnj_jabatan} • {item.departemen_nama}
+														</p>
+													</div>
+													<div className="grid grid-cols-4 gap-2 text-center bg-white/70 rounded-md p-2 border border-red-100">
+														<div>
+															<p className="text-xs text-gray-500">Jadwal</p>
+															<p className="font-semibold text-sm text-blue-600">
+																{item.jumlah_jadwal_masuk || 0}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">Total</p>
+															<p className="font-semibold text-sm">
+																{item.total_presensi || 0}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">
+																Tepat Waktu
+															</p>
+															<p className="font-semibold text-sm text-green-600">
+																{item.tepat_waktu || 0}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500 font-medium text-red-600">Terlambat</p>
+															<p className="font-bold text-sm text-red-600">
+																{item.total_terlambat || 0}
+															</p>
+														</div>
+													</div>
+													<div className="grid grid-cols-3 gap-2 text-center mt-2">
+														<div>
+															<p className="text-xs text-gray-500">
+																Tidak Presensi
+															</p>
+															<p className="font-semibold text-sm text-orange-600">
+																{item.tidak_presensi || 0}
+															</p>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">
+																% Tepat Waktu
+															</p>
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_tepat_waktu || 0}%
+															</Badge>
+														</div>
+														<div>
+															<p className="text-xs text-gray-500">
+																% Kehadiran
+															</p>
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_kehadiran || 0}%
+															</Badge>
+														</div>
+													</div>
+												</CardContent>
+											</Card>
+										))}
+									</div>
+								)}
+
+								{/* Desktop Table View */}
+								{!searchLoading && data?.worstPerformers && data.worstPerformers.length > 0 && (
+									<div className="hidden md:block overflow-x-auto">
+										<table className="w-full border-collapse">
+											<thead>
+												<tr className="border-b bg-red-50/50">
+													<th className="text-left p-3 font-semibold text-sm">
+														Rank
+													</th>
+													<th className="text-left p-3 font-semibold text-sm">
+														NIK
+													</th>
+													<th className="text-left p-3 font-semibold text-sm">
+														Nama
+													</th>
+													<th className="text-left p-3 font-semibold text-sm">
+														Jabatan
+													</th>
+													<th className="text-left p-3 font-semibold text-sm">
+														Departemen
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														Jadwal
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														Total
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														Tepat Waktu
+													</th>
+													<th className="text-center p-3 font-semibold text-sm text-red-600">
+														Terlambat
+													</th>
+													<th className="text-center p-3 font-semibold text-sm text-orange-600">
 														Tidak Presensi
-													</p>
-													<p className="text-sm md:text-lg font-bold text-orange-600">
-														{item.tidak_presensi || 0}
-													</p>
-												</div>
-												<div className="text-center">
-													<p className="text-xs text-gray-600">Skor</p>
-													<Badge
-														className={`text-xs md:text-sm ${getScoreColor(
-															item.skor_kinerja
-														)}`}
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														% Tepat Waktu
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														% Kehadiran
+													</th>
+													<th className="text-center p-3 font-semibold text-sm">
+														Skor
+													</th>
+												</tr>
+											</thead>
+											<tbody>
+												{data.worstPerformers.map((item) => (
+													<tr
+														key={item.pegawai_id || item.nik}
+														className="border-b hover:bg-red-50/30 transition-colors"
 													>
-														{item.skor_kinerja}
-													</Badge>
-												</div>
+														<td className="p-3">
+															<span className="inline-flex items-center justify-center min-w-[26px] h-6 px-1.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+																#{item.ranking}
+															</span>
+														</td>
+														<td className="p-3 font-mono text-sm">
+															{item.nik}
+														</td>
+														<td className="p-3 font-medium text-sm">
+															{item.nama}
+														</td>
+														<td className="p-3 text-sm">{item.jnj_jabatan}</td>
+														<td className="p-3 text-sm">
+															{item.departemen_nama}
+														</td>
+														<td className="p-3 text-center font-semibold text-sm text-blue-600">
+															{item.jumlah_jadwal_masuk || 0}
+														</td>
+														<td className="p-3 text-center font-semibold text-sm">
+															{item.total_presensi || 0}
+														</td>
+														<td className="p-3 text-center text-green-600 font-semibold text-sm">
+															{item.tepat_waktu || 0}
+														</td>
+														<td className="p-3 text-center text-red-600 font-bold text-sm bg-red-50/50">
+															{item.total_terlambat || 0}
+														</td>
+														<td className="p-3 text-center text-orange-600 font-semibold text-sm">
+															{item.tidak_presensi || 0}
+														</td>
+														<td className="p-3 text-center">
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_tepat_waktu || 0}%
+															</Badge>
+														</td>
+														<td className="p-3 text-center">
+															<Badge variant="outline" className="text-xs">
+																{item.persentase_kehadiran || 0}%
+															</Badge>
+														</td>
+														<td className="p-3 text-center">
+															<Badge
+																className={`text-xs ${getScoreColor(
+																	item.skor_kinerja
+																)}`}
+															>
+																{item.skor_kinerja}
+															</Badge>
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
+									</div>
+								)}
+
+								{/* Worst Performers Pagination */}
+								{!searchLoading && data?.worstPagination && data.worstPagination.total > 0 && (
+									<div className="flex flex-col md:flex-row items-center justify-between mt-4 md:mt-6 gap-3 pt-4 border-t border-gray-100">
+										<div className="flex items-center gap-3">
+											<p className="text-xs md:text-sm text-gray-600 text-center md:text-left">
+												Menampilkan {data.worstPagination.offset + 1} -{" "}
+												{Math.min(
+													data.worstPagination.offset + data.worstPagination.limit,
+													data.worstPagination.total
+												)}{" "}
+												dari {data.worstPagination.total} pegawai
+											</p>
+											<div className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500">
+												<span>Per halaman:</span>
+												<Select
+													value={worstPagination.limit.toString()}
+													onValueChange={handleWorstLimitChange}
+												>
+													<SelectTrigger className="h-7 w-16 text-xs">
+														<SelectValue />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="10">10</SelectItem>
+														<SelectItem value="25">25</SelectItem>
+														<SelectItem value="50">50</SelectItem>
+														<SelectItem value="100">100</SelectItem>
+													</SelectContent>
+												</Select>
 											</div>
 										</div>
-									))}
-								</div>
+										<div className="flex items-center gap-2">
+											<Button
+												variant="outline"
+												size="sm"
+												disabled={data.worstPagination.offset === 0 || searchLoading}
+												onClick={() =>
+													handleWorstPageChange(
+														Math.max(
+															0,
+															data.worstPagination.offset - data.worstPagination.limit
+														)
+													)
+												}
+												className="text-xs md:text-sm h-8"
+											>
+												<ChevronLeft className="h-3.5 w-3.5 mr-1" />
+												Sebelumnya
+											</Button>
+											<span className="text-xs text-gray-600 px-2">
+												Hal {Math.floor(data.worstPagination.offset / data.worstPagination.limit) + 1} / {Math.ceil(data.worstPagination.total / data.worstPagination.limit) || 1}
+											</span>
+											<Button
+												variant="outline"
+												size="sm"
+												disabled={!data.worstPagination.hasMore || searchLoading}
+												onClick={() =>
+													handleWorstPageChange(
+														data.worstPagination.offset + data.worstPagination.limit
+													)
+												}
+												className="text-xs md:text-sm h-8"
+											>
+												Selanjutnya
+												<ChevronRight className="h-3.5 w-3.5 ml-1" />
+											</Button>
+										</div>
+									</div>
+								)}
 							</CardContent>
 						</Card>
 					</TabsContent>

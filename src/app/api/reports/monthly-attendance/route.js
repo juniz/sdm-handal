@@ -27,6 +27,8 @@ export async function GET(request) {
 		const search = searchParams.get("search") || "";
 		const limit = parseInt(searchParams.get("limit")) || 50;
 		const offset = parseInt(searchParams.get("offset")) || 0;
+		const worstLimit = parseInt(searchParams.get("worst_limit")) || 10;
+		const worstOffset = parseInt(searchParams.get("worst_offset")) || 0;
 
 		// Parse month to get year and month number
 		const [year, monthNum] = month.split("-");
@@ -432,19 +434,51 @@ export async function GET(request) {
 
 		const topPerformers = await rawQuery(topPerformersQuery, summaryParams);
 
-		// Get worst performers (most late)
+		// Get worst performers (most late / disciplined attention needed) with pagination
 		const worstPerformersQuery = `
 			SELECT 
-				p.nama,
+				p.id as pegawai_id,
 				p.nik,
+				p.nama,
+				p.jnj_jabatan,
+				d.dep_id as departemen_id,
 				d.nama as departemen_nama,
+				
+				-- Statistik Presensi
+				COUNT(CASE WHEN combined.source_table IS NOT NULL THEN 1 END) as total_presensi,
+				COUNT(CASE WHEN combined.status = 'Tepat Waktu' THEN 1 END) as tepat_waktu,
 				COUNT(CASE WHEN combined.status LIKE '%Terlambat%' THEN 1 END) as total_terlambat,
+				COUNT(CASE WHEN combined.status = 'Terlambat Toleransi' THEN 1 END) as terlambat_toleransi,
+				COUNT(CASE WHEN combined.status = 'Terlambat I' THEN 1 END) as terlambat_1,
+				COUNT(CASE WHEN combined.status = 'Terlambat II' THEN 1 END) as terlambat_2,
+				
+				-- Jumlah Jadwal Masuk
 				COALESCE(jp.jumlah_jadwal, 0) as jumlah_jadwal_masuk,
+				
+				-- Pegawai Tidak Presensi
 				CASE 
 					WHEN COALESCE(jp.jumlah_jadwal, 0) > 0 AND COUNT(CASE WHEN combined.source_table IS NOT NULL THEN 1 END) = 0 
 					THEN COALESCE(jp.jumlah_jadwal, 0)
 					ELSE 0 
 				END as tidak_presensi,
+				
+				-- Persentase
+				ROUND(
+					(COUNT(CASE WHEN combined.status = 'Tepat Waktu' THEN 1 END) * 100.0) / 
+					NULLIF(COUNT(CASE WHEN combined.source_table IS NOT NULL THEN 1 END), 0), 2
+				) as persentase_tepat_waktu,
+				
+				ROUND(
+					(COUNT(CASE WHEN combined.status LIKE '%Terlambat%' THEN 1 END) * 100.0) / 
+					NULLIF(COUNT(CASE WHEN combined.source_table IS NOT NULL THEN 1 END), 0), 2
+				) as persentase_terlambat,
+				
+				ROUND(
+					(COUNT(CASE WHEN combined.source_table IS NOT NULL THEN 1 END) * 100.0) / 
+					NULLIF(COALESCE(jp.jumlah_jadwal, 0), 0), 2
+				) as persentase_kehadiran,
+				
+				-- Skor Kinerja
 				GREATEST(0, 100 - 
 					(COUNT(CASE WHEN combined.status = 'Terlambat Toleransi' THEN 1 END) * 5) -
 					(COUNT(CASE WHEN combined.status = 'Terlambat I' THEN 1 END) * 10) -
@@ -453,9 +487,9 @@ export async function GET(request) {
 			FROM pegawai p
 			LEFT JOIN departemen d ON p.departemen = d.dep_id
 			LEFT JOIN (
-				SELECT id, status, 'temporary' as source_table FROM temporary_presensi WHERE DATE_FORMAT(jam_datang, '%Y-%m') = ?
+				SELECT id, status, jam_datang, 'temporary' as source_table FROM temporary_presensi WHERE DATE_FORMAT(jam_datang, '%Y-%m') = ?
 				UNION ALL
-				SELECT id, status, 'rekap' as source_table FROM rekap_presensi WHERE DATE_FORMAT(jam_datang, '%Y-%m') = ?
+				SELECT id, status, jam_datang, 'rekap' as source_table FROM rekap_presensi WHERE DATE_FORMAT(jam_datang, '%Y-%m') = ?
 			) as combined ON p.id = combined.id
 			LEFT JOIN (
 				-- Jumlah jadwal masuk dari jadwal_pegawai
@@ -500,13 +534,19 @@ export async function GET(request) {
 			WHERE p.stts_aktif = 'AKTIF'
 			${departmentFilter !== "ALL" ? "AND d.dep_id = ?" : ""}
 			${search.trim() ? "AND (p.nama LIKE ? OR p.nik LIKE ?)" : ""}
-			GROUP BY p.id, jp.jumlah_jadwal
-			HAVING COUNT(combined.status) > 0 OR COALESCE(jp.jumlah_jadwal, 0) > 0
-			ORDER BY total_terlambat DESC, skor_kinerja ASC
-			LIMIT 10
+			GROUP BY p.id, p.nik, p.nama, p.jnj_jabatan, d.dep_id, d.nama, jp.jumlah_jadwal
+			HAVING total_presensi > 0 OR COALESCE(jp.jumlah_jadwal, 0) > 0
+			ORDER BY total_terlambat DESC, skor_kinerja ASC, tidak_presensi DESC, tepat_waktu ASC
+			LIMIT ? OFFSET ?
 		`;
 
-		const worstPerformers = await rawQuery(worstPerformersQuery, summaryParams);
+		let worstQueryParams = [...summaryParams, worstLimit, worstOffset];
+		const worstPerformers = await rawQuery(worstPerformersQuery, worstQueryParams);
+
+		const rankedWorstData = worstPerformers.map((item, index) => ({
+			...item,
+			ranking: worstOffset + index + 1,
+		}));
 
 		// Get departments for filter
 		const departmentsQuery = `
@@ -599,13 +639,19 @@ export async function GET(request) {
 						summary[0]?.total_pegawai_tidak_presensi || 0,
 				},
 				topPerformers: topPerformers,
-				worstPerformers: worstPerformers,
+				worstPerformers: rankedWorstData,
 				departments: departments,
 				pagination: {
 					total: total,
 					limit: limit,
 					offset: offset,
 					hasMore: offset + limit < total,
+				},
+				worstPagination: {
+					total: total,
+					limit: worstLimit,
+					offset: worstOffset,
+					hasMore: worstOffset + worstLimit < total,
 				},
 				filters: {
 					month: month,
