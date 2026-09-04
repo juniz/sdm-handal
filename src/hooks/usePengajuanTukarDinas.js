@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import moment from "moment-timezone";
 
+const STATIC_SHIFTS = ["Pagi", "Siang", "Malam"];
+
 const usePengajuanTukarDinas = () => {
 	// Data states
 	const [pengajuanData, setPengajuanData] = useState([]);
 	const [pegawaiData, setPegawaiData] = useState([]);
-	const [shiftData, setShiftData] = useState([]);
+	const [shiftData] = useState(STATIC_SHIFTS);
 
 	// Loading states
 	const [loading, setLoading] = useState(true);
@@ -50,12 +52,6 @@ const usePengajuanTukarDinas = () => {
 		checkUserDepartment();
 	}, []);
 
-	// Fetch shift data when userDepartmentId changes
-	useEffect(() => {
-		if (userDepartmentId) {
-			fetchShiftData();
-		}
-	}, [userDepartmentId]);
 
 	// Check user department and permissions
 	const checkUserDepartment = async () => {
@@ -84,22 +80,6 @@ const usePengajuanTukarDinas = () => {
 		}
 	};
 
-	// Fetch shift data based on user department
-	const fetchShiftData = async () => {
-		try {
-			const response = await fetch(
-				`/api/jam-jaga?departemen=${userDepartmentId}`
-			);
-			if (response.ok) {
-				const result = await response.json();
-				setShiftData(result.data || []);
-			} else {
-				console.error("Error fetching shift data:", response.statusText);
-			}
-		} catch (error) {
-			console.error("Error fetching shift data:", error);
-		}
-	};
 
 	// Fetch pengajuan data
 	const fetchData = async () => {
