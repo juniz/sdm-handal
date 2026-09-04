@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import * as XLSX from "xlsx";
@@ -17,7 +17,8 @@ import {
 	Info,
 	Search,
 	Download,
-	Upload
+	Upload,
+	Calendar
 } from "lucide-react";
 
 export default function JasaDasarPegawaiPage() {
@@ -40,11 +41,18 @@ export default function JasaDasarPegawaiPage() {
 	const [keterangan, setKeterangan] = useState("");
 	const [saving, setSaving] = useState(false);
 	
-	// Search filter
+	// Search & Status filter
 	const [searchQuery, setSearchQuery] = useState("");
 	const [departemenList, setDepartemenList] = useState([]);
 	const [selectedUnitFilter, setSelectedUnitFilter] = useState("ALL");
+	const [statusFilter, setStatusFilter] = useState("ALL"); // "ALL", "ACTIVE", "EXPIRED"
+	const [selectedBulan, setSelectedBulan] = useState("ALL"); // "ALL", "01" to "12"
+	const [selectedTahun, setSelectedTahun] = useState("ALL"); // "ALL", "2026", etc.
 	const [selectedIds, setSelectedIds] = useState([]);
+
+	// Pagination
+	const [currentPage, setCurrentPage] = useState(1);
+	const [pageSize, setPageSize] = useState(25);
 
 	const [confirmState, setConfirmState] = useState({
 		isOpen: false,
@@ -73,13 +81,61 @@ export default function JasaDasarPegawaiPage() {
 
 	useEffect(() => {
 		setSelectedIds([]);
-	}, [searchQuery, selectedUnitFilter]);
+		setCurrentPage(1);
+	}, [searchQuery, selectedUnitFilter, statusFilter, selectedBulan, selectedTahun]);
 
 	// Import Excel Modal State
 	const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 	const [importBerlakuMulai, setImportBerlakuMulai] = useState(moment().format("YYYY-MM-DD"));
 	const [importBerlakuSampai, setImportBerlakuSampai] = useState("");
 	const [pendingImportFile, setPendingImportFile] = useState(null);
+	const [importErrorList, setImportErrorList] = useState([]);
+
+	const formModalRef = useRef(null);
+	const importModalRef = useRef(null);
+
+	useEffect(() => {
+		const handleKeyDown = (e) => {
+			if (e.key === "Escape") {
+				if (isModalOpen) {
+					setIsModalOpen(false);
+					setErrorMsg("");
+				}
+				if (isImportModalOpen) {
+					setIsImportModalOpen(false);
+					setPendingImportFile(null);
+					setErrorMsg("");
+				}
+			}
+
+			if (e.key === "Tab") {
+				const activeModal = isModalOpen ? formModalRef.current : isImportModalOpen ? importModalRef.current : null;
+				if (!activeModal) return;
+
+				const focusables = activeModal.querySelectorAll(
+					'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+				);
+				if (!focusables.length) return;
+
+				const firstEl = focusables[0];
+				const lastEl = focusables[focusables.length - 1];
+
+				if (e.shiftKey) {
+					if (document.activeElement === firstEl) {
+						lastEl.focus();
+						e.preventDefault();
+					}
+				} else {
+					if (document.activeElement === lastEl) {
+						firstEl.focus();
+						e.preventDefault();
+					}
+				}
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isModalOpen, isImportModalOpen]);
 
 	useEffect(() => {
 		loadJasaDasarData();
@@ -130,6 +186,8 @@ export default function JasaDasarPegawaiPage() {
 	};
 
 	const handleOpenAdd = () => {
+		setErrorMsg("");
+		setSuccessMsg("");
 		setModalMode("add");
 		setSelectedId(null);
 		setPegawaiId("");
@@ -141,6 +199,8 @@ export default function JasaDasarPegawaiPage() {
 	};
 
 	const handleOpenEdit = (item) => {
+		setErrorMsg("");
+		setSuccessMsg("");
 		setModalMode("edit");
 		setSelectedId(item.id);
 		setPegawaiId(item.pegawai_id);
@@ -155,6 +215,11 @@ export default function JasaDasarPegawaiPage() {
 		e.preventDefault();
 		if (!pegawaiId || !nominal || !berlakuMulai) {
 			setErrorMsg("Semua kolom wajib diisi kecuali berlaku sampai & keterangan");
+			return;
+		}
+
+		if (berlakuSampai && berlakuMulai && berlakuSampai < berlakuMulai) {
+			setErrorMsg("Tanggal berakhir berlaku tidak boleh lebih awal dari tanggal mulai");
 			return;
 		}
 
@@ -300,6 +365,7 @@ export default function JasaDasarPegawaiPage() {
 		setPendingImportFile(file);
 		setImportBerlakuMulai(moment().format("YYYY-MM-DD"));
 		setImportBerlakuSampai("");
+		setImportErrorList([]);
 		setIsImportModalOpen(true);
 		e.target.value = "";
 	};
@@ -307,13 +373,19 @@ export default function JasaDasarPegawaiPage() {
 	const executeImportExcel = async () => {
 		if (!pendingImportFile) return;
 
+		setImportErrorList([]);
+
+		if (importBerlakuSampai && importBerlakuMulai && importBerlakuSampai < importBerlakuMulai) {
+			setImportErrorList(["Tanggal berakhir berlaku import tidak boleh lebih awal dari tanggal mulai."]);
+			return;
+		}
+
 		const reader = new FileReader();
 		reader.onload = async (evt) => {
 			try {
 				setErrorMsg("");
 				setSuccessMsg("");
 				setLoading(true);
-				setIsImportModalOpen(false);
 
 				const bstr = evt.target.result;
 				const wb = XLSX.read(bstr, { type: "binary" });
@@ -323,7 +395,9 @@ export default function JasaDasarPegawaiPage() {
 				const data = XLSX.utils.sheet_to_json(ws, { defval: "" });
 
 				if (data.length === 0) {
-					throw new Error("File Excel kosong atau format tidak sesuai.");
+					setImportErrorList(["File Excel kosong atau format tidak sesuai."]);
+					setLoading(false);
+					return;
 				}
 
 				const importPayload = [];
@@ -377,13 +451,15 @@ export default function JasaDasarPegawaiPage() {
 				});
 
 				if (errors.length > 0) {
-					const displayErrors = errors.slice(0, 10).join("\n");
-					const moreErrors = errors.length > 10 ? `\n...dan ${errors.length - 10} kesalahan lainnya.` : "";
-					throw new Error(`Validasi gagal:\n${displayErrors}${moreErrors}`);
+					setImportErrorList(errors);
+					setLoading(false);
+					return;
 				}
 
 				if (importPayload.length === 0) {
-					throw new Error("Tidak ada data nominal yang diisi untuk diimport.");
+					setImportErrorList(["Tidak ada data nominal yang diisi untuk diimport."]);
+					setLoading(false);
+					return;
 				}
 
 				const res = await fetch("/api/penilaian/jasa-dasar", {
@@ -396,29 +472,120 @@ export default function JasaDasarPegawaiPage() {
 				if (!res.ok) throw new Error(result.error || "Gagal menyimpan data import");
 
 				setSuccessMsg(`Berhasil mengimport ${importPayload.length} data jasa dasar pegawai!`);
+				setIsImportModalOpen(false);
+				setPendingImportFile(null);
+				setImportErrorList([]);
 				await loadJasaDasarData();
 			} catch (err) {
 				console.error(err);
-				setErrorMsg(err.message);
+				setImportErrorList([err.message]);
 			} finally {
 				setLoading(false);
-				setPendingImportFile(null);
 			}
 		};
 		reader.readAsBinaryString(pendingImportFile);
 	};
 
-	// Filter data
-	const filteredList = jasaList.filter(item => {
+	const MONTH_OPTIONS = [
+		{ value: "01", label: "01 - Januari" },
+		{ value: "02", label: "02 - Februari" },
+		{ value: "03", label: "03 - Maret" },
+		{ value: "04", label: "04 - April" },
+		{ value: "05", label: "05 - Mei" },
+		{ value: "06", label: "06 - Juni" },
+		{ value: "07", label: "07 - Juli" },
+		{ value: "08", label: "08 - Agustus" },
+		{ value: "09", label: "09 - September" },
+		{ value: "10", label: "10 - Oktober" },
+		{ value: "11", label: "11 - November" },
+		{ value: "12", label: "12 - Desember" }
+	];
+
+	const currentYearNum = parseInt(moment().format("YYYY"), 10);
+	const availableYears = Array.from(
+		new Set([
+			currentYearNum + 1,
+			currentYearNum,
+			currentYearNum - 1,
+			currentYearNum - 2,
+			...jasaList.map(item => item.berlaku_mulai ? moment(item.berlaku_mulai).year() : null).filter(Boolean),
+			...jasaList.map(item => item.berlaku_sampai ? moment(item.berlaku_sampai).year() : null).filter(Boolean)
+		])
+	).sort((a, b) => b - a);
+
+	const hasActiveFilters = 
+		searchQuery !== "" || 
+		selectedUnitFilter !== "ALL" || 
+		statusFilter !== "ALL" || 
+		selectedBulan !== "ALL" || 
+		selectedTahun !== "ALL";
+
+	const handleResetFilters = () => {
+		setSearchQuery("");
+		setSelectedUnitFilter("ALL");
+		setStatusFilter("ALL");
+		setSelectedBulan("ALL");
+		setSelectedTahun("ALL");
+	};
+
+	// Helper to check validity period overlap
+	const checkPeriodOverlap = (item) => {
+		if (selectedTahun === "ALL" && selectedBulan === "ALL") return true;
+
+		const itemStart = item.berlaku_mulai ? moment(item.berlaku_mulai).startOf("day") : null;
+		const itemEnd = item.berlaku_sampai ? moment(item.berlaku_sampai).endOf("day") : null;
+
+		if (selectedTahun !== "ALL" && selectedBulan !== "ALL") {
+			const periodStart = moment(`${selectedTahun}-${selectedBulan}-01`).startOf("month");
+			const periodEnd = moment(`${selectedTahun}-${selectedBulan}-01`).endOf("month");
+			return (!itemStart || itemStart.isSameOrBefore(periodEnd, "day")) &&
+			       (!itemEnd || itemEnd.isSameOrAfter(periodStart, "day"));
+		} else if (selectedTahun !== "ALL") {
+			const periodStart = moment(`${selectedTahun}-01-01`).startOf("year");
+			const periodEnd = moment(`${selectedTahun}-12-31`).endOf("year");
+			return (!itemStart || itemStart.isSameOrBefore(periodEnd, "day")) &&
+			       (!itemEnd || itemEnd.isSameOrAfter(periodStart, "day"));
+		} else if (selectedBulan !== "ALL") {
+			const currentY = moment().format("YYYY");
+			const periodStart = moment(`${currentY}-${selectedBulan}-01`).startOf("month");
+			const periodEnd = moment(`${currentY}-${selectedBulan}-01`).endOf("month");
+			return (!itemStart || itemStart.isSameOrBefore(periodEnd, "day")) &&
+			       (!itemEnd || itemEnd.isSameOrAfter(periodStart, "day"));
+		}
+		return true;
+	};
+
+	// Base list matching search, unit, and period
+	const baseListForCounts = jasaList.filter(item => {
 		const matchesSearch = 
 			(item.nama_pegawai || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
 			(item.nik_pegawai || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
 			(item.nama_departemen || "").toLowerCase().includes(searchQuery.toLowerCase());
 		
 		const matchesUnit = selectedUnitFilter === "ALL" || item.departemen_id === selectedUnitFilter;
-		
-		return matchesSearch && matchesUnit;
+		const matchesPeriod = checkPeriodOverlap(item);
+
+		return matchesSearch && matchesUnit && matchesPeriod;
 	});
+
+	// Counts for tabs
+	const totalCount = baseListForCounts.length;
+	const activeCount = baseListForCounts.filter(item => !item.berlaku_sampai || moment().isSameOrBefore(item.berlaku_sampai, "day")).length;
+	const expiredCount = baseListForCounts.filter(item => item.berlaku_sampai && moment().isAfter(item.berlaku_sampai, "day")).length;
+
+	// Filter data
+	const filteredList = baseListForCounts.filter(item => {
+		const isExpired = item.berlaku_sampai && moment().isAfter(item.berlaku_sampai, "day");
+		const matchesStatus = 
+			statusFilter === "ALL" ? true :
+			statusFilter === "ACTIVE" ? !isExpired :
+			isExpired;
+		
+		return matchesStatus;
+	});
+
+	const totalPages = Math.ceil(filteredList.length / pageSize) || 1;
+	const paginatedList = filteredList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
 	// Format employees for SearchableSelect
 	const employeeOptions = employees.map((emp) => ({
@@ -439,17 +606,17 @@ export default function JasaDasarPegawaiPage() {
 	return (
 		<div className="w-full p-4 md:p-6 space-y-6 font-noto-sans">
 			{/* Header */}
-			<div className="bg-gradient-to-r from-primary-900 to-primary-800 border border-primary-800/20 rounded-2xl p-6 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-				<div className="absolute top-0 right-0 w-96 h-96 bg-primary-600/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
-				<div className="relative z-10">
-					<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-800">Jasa Dasar Pegawai</h1>
-					<p className="text-slate-550 text-sm mt-1">Konfigurasi nominal jasa dasar per pegawai sebagai acuan rekap bulanan.</p>
+			<div className="bg-white border border-slate-200/80 rounded-2xl p-6 md:p-8 text-slate-800 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative">
+				<div>
+					<h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-figtree text-slate-900">Jasa Dasar Pegawai</h1>
+					<p className="text-slate-500 text-sm mt-1">Konfigurasi nominal jasa dasar per pegawai sebagai acuan rekap bulanan.</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-2 relative z-10">
+				<div className="flex flex-wrap items-center gap-2">
 					{selectedIds.length > 0 && (
 						<button 
+							type="button"
 							onClick={handleBulkDelete}
-							className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm transition-all cursor-pointer hover:scale-105 active:scale-95"
+							className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer active:opacity-90"
 						>
 							<Trash2 className="h-4 w-4 text-white" />
 							Hapus Terpilih ({selectedIds.length})
@@ -457,17 +624,18 @@ export default function JasaDasarPegawaiPage() {
 					)}
 
 					<button 
+						type="button"
 						onClick={handleDownloadTemplate}
-						className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm hover:border-slate-300 transition-all cursor-pointer hover:scale-105 active:scale-95"
+						className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm hover:border-slate-300 transition-colors cursor-pointer active:opacity-90"
 					>
 						<Download className="h-4 w-4 text-emerald-600" />
 						Download Template
 					</button>
 
 					<label 
-						className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm hover:border-slate-300 transition-all cursor-pointer hover:scale-105 active:scale-95"
+						className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm hover:border-slate-300 transition-colors cursor-pointer active:opacity-90"
 					>
-						<Upload className="h-4 w-4 text-blue-600" />
+						<Upload className="h-4 w-4 text-sky-600" />
 						Import Excel
 						<input 
 							type="file" 
@@ -478,48 +646,181 @@ export default function JasaDasarPegawaiPage() {
 					</label>
 
 					<button 
+						type="button"
 						onClick={handleOpenAdd}
-						className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm hover:border-slate-300 transition-all cursor-pointer hover:scale-105 active:scale-95"
+						className="px-4 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer active:opacity-90"
 					>
-						<Plus className="h-4 w-4 text-primary-600" />
+						<Plus className="h-4 w-4 text-white" />
 						Tambah Jasa Dasar
 					</button>
 				</div>
 			</div>
 
-			{errorMsg && (
-				<div className="p-4 bg-rose-50 border border-rose-100 text-rose-800 rounded-xl flex items-start gap-3 animate-fadeIn">
-					<AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-					<span className="font-semibold text-sm">{errorMsg}</span>
+			{errorMsg && !isModalOpen && (
+				<div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start justify-between gap-3 animate-fadeIn">
+					<div className="flex items-start gap-3">
+						<AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+						<span className="font-semibold text-sm">{errorMsg}</span>
+					</div>
+					<button 
+						type="button" 
+						onClick={() => setErrorMsg("")} 
+						aria-label="Tutup pesan error"
+						className="text-rose-400 hover:text-rose-700 p-1 rounded-lg transition-colors cursor-pointer"
+					>
+						<X className="h-4 w-4" />
+					</button>
 				</div>
 			)}
 
 			{successMsg && (
-				<div className="p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl flex items-start gap-3 animate-fadeIn">
-					<CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-					<span className="font-semibold text-sm">{successMsg}</span>
+				<div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-start justify-between gap-3 animate-fadeIn">
+					<div className="flex items-start gap-3">
+						<CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+						<span className="font-semibold text-sm">{successMsg}</span>
+					</div>
+					<button 
+						type="button" 
+						onClick={() => setSuccessMsg("")} 
+						aria-label="Tutup pesan sukses"
+						className="text-emerald-400 hover:text-emerald-700 p-1 rounded-lg transition-colors cursor-pointer"
+					>
+						<X className="h-4 w-4" />
+					</button>
 				</div>
 			)}
 
-			{/* Search & Unit Filter bar */}
-			<div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-				<div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex items-center gap-3 transition-all duration-200 hover:shadow-md flex-1">
-					<Search className="h-4 w-4 text-slate-400 shrink-0" />
-					<input 
-						type="text" 
-						placeholder="Cari berdasarkan nama, NIK, atau departemen pegawai..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						className="w-full text-sm text-slate-700 bg-transparent focus:outline-none placeholder-slate-400 font-medium"
-					/>
+			{/* Status Filter Tabs */}
+			<div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-1">
+				<button
+					type="button"
+					onClick={() => setStatusFilter("ALL")}
+					className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+						statusFilter === "ALL" 
+							? "bg-slate-900 text-white shadow-sm" 
+							: "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+					}`}
+				>
+					Semua
+					<span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-semibold ${
+						statusFilter === "ALL" ? "bg-slate-700 text-white" : "bg-slate-100 text-slate-600"
+					}`}>
+						{totalCount}
+					</span>
+				</button>
+				<button
+					type="button"
+					onClick={() => setStatusFilter("ACTIVE")}
+					className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+						statusFilter === "ACTIVE" 
+							? "bg-emerald-700 text-white shadow-sm" 
+							: "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200/80"
+					}`}
+				>
+					Aktif
+					<span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-semibold ${
+						statusFilter === "ACTIVE" ? "bg-emerald-800 text-white" : "bg-emerald-100 text-emerald-800"
+					}`}>
+						{activeCount}
+					</span>
+				</button>
+				<button
+					type="button"
+					onClick={() => setStatusFilter("EXPIRED")}
+					className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer ${
+						statusFilter === "EXPIRED" 
+							? "bg-rose-700 text-white shadow-sm" 
+							: "bg-white text-rose-700 hover:bg-rose-50 border border-rose-200/80"
+					}`}
+				>
+					Kedaluwarsa
+					<span className={`px-1.5 py-0.5 rounded-full text-[10px] tabular-nums font-semibold ${
+						statusFilter === "EXPIRED" ? "bg-rose-800 text-white" : "bg-rose-100 text-rose-800"
+					}`}>
+						{expiredCount}
+					</span>
+				</button>
+			</div>
+
+			{/* Search & Filter Bar */}
+			<div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm space-y-3">
+				{/* Top Row: Search & Unit Filter */}
+				<div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+					<div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 flex-1 focus-within:bg-white focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all">
+						<Search className="h-4 w-4 text-slate-400 shrink-0" />
+						<input 
+							type="text" 
+							placeholder="Cari berdasarkan nama, NIK, atau departemen pegawai..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="w-full text-sm text-slate-700 bg-transparent focus:outline-none placeholder-slate-400 font-medium"
+						/>
+						{searchQuery && (
+							<button 
+								type="button" 
+								onClick={() => setSearchQuery("")}
+								className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+								aria-label="Hapus teks pencarian"
+							>
+								<X className="h-3.5 w-3.5" />
+							</button>
+						)}
+					</div>
+					<div className="w-full md:w-72">
+						<SearchableSelect 
+							options={departemenOptions}
+							value={selectedUnitFilter}
+							onChange={setSelectedUnitFilter}
+							placeholder="Filter Unit / Departemen..."
+						/>
+					</div>
 				</div>
-				<div className="w-full md:w-72">
-					<SearchableSelect 
-						options={departemenOptions}
-						value={selectedUnitFilter}
-						onChange={setSelectedUnitFilter}
-						placeholder="Filter Unit / Departemen..."
-					/>
+
+				{/* Bottom Row: Periode Berlaku (Bulan, Tahun, and Reset) */}
+				<div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-100">
+					<div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 font-figtree">
+						<Calendar className="h-4 w-4 text-sky-600 shrink-0" />
+						<span>Periode Berlaku:</span>
+					</div>
+
+					<div className="w-40 sm:w-44">
+						<select
+							value={selectedBulan}
+							onChange={(e) => setSelectedBulan(e.target.value)}
+							aria-label="Filter Bulan"
+							className="w-full h-9 px-3 bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-xs cursor-pointer"
+						>
+							<option value="ALL">Semua Bulan</option>
+							{MONTH_OPTIONS.map((m) => (
+								<option key={m.value} value={m.value}>{m.label}</option>
+							))}
+						</select>
+					</div>
+
+					<div className="w-32 sm:w-36">
+						<select
+							value={selectedTahun}
+							onChange={(e) => setSelectedTahun(e.target.value)}
+							aria-label="Filter Tahun"
+							className="w-full h-9 px-3 bg-slate-50 hover:bg-slate-100/60 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all shadow-xs cursor-pointer"
+						>
+							<option value="ALL">Semua Tahun</option>
+							{availableYears.map((y) => (
+								<option key={y} value={String(y)}>{y}</option>
+							))}
+						</select>
+					</div>
+
+					{hasActiveFilters && (
+						<button
+							type="button"
+							onClick={handleResetFilters}
+							className="px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all cursor-pointer inline-flex items-center gap-1.5 ml-auto"
+						>
+							<X className="h-3.5 w-3.5" />
+							Reset Filter
+						</button>
+					)}
 				</div>
 			</div>
 
@@ -528,27 +829,40 @@ export default function JasaDasarPegawaiPage() {
 					<Loader2 className="h-8 w-8 text-primary-600 animate-spin" />
 				</div>
 			) : filteredList.length === 0 ? (
-				<div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-sm text-slate-400 font-medium">
-					Tidak ada konfigurasi jasa dasar ditemukan.
+				<div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center shadow-sm text-slate-500 font-medium space-y-3">
+					<p>Tidak ada konfigurasi jasa dasar ditemukan untuk kriteria filter yang dipilih.</p>
+					{hasActiveFilters && (
+						<button
+							type="button"
+							onClick={handleResetFilters}
+							className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer inline-flex items-center gap-1.5"
+						>
+							<X className="h-3.5 w-3.5" />
+							Reset Semua Filter
+						</button>
+					)}
 				</div>
 			) : (
 				<div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden transition-all duration-200 hover:shadow-md">
 					<div className="overflow-x-auto">
 						<table className="w-full text-left border-collapse">
-							<thead>
-								<tr className="border-b border-primary-100 bg-primary-50/50 text-[10px] uppercase font-bold text-slate-600 tracking-wider font-figtree">
+							<thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-xs">
+								<tr className="border-b border-slate-200 text-[10px] uppercase font-bold text-slate-600 tracking-wider font-figtree">
 									<th className="px-5 py-3.5 w-10">
 										<input 
 											type="checkbox"
-											checked={filteredList.length > 0 && selectedIds.length === filteredList.length}
+											aria-label="Pilih semua baris jasa dasar pada halaman ini"
+											checked={paginatedList.length > 0 && paginatedList.every(item => selectedIds.includes(item.id))}
 											onChange={(e) => {
 												if (e.target.checked) {
-													setSelectedIds(filteredList.map(item => item.id));
+													const newIds = Array.from(new Set([...selectedIds, ...paginatedList.map(item => item.id)]));
+													setSelectedIds(newIds);
 												} else {
-													setSelectedIds([]);
+													const pageIds = paginatedList.map(item => item.id);
+													setSelectedIds(selectedIds.filter(id => !pageIds.includes(id)));
 												}
 											}}
-											className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+											className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
 										/>
 									</th>
 									<th className="px-5 py-3.5">Pegawai</th>
@@ -559,12 +873,13 @@ export default function JasaDasarPegawaiPage() {
 									<th className="px-5 py-3.5 text-right">Aksi</th>
 								</tr>
 							</thead>
-							<tbody className="divide-y divide-slate-150 text-xs text-slate-700 font-medium">
-								{filteredList.map((row) => (
-									<tr key={row.id} className={`hover:bg-slate-50/40 transition-colors ${selectedIds.includes(row.id) ? 'bg-primary-50/20' : ''}`}>
+							<tbody className="divide-y divide-slate-200 text-xs text-slate-700 font-medium">
+								{paginatedList.map((row) => (
+									<tr key={row.id} className={`hover:bg-slate-50/60 transition-colors ${selectedIds.includes(row.id) ? 'bg-sky-50/40' : ''}`}>
 										<td className="px-5 py-4 w-10">
 											<input 
 												type="checkbox"
+												aria-label={`Pilih baris ${row.nama_pegawai}`}
 												checked={selectedIds.includes(row.id)}
 												onChange={(e) => {
 													if (e.target.checked) {
@@ -573,35 +888,50 @@ export default function JasaDasarPegawaiPage() {
 														setSelectedIds(selectedIds.filter(id => id !== row.id));
 													}
 												}}
-												className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+												className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
 											/>
 										</td>
 										<td className="px-5 py-4">
 											<span className="font-bold text-slate-800 block text-sm">{row.nama_pegawai}</span>
-											<span className="text-[10px] text-slate-400 block mt-0.5">NIK: {row.nik_pegawai} — {row.nama_departemen}</span>
+											<span className="text-[10px] text-slate-500 block mt-0.5">NIK: {row.nik_pegawai} — {row.nama_departemen}</span>
 										</td>
-										<td className="px-5 py-4 text-right font-extrabold text-primary-400 text-sm">
+										<td className="px-5 py-4 text-right font-bold text-slate-900 tabular-nums text-sm">
 											Rp {Number(row.nominal_jasa_dasar).toLocaleString("id-ID")}
 										</td>
 										<td className="px-5 py-4 font-semibold text-slate-600">
 											{moment(row.berlaku_mulai).format("DD/MM/YYYY")}
 										</td>
-										<td className="px-5 py-4 text-slate-500 font-semibold">
-											{row.berlaku_sampai ? moment(row.berlaku_sampai).format("DD/MM/YYYY") : "Masih Berlaku"}
+										<td className="px-5 py-4 text-slate-600 font-semibold">
+											<div>{row.berlaku_sampai ? moment(row.berlaku_sampai).format("DD/MM/YYYY") : "-"}</div>
+											<div className="mt-1">
+												{(!row.berlaku_sampai || moment().isSameOrBefore(row.berlaku_sampai, "day")) ? (
+													<span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+														Aktif
+													</span>
+												) : (
+													<span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200/60">
+														Kedaluwarsa
+													</span>
+												)}
+											</div>
 										</td>
 										<td className="px-5 py-4 text-slate-500 max-w-xs truncate font-medium">
 											{row.keterangan || "-"}
 										</td>
 										<td className="px-5 py-4 text-right space-x-1.5 whitespace-nowrap">
 											<button 
+												type="button"
 												onClick={() => handleOpenEdit(row)}
-												className="p-1.5 text-slate-400 hover:text-primary-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
+												aria-label={`Edit jasa dasar ${row.nama_pegawai}`}
+												className="p-1.5 text-slate-400 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
 											>
 												<Edit className="h-4 w-4" />
 											</button>
 											<button 
+												type="button"
 												onClick={() => handleDelete(row.id)}
-												className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-all cursor-pointer active:scale-95"
+												aria-label={`Hapus jasa dasar ${row.nama_pegawai}`}
+												className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
 											>
 												<Trash2 className="h-4 w-4" />
 											</button>
@@ -611,20 +941,79 @@ export default function JasaDasarPegawaiPage() {
 							</tbody>
 						</table>
 					</div>
+
+					{/* Pagination Controls */}
+					{filteredList.length > 0 && (
+						<div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+							<div className="flex items-center gap-2">
+								<span>Baris per halaman:</span>
+								<select
+									value={pageSize}
+									onChange={(e) => {
+										setPageSize(Number(e.target.value));
+										setCurrentPage(1);
+									}}
+									aria-label="Jumlah baris per halaman"
+									className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-sky-600 cursor-pointer"
+								>
+									<option value={10}>10</option>
+									<option value={25}>25</option>
+									<option value={50}>50</option>
+									<option value={100}>100</option>
+								</select>
+								<span className="text-slate-400">|</span>
+								<span className="tabular-nums font-medium text-slate-600">
+									Menampilkan {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, filteredList.length)} dari {filteredList.length} data
+								</span>
+							</div>
+
+							<div className="flex items-center gap-1.5">
+								<button
+									type="button"
+									onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+									disabled={currentPage === 1}
+									className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								>
+									Sebelumnya
+								</button>
+								<span className="px-2.5 py-1 text-xs font-bold text-slate-800 tabular-nums">
+									{currentPage} / {totalPages}
+								</span>
+								<button
+									type="button"
+									onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+									disabled={currentPage >= totalPages}
+									className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+								>
+									Berikutnya
+								</button>
+							</div>
+						</div>
+					)}
 				</div>
 			)}
 
 			{/* Form Modal */}
 			{isModalOpen && (
-				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-					<div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+				<div 
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="modal-form-title"
+					onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+					className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+				>
+					<div ref={formModalRef} className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
 						{/* Header */}
-						<div className="bg-gradient-to-r from-primary-900 to-primary-800 px-6 py-4 text-slate-800 flex justify-between items-center relative overflow-hidden border-b border-slate-200">
-							<div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full blur-2xl pointer-events-none"></div>
-							<h3 className="font-extrabold text-lg font-figtree relative z-10 text-slate-800">
+						<div className="bg-slate-50 px-6 py-4 text-slate-800 flex justify-between items-center border-b border-slate-200">
+							<h3 id="modal-form-title" className="font-extrabold text-lg font-figtree text-slate-900">
 								{modalMode === "add" ? "Tambah Jasa Dasar Baru" : "Edit Jasa Dasar Pegawai"}
 							</h3>
-							<button onClick={() => setIsModalOpen(false)} className="text-slate-550 hover:text-slate-800 p-1.5 hover:bg-slate-200/50 rounded-lg transition-all cursor-pointer relative z-10">
+							<button 
+								type="button"
+								onClick={() => setIsModalOpen(false)} 
+								aria-label="Tutup modal"
+								className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-200/50 rounded-lg transition-colors cursor-pointer"
+							>
 								<X className="h-5 w-5" />
 							</button>
 						</div>
@@ -632,9 +1021,17 @@ export default function JasaDasarPegawaiPage() {
 						{/* Form */}
 						<form onSubmit={handleSubmit}>
 							<div className="p-6 space-y-4 max-h-[65vh] overflow-y-auto">
+								{errorMsg && (
+									<div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-start gap-2.5 text-xs animate-fadeIn">
+										<AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+										<span className="font-semibold">{errorMsg}</span>
+									</div>
+								)}
+
 								<div className="space-y-1.5">
-									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Pilih Pegawai</label>
+									<label htmlFor="form-pegawai" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Pilih Pegawai</label>
 									<SearchableSelect 
+										id="form-pegawai"
 										options={employeeOptions}
 										value={pegawaiId}
 										onChange={setPegawaiId}
@@ -644,64 +1041,78 @@ export default function JasaDasarPegawaiPage() {
 								</div>
 
 								<div className="space-y-1.5">
-									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Nominal Jasa Dasar (Rp)</label>
+									<div className="flex justify-between items-center">
+										<label htmlFor="form-nominal" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Nominal Jasa Dasar (Rp)</label>
+										{nominal && !isNaN(Number(nominal)) && Number(nominal) > 0 && (
+											<span aria-live="polite" className="text-xs font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200/60 tabular-nums">
+												Rp {Number(nominal).toLocaleString("id-ID")}
+											</span>
+										)}
+									</div>
 									<input 
+										id="form-nominal"
 										type="number"
+										min="0"
+										step="1000"
 										value={nominal}
 										onChange={(e) => setNominal(e.target.value)}
 										placeholder="Contoh: 3000000"
 										required
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 									/>
 								</div>
 
 								<div className="grid grid-cols-2 gap-4">
 									<div className="space-y-1.5">
-										<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
+										<label htmlFor="form-berlaku-mulai" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
 										<input 
+											id="form-berlaku-mulai"
 											type="date"
 											value={berlakuMulai}
 											onChange={(e) => setBerlakuMulai(e.target.value)}
 											required
-											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 										/>
 									</div>
 									<div className="space-y-1.5">
-										<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
+										<label htmlFor="form-berlaku-sampai" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
 										<input 
+											id="form-berlaku-sampai"
 											type="date"
+											min={berlakuMulai}
 											value={berlakuSampai}
 											onChange={(e) => setBerlakuSampai(e.target.value)}
-											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+											className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 										/>
 									</div>
 								</div>
 
 								<div className="space-y-1.5">
-									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Keterangan</label>
+									<label htmlFor="form-keterangan" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Keterangan</label>
 									<input 
+										id="form-keterangan"
 										type="text"
 										value={keterangan}
 										onChange={(e) => setKeterangan(e.target.value)}
 										placeholder="Catatan tambahan"
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 									/>
 								</div>
 							</div>
 
 							{/* Footer */}
-							<div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+							<div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-2">
 								<button 
 									type="button"
 									onClick={() => setIsModalOpen(false)}
-									className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-750 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+									className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
 								>
 									Batal
 								</button>
 								<button 
 									type="submit"
 									disabled={saving}
-									className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 disabled:bg-primary-200 text-white font-bold rounded-xl text-xs transition-all inline-flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+									className="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 disabled:bg-sky-200 text-white font-bold rounded-xl text-xs transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
 								>
 									{saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
 									Simpan Konfigurasi
@@ -714,70 +1125,103 @@ export default function JasaDasarPegawaiPage() {
 
 			{/* Import Date Selection Modal */}
 			{isImportModalOpen && (
-				<div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-					<div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
+				<div 
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="modal-import-title"
+					onClick={(e) => { if (e.target === e.currentTarget) { setIsImportModalOpen(false); setPendingImportFile(null); } }}
+					className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+				>
+					<div ref={importModalRef} className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200">
 						{/* Header */}
-						<div className="bg-gradient-to-r from-primary-900 to-primary-800 px-6 py-4 text-slate-800 flex justify-between items-center relative overflow-hidden border-b border-slate-200">
-							<div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full blur-2xl pointer-events-none"></div>
-							<h3 className="font-extrabold text-lg font-figtree relative z-10 text-slate-800">
+						<div className="bg-slate-50 px-6 py-4 text-slate-800 flex justify-between items-center border-b border-slate-200">
+							<h3 id="modal-import-title" className="font-extrabold text-lg font-figtree text-slate-900">
 								Tanggal Masa Berlaku Import
 							</h3>
-							<button onClick={() => { setIsImportModalOpen(false); setPendingImportFile(null); }} className="text-slate-550 hover:text-slate-800 p-1.5 hover:bg-slate-200/50 rounded-lg transition-all cursor-pointer relative z-10">
+							<button 
+								type="button"
+								onClick={() => { setIsImportModalOpen(false); setPendingImportFile(null); }} 
+								aria-label="Tutup modal import"
+								className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-200/50 rounded-lg transition-colors cursor-pointer"
+							>
 								<X className="h-5 w-5" />
 							</button>
 						</div>
 
 						{/* Form */}
 						<div className="p-6 space-y-4">
-							<div className="p-3.5 bg-blue-50/50 border border-blue-100/50 rounded-xl text-xs text-blue-700 space-y-1">
-								<div className="font-bold flex items-center gap-1.5 text-blue-800">
+							{importErrorList.length > 0 && (
+								<div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl space-y-1.5 text-xs max-h-40 overflow-y-auto animate-fadeIn">
+									<div className="font-bold flex items-center gap-1.5 text-rose-900">
+										<AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+										Validasi Import Gagal ({importErrorList.length} kesalahan):
+									</div>
+									<ul className="list-disc list-inside space-y-0.5 text-rose-700">
+										{importErrorList.slice(0, 8).map((err, idx) => (
+											<li key={idx}>{err}</li>
+										))}
+										{importErrorList.length > 8 && (
+											<li className="font-semibold italic">...dan {importErrorList.length - 8} baris lainnya</li>
+										)}
+									</ul>
+								</div>
+							)}
+
+							<div className="p-3.5 bg-sky-50/70 border border-sky-100 rounded-xl text-xs text-sky-800 space-y-1">
+								<div className="font-bold flex items-center gap-1.5 text-sky-900">
 									<Info className="h-4 w-4 shrink-0" />
 									Informasi Masa Berlaku
 								</div>
 								<p className="font-medium">
+									{pendingImportFile ? (
+										<span>File: <strong className="text-sky-950 font-semibold">{pendingImportFile.name}</strong>. </span>
+									) : null}
 									Pilih tanggal mulai berlaku dan berakhir berlaku untuk seluruh data jasa dasar yang diimport dalam file ini.
 								</p>
 							</div>
 
 							<div className="grid grid-cols-2 gap-4">
 								<div className="space-y-1.5">
-									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
+									<label htmlFor="import-berlaku-mulai" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Mulai Berlaku</label>
 									<input 
+										id="import-berlaku-mulai"
 										type="date"
 										value={importBerlakuMulai}
 										onChange={(e) => setImportBerlakuMulai(e.target.value)}
 										required
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 									/>
 								</div>
 								<div className="space-y-1.5">
-									<label className="text-xs font-bold text-slate-400 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
+									<label htmlFor="import-berlaku-sampai" className="text-xs font-bold text-slate-500 uppercase tracking-wider block font-figtree">Berakhir Berlaku</label>
 									<input 
+										id="import-berlaku-sampai"
 										type="date"
+										min={importBerlakuMulai}
 										value={importBerlakuSampai}
 										onChange={(e) => setImportBerlakuSampai(e.target.value)}
-										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-primary-600 focus:bg-white text-sm text-slate-750 font-semibold"
+										className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-sky-600 focus:bg-white text-sm text-slate-800 font-semibold transition-colors"
 									/>
 								</div>
 							</div>
 						</div>
 
 						{/* Footer */}
-						<div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+						<div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-2">
 							<button 
 								type="button"
 								onClick={() => {
 									setIsImportModalOpen(false);
 									setPendingImportFile(null);
 								}}
-								className="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-750 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+								className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
 							>
 								Batal
 							</button>
 							<button 
 								type="button"
 								onClick={executeImportExcel}
-								className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-white font-bold rounded-xl text-xs transition-all inline-flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+								className="px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
 							>
 								Proses Import
 							</button>
