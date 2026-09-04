@@ -168,6 +168,15 @@ export async function POST(request) {
 			}
 		}
 
+		// Validasi nilai shift
+		const VALID_SHIFTS = ["Pagi", "Siang", "Malam"];
+		if (!VALID_SHIFTS.includes(shift1) || !VALID_SHIFTS.includes(shift2)) {
+			return NextResponse.json(
+				{ message: "Shift harus salah satu dari: Pagi, Siang, atau Malam" },
+				{ status: 400 }
+			);
+		}
+
 		// Validasi NIK tidak boleh sama
 		if (userId === nik_ganti) {
 			return NextResponse.json(
