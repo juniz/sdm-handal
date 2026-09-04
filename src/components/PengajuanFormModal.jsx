@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,16 +68,8 @@ const PengajuanFormModal = ({
 	// Error state for form validation
 	const [formErrors, setFormErrors] = useState({});
 
-	// Extract available shift list
-	const availableShifts = useMemo(() => {
-		if (Array.isArray(shiftData) && shiftData.length > 0) {
-			const mapped = shiftData
-				.map((s) => (typeof s === "string" ? s : s.shift || s.nama || s.id))
-				.filter(Boolean);
-			return mapped.length > 0 ? Array.from(new Set(mapped)) : DEFAULT_SHIFTS;
-		}
-		return DEFAULT_SHIFTS;
-	}, [shiftData]);
+	// Available shift list (static enum)
+	const availableShifts = DEFAULT_SHIFTS;
 
 	// Track mounting lifecycle
 	useEffect(() => {
