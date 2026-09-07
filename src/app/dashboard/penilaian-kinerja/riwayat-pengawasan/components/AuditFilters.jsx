@@ -93,7 +93,7 @@ export default function AuditFilters({
 				</div>
 
 				{/* Right Side: Page Size & Export */}
-				<div className="flex items-center gap-2 self-end sm:self-auto">
+				<div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-between sm:justify-start w-full sm:w-auto">
 					<div className="flex items-center gap-1.5 text-xs text-slate-500 font-mono">
 						<span>Baris:</span>
 						<select
@@ -108,28 +108,30 @@ export default function AuditFilters({
 							))}
 						</select>
 					</div>
-					{onPrintReport && (
-						<button
-							type="button"
-							onClick={onPrintReport}
-							className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
-							title="Cetak Laporan Audit (A4 Landscape)"
-						>
-							<Printer className="w-3.5 h-3.5 text-white" />
-							<span>Cetak (A4)</span>
-						</button>
-					)}
-					{onExportCsv && (
-						<button
-							type="button"
-							onClick={onExportCsv}
-							className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all"
-							title="Ekspor data audit ke format CSV"
-						>
-							<Download className="w-3.5 h-3.5 text-sky-600" />
-							<span>Export CSV</span>
-						</button>
-					)}
+					<div className="flex items-center gap-2">
+						{onPrintReport && (
+							<button
+								type="button"
+								onClick={onPrintReport}
+								className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all min-h-[36px] sm:min-h-0"
+								title="Cetak Laporan Audit (A4 Landscape)"
+							>
+								<Printer className="w-3.5 h-3.5 text-white" />
+								<span>Cetak (A4)</span>
+							</button>
+						)}
+						{onExportCsv && (
+							<button
+								type="button"
+								onClick={onExportCsv}
+								className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200/80 font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all min-h-[36px] sm:min-h-0"
+								title="Ekspor data audit ke format CSV"
+							>
+								<Download className="w-3.5 h-3.5 text-sky-600" />
+								<span>Export CSV</span>
+							</button>
+						)}
+					</div>
 				</div>
 			</div>
 

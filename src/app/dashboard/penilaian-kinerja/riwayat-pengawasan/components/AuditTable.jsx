@@ -60,154 +60,52 @@ export default function AuditTable({
 					</p>
 				</div>
 			) : (
-				<div className="overflow-x-auto">
-					<table className="w-full text-left text-xs md:text-sm border-collapse">
-						<thead className="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono select-none">
-							<tr>
-								<th
-									scope="col"
-									onClick={() => handleSort("nik")}
-									aria-sort={sortField === "nik" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="sticky left-0 z-20 bg-slate-50 py-3.5 px-4 whitespace-nowrap align-middle min-w-[90px] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+				<>
+					{/* Mobile Card View (for screens < 768px) */}
+					<div className="block md:hidden">
+						{/* Mobile Sort Toolbar */}
+						<div className="px-4 py-2.5 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between gap-2">
+							<div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+								<ArrowUpDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+								<span>Urutkan:</span>
+								<select
+									aria-label="Urutkan data pegawai"
+									value={sortField}
+									onChange={(e) => handleSort(e.target.value)}
+									className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
 								>
-									<div className="flex items-center justify-between gap-1">
-										<span>NIK</span>
-										{renderSortIcon("nik")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("nama")}
-									aria-sort={sortField === "nama" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="sticky left-[90px] z-20 bg-slate-50 py-3.5 px-4 whitespace-nowrap align-middle min-w-[180px] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-								>
-									<div className="flex items-center justify-between gap-1">
-										<span>Nama Pegawai</span>
-										{renderSortIcon("nama")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("nama_departemen")}
-									aria-sort={sortField === "nama_departemen" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 whitespace-nowrap align-middle min-w-[140px] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-								>
-									<div className="flex items-center justify-between gap-1">
-										<span>Departemen</span>
-										{renderSortIcon("nama_departemen")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("stts_kerja")}
-									aria-sort={sortField === "stts_kerja" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Status Kerja</span>
-										{renderSortIcon("stts_kerja")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("total_hari_jadwal")}
-									aria-sort={sortField === "total_hari_jadwal" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Total Hari Kerja Wajib Sesuai Jadwal Shift"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Wajib</span>
-										{renderSortIcon("total_hari_jadwal")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("hari_approved")}
-									aria-sort={sortField === "hari_approved" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Hari Evaluasi Disetujui Supervisor (Approved)"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Disetujui</span>
-										{renderSortIcon("hari_approved")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("hari_pending")}
-									aria-sort={sortField === "hari_pending" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Hari Evaluasi Menunggu Persetujuan Supervisor"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Pending</span>
-										{renderSortIcon("hari_pending")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("hari_draft")}
-									aria-sort={sortField === "hari_draft" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Hari Evaluasi Masih Status Draft / Revisi"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Draft</span>
-										{renderSortIcon("hari_draft")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("hari_kosong")}
-									aria-sort={sortField === "hari_kosong" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Hari Kerja Terjadwal Tanpa Pengisian Laporan Kegiatan"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Kosong</span>
-										{renderSortIcon("hari_kosong")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("gap_hari")}
-									aria-sort={sortField === "gap_hari" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Selisih Hari Wajib yang Belum Disetujui Supervisor"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Gap Hari</span>
-										{renderSortIcon("gap_hari")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("rata_skor_total")}
-									aria-sort={sortField === "rata_skor_total" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Rata-Rata Skor Penilaian Harian Disetujui"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Rata Skor</span>
-										{renderSortIcon("rata_skor_total")}
-									</div>
-								</th>
-								<th
-									scope="col"
-									onClick={() => handleSort("status_rekap")}
-									aria-sort={sortField === "status_rekap" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-									className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-									title="Status Kunci Rekapitulasi Akhir Bulanan"
-								>
-									<div className="flex items-center justify-center gap-1">
-										<span>Rekap</span>
-										{renderSortIcon("status_rekap")}
-									</div>
-								</th>
-								<th scope="col" className="py-3.5 px-4 text-center whitespace-nowrap align-middle">Aksi</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-slate-100 text-slate-700">
+									<option value="nama">Nama</option>
+									<option value="nik">NIK</option>
+									<option value="gap_hari">Gap Hari</option>
+									<option value="rata_skor_total">Rata Skor</option>
+									<option value="total_hari_jadwal">Wajib Kerja</option>
+									<option value="hari_approved">Disetujui</option>
+									<option value="status_rekap">Status Rekap</option>
+								</select>
+							</div>
+
+							<button
+								type="button"
+								onClick={() => handleSort(sortField)}
+								className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 active:scale-95 transition-all cursor-pointer shadow-2xs"
+								title={`Urutan: ${sortDirection === "asc" ? "Menaik (A-Z)" : "Menurun (Z-A)"}`}
+							>
+								{sortDirection === "asc" ? (
+									<>
+										<ArrowUp className="w-3 h-3 text-sky-600" />
+										<span>ASC</span>
+									</>
+								) : (
+									<>
+										<ArrowDown className="w-3 h-3 text-sky-600" />
+										<span>DESC</span>
+									</>
+								)}
+							</button>
+						</div>
+
+						{/* Mobile Cards List */}
+						<div className="p-3.5 space-y-3 divide-y divide-slate-100">
 							{rekapList.map((row) => {
 								const isLocked = row.status_rekap === "LOCKED" || row.status_rekap === "final";
 								const totalJadwal = Number(row.total_hari_jadwal || 0);
@@ -219,152 +117,452 @@ export default function AuditTable({
 								const compliancePct = totalJadwal > 0 ? Math.round((hariApproved / totalJadwal) * 100) : 0;
 
 								return (
-									<tr
+									<div
 										key={row.id || `${row.pegawai_id}-${row.bulan}-${row.tahun}`}
-										className="hover:bg-slate-50/80 transition-colors group"
+										className="pt-3 first:pt-0 space-y-3"
 									>
-										{/* NIK (Sticky) */}
-										<td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 py-3.5 px-4 font-mono font-semibold text-slate-600 whitespace-nowrap align-middle transition-colors">
-											{row.nik || "-"}
-										</td>
+										{/* Card Header: Name, NIK, Status Rekap */}
+										<div className="flex items-start justify-between gap-2">
+											<div className="space-y-1 min-w-0 flex-1">
+												<h4 className="font-bold text-slate-900 font-figtree text-sm leading-snug truncate" title={row.nama}>
+													{row.nama || "-"}
+												</h4>
+												<div className="flex items-center gap-1.5 flex-wrap">
+													<span className="font-mono text-[11px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+														{row.nik || "-"}
+													</span>
+													<span className="text-xs text-slate-500 truncate max-w-[160px]">
+														{row.nama_departemen || "-"}
+													</span>
+													{row.stts_kerja && (
+														<span className="text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200/80 px-1.5 py-0.2 rounded font-mono">
+															{row.stts_kerja}
+														</span>
+													)}
+												</div>
+											</div>
 
-										{/* Nama Pegawai (Sticky) */}
-										<td className="sticky left-[90px] z-10 bg-white group-hover:bg-slate-50/90 py-3.5 px-4 font-bold text-slate-900 font-figtree align-middle shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] transition-colors">
-											<div className="flex flex-col">
-												<span className="truncate max-w-[220px]" title={row.nama}>{row.nama}</span>
-												{totalJadwal > 0 && (
-													<div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1.5 max-w-[140px]" title={`Kepatuhan: ${compliancePct}% (${hariApproved}/${totalJadwal} hari)`}>
-														<div
-															className={`h-full rounded-full ${
-																compliancePct >= 80 ? "bg-emerald-500" : compliancePct >= 50 ? "bg-amber-500" : "bg-rose-500"
-															}`}
-															style={{ width: `${Math.min(100, Math.max(0, compliancePct))}%` }}
-														/>
-													</div>
+											<div className="shrink-0">
+												{isLocked ? (
+													<span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
+														<Lock className="w-3 h-3 text-emerald-700" /> LOCKED
+													</span>
+												) : (
+													<span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
+														<Clock className="w-3 h-3 text-amber-700" /> DRAFT
+													</span>
 												)}
 											</div>
-										</td>
+										</div>
 
-										{/* Departemen */}
-										<td className="py-3.5 px-4 text-slate-600 font-medium align-middle">
-											{row.nama_departemen || "-"}
-										</td>
+										{/* Compliance Progress Bar */}
+										{totalJadwal > 0 && (
+											<div className="space-y-1 bg-slate-50/70 p-2.5 rounded-xl border border-slate-150/70">
+												<div className="flex items-center justify-between text-[11px]">
+													<span className="text-slate-500 font-medium">Kepatuhan Evaluasi:</span>
+													<span className="font-mono font-bold text-slate-700">
+														{compliancePct}% ({hariApproved}/{totalJadwal} hari)
+													</span>
+												</div>
+												<div className="w-full bg-slate-200/70 h-1.5 rounded-full overflow-hidden">
+													<div
+														className={`h-full rounded-full transition-all duration-300 ${
+															compliancePct >= 80 ? "bg-emerald-500" : compliancePct >= 50 ? "bg-amber-500" : "bg-rose-500"
+														}`}
+														style={{ width: `${Math.min(100, Math.max(0, compliancePct))}%` }}
+													/>
+												</div>
+											</div>
+										)}
 
-										{/* Status Kerja */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											<span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 rounded-md font-mono whitespace-nowrap">
-												{row.stts_kerja || "-"}
-											</span>
-										</td>
-
-										{/* Jadwal (Hari Wajib) */}
-										<td className="py-3.5 px-4 text-center font-bold text-slate-800 font-mono align-middle">
-											{totalJadwal}
-										</td>
-
-										{/* Disetujui (OK) */}
-										<td className="py-3.5 px-4 text-center font-bold text-emerald-700 font-mono align-middle">
-											<span className="inline-block px-2 py-0.5 text-xs font-bold text-emerald-800 bg-emerald-50 rounded border border-emerald-200/80 font-mono">
-												{hariApproved}
-											</span>
-										</td>
-
-										{/* Pending */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											{hariPending > 0 ? (
-												<span className="inline-block px-2 py-0.5 text-xs font-bold text-amber-800 bg-amber-50 rounded border border-amber-200/80 font-mono">
-													{hariPending}
+										{/* Key Metrics Grid */}
+										<div className="grid grid-cols-3 gap-2 bg-slate-50/60 p-2.5 rounded-xl border border-slate-100 text-center">
+											<div className="space-y-0.5">
+												<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+													Disetujui
 												</span>
-											) : (
-												<span className="text-slate-300 font-mono">-</span>
-											)}
-										</td>
-
-										{/* Draft */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											{hariDraft > 0 ? (
-												<span className="inline-block px-2 py-0.5 text-xs font-bold text-slate-700 bg-slate-100 rounded border border-slate-200 font-mono">
-													{hariDraft}
+												<span className="text-xs font-bold text-emerald-800 font-mono bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/70 inline-block">
+													{hariApproved}
 												</span>
-											) : (
-												<span className="text-slate-300 font-mono">-</span>
-											)}
-										</td>
-
-										{/* Kosong */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											{hariKosong > 0 ? (
-												<span className="inline-block px-2 py-0.5 text-xs font-bold text-rose-700 bg-rose-50 rounded border border-rose-200/80 font-mono">
-													{hariKosong}
+												<span className="text-[10px] text-slate-400 block font-mono">
+													/{totalJadwal} wajib
 												</span>
-											) : (
-												<span className="text-slate-300 font-mono">-</span>
-											)}
-										</td>
+											</div>
 
-										{/* Gap */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											{gapHari > 0 ? (
-												<span className="inline-block px-2 py-0.5 text-xs font-bold text-rose-800 bg-rose-100 rounded-md border border-rose-200 font-mono shadow-2xs">
-													{gapHari} Hari
+											<div className="space-y-0.5">
+												<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+													Gap Hari
 												</span>
-											) : (
-												<span className="inline-block px-2 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded border border-emerald-200/60 font-mono">
-													0
+												{gapHari > 0 ? (
+													<span className="text-xs font-bold text-rose-800 font-mono bg-rose-100 px-1.5 py-0.5 rounded-md border border-rose-200 inline-block shadow-2xs">
+														{gapHari} Hari
+													</span>
+												) : (
+													<span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60 font-mono inline-block">
+														0 Gap
+													</span>
+												)}
+												<span className="text-[10px] text-slate-400 block font-mono">
+													{hariKosong > 0 ? `${hariKosong} kosong` : "lengkap"}
 												</span>
-											)}
-										</td>
+											</div>
 
-										{/* Rata-Rata Skor */}
-										<td className="py-3.5 px-4 text-center font-bold text-sky-800 font-figtree text-sm align-middle">
-											{row.rata_skor_total != null ? Math.round(row.rata_skor_total) : 0}
-										</td>
-
-										{/* Status Rekap */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											{isLocked ? (
-												<span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
-													<Lock className="w-3 h-3 text-emerald-700" /> LOCKED
+											<div className="space-y-0.5">
+												<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+													Rata Skor
 												</span>
-											) : (
-												<span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
-													<Clock className="w-3 h-3 text-amber-700" /> DRAFT
+												<span className="text-sm font-extrabold text-sky-800 font-figtree block">
+													{row.rata_skor_total != null ? Math.round(row.rata_skor_total) : 0}
 												</span>
-											)}
-										</td>
+												<span className="text-[10px] text-slate-400 block font-mono">
+													poin
+												</span>
+											</div>
+										</div>
 
-										{/* Aksi */}
-										<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-											<button
-												type="button"
-												onClick={() => onOpenDetail && onOpenDetail(row)}
-												className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-800 bg-sky-50 border border-sky-200/80 rounded-xl hover:bg-sky-700 hover:text-white hover:border-sky-700 active:scale-95 transition-all duration-150 cursor-pointer shadow-2xs whitespace-nowrap"
-											>
-												<Eye className="w-3.5 h-3.5" />
-												<span>Detail Audit</span>
-											</button>
-										</td>
-									</tr>
+										{/* Additional Flags (Pending / Draft / Kosong) */}
+										{(hariPending > 0 || hariDraft > 0 || hariKosong > 0) && (
+											<div className="flex items-center justify-start gap-2 flex-wrap text-[11px] font-mono">
+												{hariPending > 0 && (
+													<span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/80 font-bold">
+														Pending: {hariPending}
+													</span>
+												)}
+												{hariDraft > 0 && (
+													<span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-bold">
+														Draft: {hariDraft}
+													</span>
+												)}
+												{hariKosong > 0 && (
+													<span className="px-2 py-0.5 rounded bg-rose-50 text-rose-800 border border-rose-200/80 font-bold">
+														Kosong: {hariKosong}
+													</span>
+												)}
+											</div>
+										)}
+
+										{/* Touch-Friendly Action Button */}
+										<button
+											type="button"
+											onClick={() => onOpenDetail && onOpenDetail(row)}
+											className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold text-sky-800 bg-sky-50/80 hover:bg-sky-100 border border-sky-200/80 rounded-xl active:scale-[0.98] transition-all cursor-pointer shadow-2xs"
+										>
+											<Eye className="w-4 h-4 text-sky-600 shrink-0" />
+											<span>Lihat Detail Audit</span>
+										</button>
+									</div>
 								);
 							})}
-						</tbody>
-					</table>
-				</div>
+						</div>
+					</div>
+
+					{/* Desktop Data Table (for screens >= 768px) */}
+					<div className="hidden md:block overflow-x-auto">
+						<table className="w-full text-left text-xs md:text-sm border-collapse">
+							<thead className="bg-slate-50/90 border-b border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest font-mono select-none">
+								<tr>
+									<th
+										scope="col"
+										onClick={() => handleSort("nik")}
+										aria-sort={sortField === "nik" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="sticky left-0 z-20 bg-slate-50 py-3.5 px-4 whitespace-nowrap align-middle min-w-[90px] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+									>
+										<div className="flex items-center justify-between gap-1">
+											<span>NIK</span>
+											{renderSortIcon("nik")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("nama")}
+										aria-sort={sortField === "nama" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="sticky left-[90px] z-20 bg-slate-50 py-3.5 px-4 whitespace-nowrap align-middle min-w-[180px] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+									>
+										<div className="flex items-center justify-between gap-1">
+											<span>Nama Pegawai</span>
+											{renderSortIcon("nama")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("nama_departemen")}
+										aria-sort={sortField === "nama_departemen" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 whitespace-nowrap align-middle min-w-[140px] cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+									>
+										<div className="flex items-center justify-between gap-1">
+											<span>Departemen</span>
+											{renderSortIcon("nama_departemen")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("stts_kerja")}
+										aria-sort={sortField === "stts_kerja" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Status Kerja</span>
+											{renderSortIcon("stts_kerja")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("total_hari_jadwal")}
+										aria-sort={sortField === "total_hari_jadwal" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Total Hari Kerja Wajib Sesuai Jadwal Shift"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Wajib</span>
+											{renderSortIcon("total_hari_jadwal")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("hari_approved")}
+										aria-sort={sortField === "hari_approved" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Hari Evaluasi Disetujui Supervisor (Approved)"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Disetujui</span>
+											{renderSortIcon("hari_approved")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("hari_pending")}
+										aria-sort={sortField === "hari_pending" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Hari Evaluasi Menunggu Persetujuan Supervisor"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Pending</span>
+											{renderSortIcon("hari_pending")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("hari_draft")}
+										aria-sort={sortField === "hari_draft" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Hari Evaluasi Masih Status Draft / Revisi"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Draft</span>
+											{renderSortIcon("hari_draft")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("hari_kosong")}
+										aria-sort={sortField === "hari_kosong" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Hari Kerja Terjadwal Tanpa Pengisian Laporan Kegiatan"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Kosong</span>
+											{renderSortIcon("hari_kosong")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("gap_hari")}
+										aria-sort={sortField === "gap_hari" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Selisih Hari Wajib yang Belum Disetujui Supervisor"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Gap Hari</span>
+											{renderSortIcon("gap_hari")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("rata_skor_total")}
+										aria-sort={sortField === "rata_skor_total" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Rata-Rata Skor Penilaian Harian Disetujui"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Rata Skor</span>
+											{renderSortIcon("rata_skor_total")}
+										</div>
+									</th>
+									<th
+										scope="col"
+										onClick={() => handleSort("status_rekap")}
+										aria-sort={sortField === "status_rekap" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Status Kunci Rekapitulasi Akhir Bulanan"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Rekap</span>
+											{renderSortIcon("status_rekap")}
+										</div>
+									</th>
+									<th scope="col" className="py-3.5 px-4 text-center whitespace-nowrap align-middle">Aksi</th>
+								</tr>
+							</thead>
+							<tbody className="divide-y divide-slate-100 text-slate-700">
+								{rekapList.map((row) => {
+									const isLocked = row.status_rekap === "LOCKED" || row.status_rekap === "final";
+									const totalJadwal = Number(row.total_hari_jadwal || 0);
+									const hariApproved = Number(row.hari_approved || 0);
+									const hariPending = Number(row.hari_pending || 0);
+									const hariDraft = Number(row.hari_draft || 0);
+									const hariKosong = Number(row.hari_kosong || 0);
+									const gapHari = Number(row.gap_hari || 0);
+									const compliancePct = totalJadwal > 0 ? Math.round((hariApproved / totalJadwal) * 100) : 0;
+
+									return (
+										<tr
+											key={row.id || `${row.pegawai_id}-${row.bulan}-${row.tahun}`}
+											className="hover:bg-slate-50/80 transition-colors group"
+										>
+											{/* NIK (Sticky) */}
+											<td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 py-3.5 px-4 font-mono font-semibold text-slate-600 whitespace-nowrap align-middle transition-colors">
+												{row.nik || "-"}
+											</td>
+
+											{/* Nama Pegawai (Sticky) */}
+											<td className="sticky left-[90px] z-10 bg-white group-hover:bg-slate-50/90 py-3.5 px-4 font-bold text-slate-900 font-figtree align-middle shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] transition-colors">
+												<div className="flex flex-col">
+													<span className="truncate max-w-[220px]" title={row.nama}>{row.nama}</span>
+													{totalJadwal > 0 && (
+														<div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1.5 max-w-[140px]" title={`Kepatuhan: ${compliancePct}% (${hariApproved}/${totalJadwal} hari)`}>
+															<div
+																className={`h-full rounded-full ${
+																	compliancePct >= 80 ? "bg-emerald-500" : compliancePct >= 50 ? "bg-amber-500" : "bg-rose-500"
+																}`}
+																style={{ width: `${Math.min(100, Math.max(0, compliancePct))}%` }}
+															/>
+														</div>
+													)}
+												</div>
+											</td>
+
+											{/* Departemen */}
+											<td className="py-3.5 px-4 text-slate-600 font-medium align-middle">
+												{row.nama_departemen || "-"}
+											</td>
+
+											{/* Status Kerja */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												<span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-200/80 rounded-md font-mono whitespace-nowrap">
+													{row.stts_kerja || "-"}
+												</span>
+											</td>
+
+											{/* Jadwal (Hari Wajib) */}
+											<td className="py-3.5 px-4 text-center font-bold text-slate-800 font-mono align-middle">
+												{totalJadwal}
+											</td>
+
+											{/* Disetujui (OK) */}
+											<td className="py-3.5 px-4 text-center font-bold text-emerald-700 font-mono align-middle">
+												<span className="inline-block px-2 py-0.5 text-xs font-bold text-emerald-800 bg-emerald-50 rounded border border-emerald-200/80 font-mono">
+													{hariApproved}
+												</span>
+											</td>
+
+											{/* Pending */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{hariPending > 0 ? (
+													<span className="inline-block px-2 py-0.5 text-xs font-bold text-amber-800 bg-amber-50 rounded border border-amber-200/80 font-mono">
+														{hariPending}
+													</span>
+												) : (
+													<span className="text-slate-300 font-mono">-</span>
+												)}
+											</td>
+
+											{/* Draft */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{hariDraft > 0 ? (
+													<span className="inline-block px-2 py-0.5 text-xs font-bold text-slate-700 bg-slate-100 rounded border border-slate-200 font-mono">
+														{hariDraft}
+													</span>
+												) : (
+													<span className="text-slate-300 font-mono">-</span>
+												)}
+											</td>
+
+											{/* Kosong */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{hariKosong > 0 ? (
+													<span className="inline-block px-2 py-0.5 text-xs font-bold text-rose-700 bg-rose-50 rounded border border-rose-200/80 font-mono">
+														{hariKosong}
+													</span>
+												) : (
+													<span className="text-slate-300 font-mono">-</span>
+												)}
+											</td>
+
+											{/* Gap */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{gapHari > 0 ? (
+													<span className="inline-block px-2 py-0.5 text-xs font-bold text-rose-800 bg-rose-100 rounded-md border border-rose-200 font-mono shadow-2xs">
+														{gapHari} Hari
+													</span>
+												) : (
+													<span className="inline-block px-2 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded border border-emerald-200/60 font-mono">
+														0
+													</span>
+												)}
+											</td>
+
+											{/* Rata-Rata Skor */}
+											<td className="py-3.5 px-4 text-center font-bold text-sky-800 font-figtree text-sm align-middle">
+												{row.rata_skor_total != null ? Math.round(row.rata_skor_total) : 0}
+											</td>
+
+											{/* Status Rekap */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{isLocked ? (
+													<span className="px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
+														<Lock className="w-3 h-3 text-emerald-700" /> LOCKED
+													</span>
+												) : (
+													<span className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full inline-flex items-center gap-1 font-mono whitespace-nowrap">
+														<Clock className="w-3 h-3 text-amber-700" /> DRAFT
+													</span>
+												)}
+											</td>
+
+											{/* Aksi */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												<button
+													type="button"
+													onClick={() => onOpenDetail && onOpenDetail(row)}
+													className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-800 bg-sky-50 border border-sky-200/80 rounded-xl hover:bg-sky-700 hover:text-white hover:border-sky-700 active:scale-95 transition-all duration-150 cursor-pointer shadow-2xs whitespace-nowrap"
+												>
+													<Eye className="w-3.5 h-3.5" />
+													<span>Detail Audit</span>
+												</button>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
+					</div>
+				</>
 			)}
 
 			{/* Pagination Controls */}
-			<div className="px-5 py-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 text-xs">
-				<div className="text-slate-500 font-medium">
+			<div className="px-4 sm:px-5 py-3.5 sm:py-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50/50 text-xs">
+				<div className="text-slate-500 font-medium text-center sm:text-left">
 					Halaman <span className="font-bold text-slate-800">{meta?.page ?? 1}</span> dari{" "}
 					<span className="font-bold text-slate-800">{meta?.totalPages ?? 1}</span> (Total{" "}
 					<span className="font-bold text-slate-800">{meta?.totalItems ?? 0}</span> pegawai)
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 w-full sm:w-auto justify-center">
 					<button
 						type="button"
 						disabled={(meta?.page ?? 1) <= 1 || loading}
 						onClick={() => onPageChange && onPageChange(Math.max(1, (meta?.page ?? 1) - 1))}
-						className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+						className="inline-flex items-center justify-center gap-1 px-3.5 py-2 sm:py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs min-h-[40px] sm:min-h-0 flex-1 sm:flex-initial"
 					>
 						<ChevronLeft className="w-4 h-4" />
 						<span>Sebelumnya</span>
@@ -375,7 +573,7 @@ export default function AuditTable({
 						onClick={() =>
 							onPageChange && onPageChange(Math.min(meta?.totalPages ?? 1, (meta?.page ?? 1) + 1))
 						}
-						className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
+						className="inline-flex items-center justify-center gap-1 px-3.5 py-2 sm:py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs min-h-[40px] sm:min-h-0 flex-1 sm:flex-initial"
 					>
 						<span>Berikutnya</span>
 						<ChevronRight className="w-4 h-4" />
