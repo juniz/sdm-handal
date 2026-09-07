@@ -199,14 +199,14 @@ export default function DashboardPage() {
 							transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
 							className="space-y-6"
 						>
-							{/* Profil Pegawai (Physical 3D ID Card with Flippable Stats) */}
-							<EmployeeCard />
-
-							{/* Floating Notifications Stack */}
-							<div className="fixed top-16 left-4 right-4 md:left-auto md:right-6 md:w-96 z-40 space-y-3 pointer-events-none">
+							{/* Notifications Stack: In-flow on mobile, floating on desktop */}
+							<div className="space-y-3 pointer-events-none md:fixed md:top-16 md:right-6 md:w-96 md:z-40">
 								<RevisiNotifPopup />
 								<KegiatanPendingPopup />
 							</div>
+
+							{/* Profil Pegawai (Physical 3D ID Card with Flippable Stats) */}
+							<EmployeeCard />
 
 							{/* Admin Menu - Hanya untuk Departemen IT/SPI */}
 							{isLoading ? (

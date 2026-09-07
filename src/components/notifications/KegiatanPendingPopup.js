@@ -41,11 +41,11 @@ export default function KegiatanPendingPopup() {
         {/* Header Bar (Clickable to toggle expand) */}
         <div
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="flex items-center justify-between p-3.5 bg-gradient-to-r from-sky-500/10 via-sky-500/5 to-transparent cursor-pointer hover:bg-sky-500/15 transition-colors select-none"
+          className="flex items-center justify-between p-3.5 bg-sky-50/90 hover:bg-sky-100/70 transition-colors select-none cursor-pointer"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-sky-500/15 flex items-center justify-center shrink-0">
-              <Clock className="h-4.5 w-4.5 text-blue-600 animate-pulse" />
+              <Clock className="h-4.5 w-4.5 text-sky-600" />
             </div>
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm font-extrabold text-slate-800 tracking-tight">
@@ -137,7 +137,7 @@ export default function KegiatanPendingPopup() {
                       </button>
                       <button
                         onClick={() => dismissItem(item.tanggal)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-sky-100 transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-sky-400 hover:text-sky-700 hover:bg-sky-100 transition-colors cursor-pointer"
                         aria-label="Tutup notifikasi item ini"
                       >
                         <X className="h-3.5 w-3.5" />

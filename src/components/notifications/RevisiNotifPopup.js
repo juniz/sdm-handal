@@ -34,11 +34,11 @@ export default function RevisiNotifPopup() {
         {/* Header Bar (Clickable to toggle expand) */}
         <div
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="flex items-center justify-between p-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent cursor-pointer hover:bg-amber-500/15 transition-colors select-none"
+          className="flex items-center justify-between p-3.5 bg-amber-50/90 hover:bg-amber-100/70 transition-colors select-none cursor-pointer"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-amber-500/15 flex items-center justify-center shrink-0">
-              <AlertTriangle className="h-4.5 w-4.5 text-amber-600 animate-bounce" />
+              <AlertTriangle className="h-4.5 w-4.5 text-amber-600" />
             </div>
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm font-extrabold text-slate-800 tracking-tight">
@@ -115,7 +115,7 @@ export default function RevisiNotifPopup() {
                       </button>
                       <button
                         onClick={() => markAsRead(item.id)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-amber-100 transition-colors cursor-pointer"
+                        className="p-1 rounded-lg text-amber-400 hover:text-amber-800 hover:bg-amber-100 transition-colors cursor-pointer"
                         aria-label="Tutup notifikasi item ini"
                       >
                         <X className="h-3.5 w-3.5" />

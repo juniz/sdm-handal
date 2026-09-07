@@ -8,11 +8,15 @@ const usePenilaianPendingNotif = () => {
   const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      sessionStorage.getItem("kegiatan_pending_dismissed") === "true"
-    ) {
-      setIsDismissed(true);
+    try {
+      if (
+        typeof window !== "undefined" &&
+        sessionStorage.getItem("kegiatan_pending_dismissed") === "true"
+      ) {
+        setIsDismissed(true);
+      }
+    } catch (e) {
+      console.warn("sessionStorage read failed:", e);
     }
   }, []);
 
