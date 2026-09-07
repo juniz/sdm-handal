@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { EmployeeCard } from "@/components/EmployeeCard";
 import RevisiNotifPopup from "@/components/notifications/RevisiNotifPopup";
+import KegiatanPendingPopup from "@/components/notifications/KegiatanPendingPopup";
 import { useRouter } from "next/navigation";
 import adminType from "@/types/adminType";
 import { useUser } from "@/hooks/useUser";
@@ -201,8 +202,11 @@ export default function DashboardPage() {
 							{/* Profil Pegawai (Physical 3D ID Card with Flippable Stats) */}
 							<EmployeeCard />
 
-							{/* Notifikasi Revisi Penilaian Kinerja Popup */}
-							<RevisiNotifPopup />
+							{/* Floating Notifications Stack */}
+							<div className="fixed top-16 left-4 right-4 md:left-auto md:right-6 md:w-96 z-40 space-y-3 pointer-events-none">
+								<RevisiNotifPopup />
+								<KegiatanPendingPopup />
+							</div>
 
 							{/* Admin Menu - Hanya untuk Departemen IT/SPI */}
 							{isLoading ? (

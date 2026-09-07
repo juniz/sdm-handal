@@ -23,7 +23,7 @@ export default function RevisiNotifPopup() {
   const count = revisiList.length;
 
   return (
-    <div className="fixed top-16 left-4 right-4 md:left-auto md:right-6 md:w-96 z-40">
+    <div className="pointer-events-auto w-full">
       <motion.div
         initial={{ opacity: 0, y: -20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
