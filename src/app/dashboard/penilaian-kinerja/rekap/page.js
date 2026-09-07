@@ -605,7 +605,208 @@ export default function AdminRekapBulananPage() {
 							<h3 className="font-bold text-slate-800 text-sm font-figtree">Daftar Rekap Bulanan Pegawai</h3>
 						</div>
 
-						<div className="overflow-x-auto">
+						{/* Mobile Batch Selection Bar */}
+						<div className="px-4 py-3 border-b border-slate-100 bg-slate-50/70 flex items-center justify-between gap-2 md:hidden">
+							<label className="inline-flex items-center gap-2 cursor-pointer select-none">
+								<input 
+									type="checkbox"
+									checked={rekapList.length > 0 && selectedIds.length === rekapList.length}
+									onChange={(e) => {
+										if (e.target.checked) {
+											setSelectedIds(rekapList.map(item => item.id));
+										} else {
+											setSelectedIds([]);
+										}
+									}}
+									className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer h-4 w-4"
+								/>
+								<span className="text-xs font-bold text-slate-700 font-figtree">
+									Pilih Semua
+								</span>
+							</label>
+							<span className="text-xs font-mono text-slate-500">
+								{selectedIds.length} dari {rekapList.length} dipilih
+							</span>
+						</div>
+
+						{/* Mobile Card View (for screens < 768px) */}
+						<div className="block md:hidden divide-y divide-slate-100">
+							{rekapList.length === 0 ? (
+								<div className="px-5 py-10 text-center text-slate-400 font-medium text-xs">
+									Tidak ada data rekapitulasi untuk bulan/tahun terpilih.
+								</div>
+							) : (
+								rekapList.map((row) => {
+									const hariReguler = row.hari_approved - (row.hari_approved_bonus || 0);
+									const isSelected = selectedIds.includes(row.id);
+									const isFinal = row.status_rekap === "final";
+
+									return (
+										<div 
+											key={row.id}
+											className={`p-4 space-y-3 transition-colors ${isSelected ? "bg-[#E0F7FE]/15" : "bg-white"}`}
+										>
+											{/* Header: Checkbox, Name, Status */}
+											<div className="flex items-start justify-between gap-2.5">
+												<div className="flex items-start gap-2.5 min-w-0 flex-1">
+													<input 
+														type="checkbox"
+														checked={isSelected}
+														onChange={(e) => {
+															if (e.target.checked) {
+																setSelectedIds([...selectedIds, row.id]);
+															} else {
+																setSelectedIds(selectedIds.filter(id => id !== row.id));
+															}
+														}}
+														className="rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer h-4 w-4 mt-0.5 shrink-0"
+													/>
+													<div className="min-w-0 flex-1 space-y-0.5">
+														<span className="font-bold text-slate-800 block text-sm font-figtree truncate" title={row.nama}>
+															{row.nama}
+														</span>
+														<span className="text-[11px] text-slate-500 block truncate font-medium">
+															<span className="font-mono text-slate-600">NIK: {row.nik}</span> • {row.nama_departemen}
+														</span>
+													</div>
+												</div>
+
+												<div className="shrink-0">
+													{isFinal ? (
+														<span className="px-2 py-0.5 text-[9px] font-bold rounded-full border bg-emerald-50 text-emerald-800 border-emerald-200 font-figtree uppercase tracking-wider inline-flex items-center gap-1">
+															<Lock className="w-2.5 h-2.5 text-emerald-700" /> Locked
+														</span>
+													) : (
+														<span className="px-2 py-0.5 text-[9px] font-bold rounded-full border bg-slate-50 text-slate-700 border-slate-200 font-figtree uppercase tracking-wider inline-flex items-center gap-1">
+															Draft
+														</span>
+													)}
+												</div>
+											</div>
+
+											{/* Work Days & Shift Summary Grid */}
+											<div className="grid grid-cols-3 gap-2 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100 text-center">
+												<div className="space-y-0.5">
+													<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+														Reguler / Jadwal
+													</span>
+													<span className="text-xs font-bold text-emerald-700 font-figtree block">
+														{hariReguler} / {row.total_hari_jadwal}
+													</span>
+													<span className="text-[10px] text-slate-400 block font-mono">
+														hari
+													</span>
+												</div>
+
+												<div className="space-y-0.5">
+													<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+														Tambahan
+													</span>
+													<span className="text-xs font-bold text-amber-600 font-figtree block">
+														{row.hari_approved_bonus || 0}
+													</span>
+													<span className="text-[10px] text-slate-400 block font-mono">
+														shift
+													</span>
+												</div>
+
+												<div className="space-y-0.5">
+													<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+														Gap / Skor
+													</span>
+													<span className="text-xs font-bold font-figtree block">
+														{row.gap_hari > 0 ? (
+															<span className="text-rose-600 font-bold">{row.gap_hari} gap</span>
+														) : (
+															<span className="text-slate-600 font-semibold">0 gap</span>
+														)}
+													</span>
+													<span className="text-[10px] text-slate-500 block font-mono font-medium">
+														{Math.round(row.rata_skor_total)} skor
+													</span>
+												</div>
+											</div>
+
+											{/* Financial Breakdown Card */}
+											<div className="bg-slate-50/60 p-3 rounded-xl border border-slate-200/60 space-y-2 text-xs">
+												<div className="grid grid-cols-2 gap-2 text-slate-600">
+													<div>
+														<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+															Jasa Dasar
+														</span>
+														<span className="font-semibold font-mono text-slate-800">
+															Rp {Number(row.nominal_jasa_dasar).toLocaleString("id-ID")}
+														</span>
+													</div>
+
+													<div className="text-right">
+														<span className="text-[10px] uppercase font-bold text-slate-400 font-mono block">
+															Pengurang
+														</span>
+														<span className={`font-semibold font-mono ${row.pengurang_jasa > 0 ? "text-red-600 font-bold" : "text-slate-400"}`}>
+															Rp {Number(row.pengurang_jasa).toLocaleString("id-ID")}
+														</span>
+													</div>
+												</div>
+
+												{(Number(row.nominal_jasa_tambahan || 0) > 0 || Boolean(row.jasa_bagian_unit)) && (
+													<div className="pt-1.5 border-t border-slate-200/50 flex justify-between items-center text-[11px]">
+														<span className="text-slate-500 font-medium">Insentif Tambahan:</span>
+														<div className="text-right font-mono">
+															<span className="font-bold text-amber-600">
+																Rp {Number(row.nominal_jasa_tambahan || 0).toLocaleString("id-ID")}
+															</span>
+															{Boolean(row.jasa_bagian_unit) && (
+																<span className="text-[10px] text-slate-400 block font-sans">
+																	(+Rp {Number(row.jasa_bagian_unit).toLocaleString("id-ID")} unit)
+																</span>
+															)}
+														</div>
+													</div>
+												)}
+
+												<div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+													<span className="font-bold text-slate-700 text-xs">Jasa Final:</span>
+													<span className="font-extrabold text-[#0090CC] text-sm font-mono">
+														Rp {Number(row.nominal_jasa_final).toLocaleString("id-ID")}
+													</span>
+												</div>
+											</div>
+
+											{/* Card Action Button */}
+											<div className="pt-1">
+												{actionLoadingId === row.id ? (
+													<div className="w-full min-h-[44px] flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200 text-slate-400">
+														<Loader2 className="h-5 w-5 animate-spin" />
+													</div>
+												) : isFinal ? (
+													<button 
+														type="button"
+														onClick={() => handleLockAction(row.id, "unlock")}
+														className="w-full min-h-[44px] bg-rose-50 hover:bg-rose-100 hover:text-rose-800 active:scale-[0.98] transition-all text-rose-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-rose-200/80 cursor-pointer shadow-2xs"
+													>
+														<Unlock className="h-3.5 w-3.5" />
+														<span>Buka Kunci (Unlock)</span>
+													</button>
+												) : (
+													<button 
+														type="button"
+														onClick={() => handleLockAction(row.id, "lock")}
+														className="w-full min-h-[44px] bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 active:scale-[0.98] transition-all text-emerald-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-emerald-200/80 cursor-pointer shadow-2xs"
+													>
+														<Lock className="h-3.5 w-3.5" />
+														<span>Kunci Rekap (Lock)</span>
+													</button>
+												)}
+											</div>
+										</div>
+									);
+								})
+							)}
+						</div>
+
+						{/* Desktop Table View (for screens >= 768px) */}
+						<div className="hidden md:block overflow-x-auto">
 							<table className="w-full text-left border-collapse">
 								<thead>
 									<tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase font-bold text-slate-400 tracking-widest font-mono">
@@ -640,7 +841,7 @@ export default function AdminRekapBulananPage() {
 								<tbody className="divide-y divide-slate-100 text-xs">
 									{rekapList.length === 0 ? (
 										<tr>
-											<td colSpan="12" className="px-5 py-10 text-center text-slate-400 font-medium">
+											<td colSpan="13" className="px-5 py-10 text-center text-slate-400 font-medium">
 												Tidak ada data rekapitulasi untuk bulan/tahun terpilih.
 											</td>
 										</tr>
@@ -742,16 +943,16 @@ export default function AdminRekapBulananPage() {
 						</div>
 
 						{/* Pagination Controls */}
-						<div className="bg-white border-t border-slate-100 px-5 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 print:hidden">
-							<div className="text-xs text-slate-500 font-medium">
+						<div className="bg-white border-t border-slate-100 px-4 sm:px-5 py-3.5 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3.5 print:hidden">
+							<div className="text-xs text-slate-500 font-medium text-center sm:text-left">
 								Menampilkan <span className="font-semibold text-slate-700">{meta.totalItems > 0 ? (page - 1) * limit + 1 : 0}</span> sampai{" "}
 								<span className="font-semibold text-slate-700">{Math.min(page * limit, meta.totalItems)}</span> dari{" "}
 								<span className="font-semibold text-slate-700">{meta.totalItems}</span> data
 							</div>
 							
-							<div className="flex items-center gap-4">
+							<div className="flex items-center gap-3 flex-wrap justify-center w-full sm:w-auto">
 								{/* Limit Selector */}
-								<div className="flex items-center gap-2">
+								<div className="flex items-center gap-1.5">
 									<span className="text-xs text-slate-500 font-medium">Baris:</span>
 									<select
 										value={limit}
@@ -773,36 +974,44 @@ export default function AdminRekapBulananPage() {
 									<button
 										onClick={() => setPage((p) => Math.max(1, p - 1))}
 										disabled={page === 1}
-										className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-[11px] font-bold"
+										className="px-3 py-2 sm:py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-xs font-bold min-h-[38px] sm:min-h-0"
 									>
 										Sebelumnya
 									</button>
 									
-									{Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-										.filter(p => p === 1 || p === meta.totalPages || Math.abs(p - page) <= 1)
-										.map((p, idx, arr) => {
-											const prev = arr[idx - 1];
-											return (
-												<div key={p} className="flex items-center gap-1.5">
-													{prev && p - prev > 1 && <span className="text-slate-400 text-xs px-1">...</span>}
-													<button
-														onClick={() => setPage(p)}
-														className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 ${
-															page === p
-																? "bg-primary-600 text-white shadow-sm"
-																: "hover:bg-slate-50 text-slate-600 border border-slate-200"
-														}`}
-													>
-														{p}
-													</button>
-												</div>
-											);
-										})}
+									{/* Desktop page number buttons */}
+									<div className="hidden sm:flex items-center gap-1.5">
+										{Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+											.filter(p => p === 1 || p === meta.totalPages || Math.abs(p - page) <= 1)
+											.map((p, idx, arr) => {
+												const prev = arr[idx - 1];
+												return (
+													<div key={p} className="flex items-center gap-1.5">
+														{prev && p - prev > 1 && <span className="text-slate-400 text-xs px-1">...</span>}
+														<button
+															onClick={() => setPage(p)}
+															className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-150 ${
+																page === p
+																	? "bg-primary-600 text-white shadow-sm"
+																	: "hover:bg-slate-50 text-slate-600 border border-slate-200"
+															}`}
+														>
+															{p}
+														</button>
+													</div>
+												);
+											})}
+									</div>
+
+									{/* Mobile page indicator badge */}
+									<div className="flex sm:hidden items-center px-2 text-xs font-mono font-bold text-slate-700">
+										{page} / {meta.totalPages || 1}
+									</div>
 
 									<button
 										onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
 										disabled={page === meta.totalPages || meta.totalPages === 0}
-										className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-[11px] font-bold"
+										className="px-3 py-2 sm:py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-all duration-150 text-xs font-bold min-h-[38px] sm:min-h-0"
 									>
 										Berikutnya
 									</button>
