@@ -37,6 +37,7 @@ import {
 	NotificationBell,
 	FloatingNotification,
 } from "@/components/notifications";
+import NotificationPermissionBanner from "@/components/notifications/NotificationPermissionBanner";
 import { removeClientToken } from "@/lib/client-auth";
 import adminType from "@/types/adminType";
 
@@ -400,6 +401,7 @@ export default function DashboardLayout({ children }) {
 
 				{/* Page content */}
 				<main className="px-0 md:px-6 print:p-0 print:m-0">
+					<NotificationPermissionBanner />
 					<div className="bg-white md:rounded-xl md:border md:border-gray-200/60 md:shadow-xs overflow-hidden print:border-none print:shadow-none print:p-0 print:m-0">
 						{children}
 					</div>
