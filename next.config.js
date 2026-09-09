@@ -107,11 +107,11 @@ const nextConfig = {
 				key: "Content-Security-Policy",
 				value: [
 					"default-src 'self'",
-					`script-src 'self' 'unsafe-eval' 'unsafe-inline'${__impeccableLiveDev}`,
+					`script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.onesignal.com https://*.onesignal.com${__impeccableLiveDev}`,
 					"style-src 'self' 'unsafe-inline'",
 					"img-src 'self' data: https:",
 					"font-src 'self'",
-					`connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001${__impeccableLiveDev}`,
+					`connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001 https://*.onesignal.com${__impeccableLiveDev}`,
 					"object-src 'none'",
 					"base-uri 'self'",
 					"form-action 'self'",
