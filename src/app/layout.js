@@ -142,9 +142,6 @@ export default function RootLayout({ children }) {
 						`,
 					}}
 				/>
-			{/* impeccable-live-start */}
-<script src="http://localhost:8400/live.js?token=b98b77a1-a9bd-40dd-a9be-a1779e27cbdf"></script>
-{/* impeccable-live-end */}
 				<Script
 					src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
 					strategy="afterInteractive"
@@ -155,9 +152,8 @@ export default function RootLayout({ children }) {
 						OneSignalDeferred.push(async function(OneSignal) {
 							await OneSignal.init({
 								appId: "2f714dce-3685-47a3-9a02-4350d1186f71",
-								safari_web_id: "web.onesignal.auto.4d1813bb-fb28-4cd6-9039-144582b81585",
 								notifyButton: {
-									enable: true,
+									enable: false,
 								},
 							});
 						});
