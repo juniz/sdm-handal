@@ -132,6 +132,19 @@ export default function DashboardLayout({ children }) {
 					setUserProfile(userData);
 					setUserId(userData.id);
 
+					if (typeof window !== "undefined") {
+						window.OneSignalDeferred = window.OneSignalDeferred || [];
+						window.OneSignalDeferred.push(async function(OneSignal) {
+							if (userData?.username) {
+								try {
+									await OneSignal.login(userData.username);
+								} catch (err) {
+									console.warn("OneSignal login error:", err);
+								}
+							}
+						});
+					}
+
 					setUserRole(userData.jabatan);
 
 					// Check user department
@@ -179,6 +192,16 @@ export default function DashboardLayout({ children }) {
 
 	const handleLogout = async () => {
 		try {
+			if (typeof window !== "undefined" && window.OneSignalDeferred) {
+				window.OneSignalDeferred.push(async function(OneSignal) {
+					try {
+						await OneSignal.logout();
+					} catch (err) {
+						console.warn("OneSignal logout error:", err);
+					}
+				});
+			}
+
 			const response = await fetch("/api/auth/logout", {
 				method: "POST",
 				headers: {
