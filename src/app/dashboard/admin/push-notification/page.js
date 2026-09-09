@@ -13,10 +13,22 @@ import {
 	ArrowLeft,
 	Loader2,
 	Info,
-	Radio,
+	AlertTriangle,
+	CheckCircle2,
+	X,
+	Clock,
+	History,
 } from "lucide-react";
 import { toast } from "sonner";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+
+const QUICK_ROUTES = [
+	{ label: "Tukar Dinas", path: "/dashboard/pengajuan-tukar-dinas" },
+	{ label: "Cuti", path: "/dashboard/cuti" },
+	{ label: "Kinerja", path: "/dashboard/penilaian-kinerja" },
+	{ label: "Slip Gaji", path: "/dashboard/penggajian" },
+	{ label: "Tiket IT", path: "/dashboard/ticket" },
+];
 
 export default function AdminPushNotificationPage() {
 	const [targetType, setTargetType] = useState("single");
@@ -25,9 +37,11 @@ export default function AdminPushNotificationPage() {
 	const [message, setMessage] = useState("");
 	const [url, setUrl] = useState("");
 	const [isSending, setIsSending] = useState(false);
+	const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
 	const [employees, setEmployees] = useState([]);
 	const [isLoadingPegawai, setIsLoadingPegawai] = useState(true);
+	const [sentHistory, setSentHistory] = useState([]);
 
 	useEffect(() => {
 		async function fetchPegawai() {
@@ -49,7 +63,27 @@ export default function AdminPushNotificationPage() {
 		}
 
 		fetchPegawai();
+
+		// Load local sent history if available
+		try {
+			const saved = localStorage.getItem("sdm_push_history");
+			if (saved) {
+				setSentHistory(JSON.parse(saved));
+			}
+		} catch (e) {
+			console.warn("Failed to load sent history:", e);
+		}
 	}, []);
+
+	const saveToHistory = (entry) => {
+		try {
+			const updated = [entry, ...sentHistory.slice(0, 9)];
+			setSentHistory(updated);
+			localStorage.setItem("sdm_push_history", JSON.stringify(updated));
+		} catch (e) {
+			console.warn("Failed to persist history:", e);
+		}
+	};
 
 	const employeeOptions = employees.map((emp) => ({
 		value: emp.value,
@@ -58,8 +92,14 @@ export default function AdminPushNotificationPage() {
 	}));
 
 	const selectedEmployee = employees.find((e) => e.value === selectedNik);
+	const isFormDirty = !!(title || message || url || selectedNik);
 
 	const handleReset = () => {
+		if (isFormDirty) {
+			if (!window.confirm("Kosongkan draft notifikasi yang sedang ditulis?")) {
+				return;
+			}
+		}
 		setTargetType("single");
 		setSelectedNik("");
 		setTitle("");
@@ -67,7 +107,7 @@ export default function AdminPushNotificationPage() {
 		setUrl("");
 	};
 
-	const handleSubmit = async (e) => {
+	const handleOpenConfirm = (e) => {
 		e.preventDefault();
 
 		if (targetType === "single" && !selectedNik) {
@@ -85,6 +125,10 @@ export default function AdminPushNotificationPage() {
 			return;
 		}
 
+		setIsConfirmModalOpen(true);
+	};
+
+	const handleExecuteSend = async () => {
 		setIsSending(true);
 
 		try {
@@ -104,327 +148,542 @@ export default function AdminPushNotificationPage() {
 				body: JSON.stringify(payload),
 			});
 
-			const data = await res.json();
+			const json = await res.json();
 
-			if (!res.ok || data.status === "error") {
-				let errMsg = "Gagal mengirim notifikasi";
-				if (typeof data.error === "string") {
-					errMsg = data.error;
-				} else if (Array.isArray(data.error)) {
-					errMsg = data.error.join(", ");
-				} else if (data.error?.invalid_external_user_ids) {
-					errMsg = `User belum terhubung ke push notifikasi: ${data.error.invalid_external_user_ids.join(", ")}`;
-				}
+			if (!res.ok || json.status === "error") {
+				const errMsg =
+					json.error?.invalid_external_user_ids?.length > 0
+						? `Pegawai (${json.error.invalid_external_user_ids.join(", ")}) belum mengaktifkan push notification di perangkatnya.`
+						: typeof json.error === "string"
+						? json.error
+						: "Gagal mengirim push notification.";
 				toast.error(errMsg);
 				return;
 			}
 
-			toast.success(data.message || "Push notification berhasil dikirim");
+			toast.success(
+				targetType === "all"
+					? "Push notification broadcast berhasil dikirim ke seluruh subscriber!"
+					: `Push notification berhasil dikirim ke ${selectedEmployee?.label || selectedNik}`
+			);
+
+			// Append to sent audit history
+			saveToHistory({
+				id: json.data?.id || `push-${Date.now()}`,
+				timestamp: new Date().toISOString(),
+				targetType,
+				recipientName:
+					targetType === "all"
+						? "Semua Pegawai (Broadcast)"
+						: selectedEmployee?.label || selectedNik,
+				recipientNik: targetType === "single" ? selectedNik : null,
+				title: title.trim(),
+				message: message.trim(),
+				url: url.trim() || null,
+			});
+
+			// Reset content fields
 			setTitle("");
 			setMessage("");
 			setUrl("");
+			setIsConfirmModalOpen(false);
 		} catch (err) {
-			console.error("Error submitting notification:", err);
-			toast.error("Terjadi kesalahan sistem saat mengirim notifikasi");
+			console.error("Error sending push notification:", err);
+			toast.error("Terjadi kesalahan jaringan saat mengirim notifikasi");
 		} finally {
 			setIsSending(false);
 		}
 	};
 
 	return (
-		<div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-			{/* Breadcrumb & Navigation */}
-			<div className="flex items-center gap-2 text-sm text-slate-500">
-				<Link
-					href="/dashboard/admin/settings"
-					className="inline-flex items-center gap-1.5 hover:text-slate-800 transition-colors"
-				>
-					<ArrowLeft className="w-4 h-4" />
-					<span>System Settings</span>
-				</Link>
-				<span>/</span>
-				<span className="text-slate-800 font-medium">Push Notification</span>
-			</div>
-
-			{/* Header */}
-			<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-				<div>
-					<h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-						<Bell className="w-7 h-7 text-indigo-600" />
-						Kirim Push Notification
-					</h1>
-					<p className="text-sm text-slate-600 mt-1">
-						Kirim push notification OneSignal ke pegawai tertentu atau broadcast ke seluruh perangkat terdaftar.
-					</p>
+		<div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+			{/* Breadcrumb & Header */}
+			<div>
+				<div className="flex items-center gap-2 text-xs font-semibold text-slate-500 mb-2 font-mono uppercase tracking-wider">
+					<Link
+						href="/dashboard/admin/settings"
+						className="hover:text-sky-600 flex items-center gap-1 transition-colors"
+					>
+						<ArrowLeft className="w-3.5 h-3.5" />
+						Pengaturan Sistem
+					</Link>
+					<span>/</span>
+					<span className="text-slate-800">Notifikasi Push</span>
+				</div>
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+					<div>
+						<h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight font-figtree flex items-center gap-3">
+							<div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 shrink-0">
+								<Bell className="w-5 h-5" />
+							</div>
+							Kirim Push Notification
+						</h1>
+						<p className="text-sm text-slate-600 mt-1">
+							Kirim pesan siaran atau notifikasi personal ke perangkat pegawai terdaftar melalui OneSignal
+						</p>
+					</div>
+					<div className="flex items-center gap-2">
+						<span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+							<span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+							OneSignal Aktif
+						</span>
+					</div>
 				</div>
 			</div>
 
-			{/* Main Grid: Form (7 cols) & Live Preview (5 cols) */}
+			{/* Main Grid: Form (7 cols) + Preview & History (5 cols) */}
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-				{/* Left Column: Form */}
-				<div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6">
-					<form onSubmit={handleSubmit} className="space-y-5">
-						{/* Target Type Pill Buttons */}
+				{/* Left Column: Form Card */}
+				<div className="lg:col-span-7 bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+					<div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<Send className="w-4 h-4 text-sky-600" />
+							<h2 className="text-sm font-bold text-slate-900 font-figtree">
+								Formulir Notifikasi
+							</h2>
+						</div>
+						{isFormDirty && (
+							<button
+								type="button"
+								onClick={handleReset}
+								className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors"
+							>
+								<RotateCcw className="w-3.5 h-3.5" />
+								Reset
+							</button>
+						)}
+					</div>
+
+					<form onSubmit={handleOpenConfirm} className="p-6 space-y-5">
+						{/* Target Type Selector */}
 						<div>
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-								Target Penerima
+							<label className="block text-xs font-bold text-slate-700 mb-2 font-figtree uppercase tracking-wider">
+								Sasaran Penerima <span className="text-rose-500">*</span>
 							</label>
-							<div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
+							<div className="grid grid-cols-2 gap-3">
 								<button
 									type="button"
 									onClick={() => setTargetType("single")}
-									className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+									className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border text-xs font-bold transition-all ${
 										targetType === "single"
-											? "bg-white text-indigo-600 shadow-xs border border-slate-200/80 font-semibold"
-											: "text-slate-600 hover:text-slate-900"
+											? "bg-sky-50 border-sky-500 text-sky-700 shadow-xs"
+											: "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
 									}`}
 								>
 									<User className="w-4 h-4" />
-									<span>Pegawai Tertentu</span>
+									Pegawai Tertentu
 								</button>
 								<button
 									type="button"
 									onClick={() => setTargetType("all")}
-									className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+									className={`flex items-center justify-center gap-2.5 px-4 py-3 rounded-lg border text-xs font-bold transition-all ${
 										targetType === "all"
-											? "bg-white text-indigo-600 shadow-xs border border-slate-200/80 font-semibold"
-											: "text-slate-600 hover:text-slate-900"
+											? "bg-sky-50 border-sky-500 text-sky-700 shadow-xs"
+											: "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
 									}`}
 								>
 									<Users className="w-4 h-4" />
-									<span>Broadcast Semua Pegawai</span>
+									Broadcast Semua Pegawai
 								</button>
 							</div>
 						</div>
 
-						{/* Single Target Employee Selection */}
-						{targetType === "single" && (
-							<div className="space-y-1.5">
-								<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+						{/* Single Employee Picker */}
+						{targetType === "single" ? (
+							<div>
+								<label className="block text-xs font-bold text-slate-700 mb-1.5 font-figtree uppercase tracking-wider">
 									Pilih Pegawai <span className="text-rose-500">*</span>
 								</label>
 								<SearchableSelect
 									options={employeeOptions}
 									value={selectedNik}
 									onChange={(val) => setSelectedNik(val)}
-									placeholder={isLoadingPegawai ? "Memuat pegawai..." : "Cari berdasarkan nama atau NIK..."}
+									placeholder={
+										isLoadingPegawai
+											? "Memuat data pegawai..."
+											: "Cari nama pegawai atau NIK..."
+									}
 									disabled={isLoadingPegawai}
 								/>
 								{selectedEmployee && (
-									<div className="flex items-center gap-2 mt-1.5 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-										<span className="font-semibold text-slate-800">{selectedEmployee.label}</span>
-										<span>•</span>
-										<span className="font-mono text-slate-500">{selectedEmployee.value}</span>
-										{selectedEmployee.nama_departemen && (
-											<>
-												<span>•</span>
-												<span className="text-slate-600">{selectedEmployee.nama_departemen}</span>
-											</>
-										)}
+									<div className="mt-2.5 flex items-center gap-3 p-3 bg-slate-50 border border-slate-200/80 rounded-lg text-xs">
+										<div className="w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-bold flex items-center justify-center shrink-0">
+											{selectedEmployee.label?.[0]?.toUpperCase() || "P"}
+										</div>
+										<div className="min-w-0 flex-1">
+											<p className="font-bold text-slate-900 truncate">
+												{selectedEmployee.label}
+											</p>
+											<p className="text-slate-500 font-mono text-[11px]">
+												NIK: {selectedEmployee.value} •{" "}
+												{selectedEmployee.nama_departemen || "Umum"}
+											</p>
+										</div>
 									</div>
 								)}
 							</div>
-						)}
-
-						{/* Broadcast Warning Notice */}
-						{targetType === "all" && (
-							<div className="flex items-start gap-2.5 p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-xs leading-relaxed">
-								<Radio className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+						) : (
+							<div className="flex items-start gap-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-lg text-xs text-amber-900 leading-relaxed">
+								<AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
 								<div>
-									<span className="font-semibold">Perhatian Siaran Massal:</span> Notifikasi akan dikirimkan ke seluruh perangkat pegawai yang telah aktif berlangganan push notification OneSignal.
+									<p className="font-bold text-amber-950">
+										Peringatan Siaran Massal
+									</p>
+									<p className="mt-0.5 text-amber-800 text-[11.5px]">
+										Pesan akan dikirimkan ke seluruh perangkat pegawai yang saat ini terdaftar dan mengaktifkan notifikasi.
+									</p>
 								</div>
 							</div>
 						)}
 
-						{/* Judul Notifikasi */}
-						<div className="space-y-1.5">
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-								Judul Notifikasi <span className="text-rose-500">*</span>
-							</label>
+						{/* Notification Title */}
+						<div>
+							<div className="flex items-center justify-between mb-1.5">
+								<label className="block text-xs font-bold text-slate-700 font-figtree uppercase tracking-wider">
+									Judul Notifikasi <span className="text-rose-500">*</span>
+								</label>
+								<span
+									className={`text-[11px] font-mono ${
+										title.length > 45 ? "text-amber-600 font-bold" : "text-slate-400"
+									}`}
+								>
+									{title.length}/50
+								</span>
+							</div>
 							<input
 								type="text"
 								value={title}
 								onChange={(e) => setTitle(e.target.value)}
-								placeholder="cth: Pengumuman Jadwal Dinas"
-								className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
-								required
+								maxLength={50}
+								placeholder="Contoh: Pengumuman Jadwal Dinas Baru"
+								className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-sans"
 							/>
+							{title.length > 45 && (
+								<p className="text-[11px] text-amber-600 mt-1 font-medium">
+									Judul mendekati batas ideal layar ponsel agar tidak terpotong.
+								</p>
+							)}
 						</div>
 
-						{/* Isi Pesan */}
-						<div className="space-y-1.5">
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-								Isi Pesan <span className="text-rose-500">*</span>
-							</label>
+						{/* Notification Body */}
+						<div>
+							<div className="flex items-center justify-between mb-1.5">
+								<label className="block text-xs font-bold text-slate-700 font-figtree uppercase tracking-wider">
+									Isi Pesan Notifikasi <span className="text-rose-500">*</span>
+								</label>
+								<span className="text-[11px] font-mono text-slate-400">
+									{message.length}/500
+								</span>
+							</div>
 							<textarea
 								rows={4}
 								value={message}
 								onChange={(e) => setMessage(e.target.value)}
-								placeholder="Tulis pesan notifikasi..."
-								className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 resize-none leading-relaxed"
-								required
+								maxLength={500}
+								placeholder="Tuliskan pesan notifikasi secara padat dan jelas untuk pegawai..."
+								className="w-full px-3.5 py-2.5 text-sm bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-sans resize-y"
 							/>
-							<div className="flex justify-between items-center text-[11px] text-slate-400">
-								<span>Disarankan singkat dan jelas untuk tampilan notifikasi ponsel.</span>
-								<span>{message.length} karakter</span>
-							</div>
 						</div>
 
-						{/* URL Tujuan */}
-						<div className="space-y-1.5">
-							<label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-								URL Tujuan <span className="text-slate-400 font-normal lowercase">(opsional)</span>
-							</label>
+						{/* Destination URL */}
+						<div>
+							<div className="flex items-center justify-between mb-1.5">
+								<label className="block text-xs font-bold text-slate-700 font-figtree uppercase tracking-wider">
+									Tautan Tujuan / Deep Link{" "}
+									<span className="text-slate-400 font-normal font-sans text-[11px] lowercase">
+										(opsional)
+									</span>
+								</label>
+							</div>
 							<div className="relative">
 								<input
 									type="text"
 									value={url}
 									onChange={(e) => setUrl(e.target.value)}
-									placeholder="/dashboard/pengajuan-tukar-dinas"
-									className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400"
+									placeholder="/dashboard/penilaian-kinerja atau https://..."
+									className="w-full pl-3.5 pr-10 py-2.5 text-sm bg-white border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all font-mono text-xs"
 								/>
-								<ExternalLink className="absolute right-3.5 top-3 w-4 h-4 text-slate-400 pointer-events-none" />
+								<ExternalLink className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
 							</div>
-							<p className="text-[11px] text-slate-400">
-								Halaman tujuan saat penerima mengetuk notifikasi. Gunakan tautan relatif atau absolut.
-							</p>
+
+							{/* Quick Route Suggestions */}
+							<div className="mt-2 flex flex-wrap items-center gap-1.5">
+								<span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+									Rekomendasi:
+								</span>
+								{QUICK_ROUTES.map((route) => (
+									<button
+										key={route.path}
+										type="button"
+										onClick={() => setUrl(route.path)}
+										className={`px-2 py-0.5 text-[11px] rounded-md border font-medium transition-colors ${
+											url === route.path
+												? "bg-sky-100 border-sky-300 text-sky-800 font-bold"
+												: "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+										}`}
+									>
+										{route.label}
+									</button>
+								))}
+							</div>
 						</div>
 
-						{/* Action Buttons */}
-						<div className="flex items-center gap-3 pt-2">
+						{/* Submit Button */}
+						<div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+							<button
+								type="button"
+								onClick={handleReset}
+								disabled={!isFormDirty || isSending}
+								className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+							>
+								Batal / Bersihkan
+							</button>
 							<button
 								type="submit"
 								disabled={isSending}
-								className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-all shadow-xs cursor-pointer"
+								className="inline-flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow-sm active:scale-[0.99] transition-all disabled:opacity-50 disabled:pointer-events-none font-figtree tracking-wide"
 							>
 								{isSending ? (
 									<>
 										<Loader2 className="w-4 h-4 animate-spin" />
-										<span>Mengirim Notifikasi...</span>
+										Mengirimkan...
 									</>
 								) : (
 									<>
 										<Send className="w-4 h-4" />
-										<span>Kirim Notifikasi</span>
+										Kirim Notifikasi
 									</>
 								)}
-							</button>
-							<button
-								type="button"
-								onClick={handleReset}
-								disabled={isSending}
-								className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 text-sm font-medium rounded-xl transition-colors cursor-pointer"
-							>
-								<RotateCcw className="w-4 h-4" />
-								<span>Reset</span>
 							</button>
 						</div>
 					</form>
 				</div>
 
-				{/* Right Column: Realistic Live Preview */}
-				<div className="lg:col-span-5 space-y-4">
-					<div className="flex items-center justify-between px-1">
-						<h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-							<Smartphone className="w-4 h-4 text-indigo-500" />
-							Live Push Preview
-						</h2>
-						<span className="text-[11px] font-medium text-slate-400">Tampilan Mobile</span>
-					</div>
-
-					{/* Phone Container */}
-					<div className="bg-slate-900 rounded-[2.5rem] p-3 shadow-xl border-4 border-slate-800">
-						{/* Screen */}
-						<div className="rounded-[2rem] overflow-hidden bg-gradient-to-b from-indigo-950/70 via-slate-900 to-slate-950 p-4 min-h-[380px] flex flex-col justify-between relative border border-white/5">
-							{/* Phone Speaker & Camera Notch */}
-							<div className="flex justify-center mb-6">
-								<div className="h-4 w-28 bg-black/80 rounded-full flex items-center justify-center gap-2 px-2">
-									<div className="w-2 h-2 rounded-full bg-slate-800"></div>
-									<div className="w-1.5 h-1.5 rounded-full bg-indigo-900/60"></div>
-								</div>
+				{/* Right Column: Clinical Preview & Sent History (5 cols) */}
+				<div className="lg:col-span-5 space-y-6">
+					{/* Clinical Preview Card */}
+					<div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+						<div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+							<div className="flex items-center gap-2">
+								<Smartphone className="w-4 h-4 text-sky-600" />
+								<h2 className="text-xs font-bold text-slate-900 font-figtree uppercase tracking-wider">
+									Pratinjau Notifikasi
+								</h2>
 							</div>
+							<span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+								Live
+							</span>
+						</div>
 
-							{/* Status Bar */}
-							<div className="flex justify-between items-center text-[10px] text-white/70 px-2 -mt-4 mb-8">
-								<span className="font-semibold">09:41</span>
-								<div className="flex items-center gap-1.5">
-									<span className="text-[9px]">5G</span>
-									<div className="w-4 h-2 border border-white/70 rounded-xs flex items-center p-0.5">
-										<div className="w-full h-full bg-white/90 rounded-2xs"></div>
-									</div>
-								</div>
-							</div>
-
-							{/* Notification Banner */}
-							<div className="my-auto">
-								<div className="bg-white/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-white/40 text-slate-900 transition-all">
-									{/* App Header Row */}
-									<div className="flex items-center justify-between mb-2">
-										<div className="flex items-center gap-2">
-											<div className="w-5 h-5 rounded-md bg-indigo-600 flex items-center justify-center shadow-xs">
-												<Bell className="w-3 h-3 text-white" />
-											</div>
-											<span className="text-xs font-semibold text-slate-800">SDM Handal</span>
-											<span className="text-[10px] text-slate-400">• Baru saja</span>
+						<div className="p-5 bg-slate-50/50">
+							<div className="bg-white border border-slate-200/90 rounded-xl p-4 shadow-sm space-y-2.5 transition-all">
+								{/* Notification Header */}
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-2">
+										<div className="w-6 h-6 rounded-md bg-sky-600 text-white flex items-center justify-center font-bold text-[11px] shadow-xs">
+											H
+										</div>
+										<div className="flex items-center gap-1.5">
+											<span className="text-xs font-bold text-slate-900 font-figtree">
+												SDM Handal
+											</span>
+											<span className="text-[10.5px] text-slate-400">• Baru saja</span>
 										</div>
 									</div>
-
-									{/* Notification Content */}
-									<div className="space-y-1">
-										<h3 className="text-xs font-bold text-slate-900 truncate">
-											{title.trim() || "cth: Pengumuman Jadwal Dinas"}
-										</h3>
-										<p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-											{message.trim() || "Tulis pesan notifikasi pada form untuk melihat simulasi tampilan push notification di perangkat pengguna."}
-										</p>
-									</div>
-
-									{/* Action / URL Indicator */}
-									{url.trim() && (
-										<div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-indigo-600 font-medium">
-											<span className="truncate max-w-[190px] font-mono">{url.trim()}</span>
-											<ExternalLink className="w-3 h-3 shrink-0" />
-										</div>
-									)}
-								</div>
-
-								{/* Target recipient preview badge */}
-								<div className="mt-3 text-center">
-									<span className="inline-flex items-center gap-1.5 text-[11px] text-indigo-300/80 bg-indigo-950/60 px-2.5 py-1 rounded-full border border-indigo-800/40">
-										{targetType === "single" ? (
-											<>
-												<User className="w-3 h-3" />
-												<span>Penerima: {selectedEmployee ? selectedEmployee.label : "Belum dipilih"}</span>
-											</>
-										) : (
-											<>
-												<Users className="w-3 h-3" />
-												<span>Penerima: Semua Pegawai (Broadcast)</span>
-											</>
-										)}
+									<span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-sky-50 text-sky-700 border border-sky-100">
+										{targetType === "all" ? "Broadcast" : "Personal"}
 									</span>
 								</div>
-							</div>
 
-							{/* Home Indicator Bar */}
-							<div className="flex justify-center pt-6 pb-1">
-								<div className="w-28 h-1 bg-white/40 rounded-full"></div>
+								{/* Title & Body */}
+								<div>
+									<p className="text-xs font-bold text-slate-900 leading-snug">
+										{title.trim() || "Judul Notifikasi Muncul di Sini"}
+									</p>
+									<p className="text-xs text-slate-600 mt-1 leading-relaxed line-clamp-3">
+										{message.trim() ||
+											"Isi pesan notifikasi yang Anda ketikkan pada formulir akan ditampilkan persis seperti ini di layar perangkat pengguna."}
+									</p>
+								</div>
+
+								{/* Target & URL Chips */}
+								<div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5 text-[10px]">
+									<span className="text-slate-500 font-mono">
+										Kepada:{" "}
+										<strong className="text-slate-800">
+											{targetType === "all"
+												? "Semua Pegawai"
+												: selectedEmployee?.label || "Pilih Pegawai"}
+										</strong>
+									</span>
+									{url && (
+										<span className="text-sky-600 font-mono truncate max-w-[200px] flex items-center gap-1">
+											<ExternalLink className="w-3 h-3 shrink-0" />
+											{url}
+										</span>
+									)}
+								</div>
 							</div>
 						</div>
 					</div>
 
-					{/* Helper Card */}
-					<div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
-						<div className="flex items-center gap-1.5 font-semibold text-slate-700">
-							<Info className="w-3.5 h-3.5 text-indigo-500" />
-							<span>Informasi Pengiriman</span>
+					{/* Sent History Card */}
+					<div className="bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+						<div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+							<div className="flex items-center gap-2">
+								<History className="w-4 h-4 text-slate-600" />
+								<h2 className="text-xs font-bold text-slate-900 font-figtree uppercase tracking-wider">
+									Riwayat Pengiriman Sesi Ini
+								</h2>
+							</div>
+							<span className="text-[10px] font-mono text-slate-400">
+								{sentHistory.length} terkirim
+							</span>
 						</div>
-						<p className="text-[11px] text-slate-500 leading-normal">
-							Notifikasi dikirim melalui layanan OneSignal. Hanya pegawai yang telah mengizinkan izin notifikasi pada peramban/aplikasi yang akan menerima push notification.
-						</p>
+
+						<div className="divide-y divide-slate-100 max-h-[320px] overflow-y-auto">
+							{sentHistory.length === 0 ? (
+								<div className="py-8 text-center px-4">
+									<Clock className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+									<p className="text-xs text-slate-500 font-medium">
+										Belum ada notifikasi yang dikirim pada sesi ini.
+									</p>
+									<p className="text-[11px] text-slate-400 mt-0.5">
+										Riwayat akan tercatat otomatis saat pengiriman sukses.
+									</p>
+								</div>
+							) : (
+								sentHistory.map((item, idx) => (
+									<div key={item.id || idx} className="p-3.5 hover:bg-slate-50 transition-colors text-xs space-y-1">
+										<div className="flex items-center justify-between gap-2">
+											<span className="font-bold text-slate-900 truncate">
+												{item.title}
+											</span>
+											<span className="inline-flex items-center gap-1 text-[9.5px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
+												<CheckCircle2 className="w-2.5 h-2.5" />
+												Terkirim
+											</span>
+										</div>
+										<p className="text-slate-500 text-[11px] line-clamp-1">
+											{item.message}
+										</p>
+										<div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 font-mono">
+											<span>Kepada: {item.recipientName}</span>
+											<span>
+												{new Date(item.timestamp).toLocaleTimeString("id-ID", {
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
+											</span>
+										</div>
+									</div>
+								))
+							)}
+						</div>
 					</div>
 				</div>
 			</div>
+
+			{/* Safety Confirmation Modal */}
+			{isConfirmModalOpen && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+					<div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+						<div className="p-5 border-b border-slate-100 flex items-center justify-between">
+							<div className="flex items-center gap-2.5">
+								<div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200">
+									<AlertTriangle className="w-4 h-4" />
+								</div>
+								<div>
+									<h3 className="text-sm font-bold text-slate-900 font-figtree">
+										Konfirmasi Pengiriman Notifikasi
+									</h3>
+									<p className="text-[11px] text-slate-500">
+										Pastikan isi dan sasaran penerima sudah tepat
+									</p>
+								</div>
+							</div>
+							<button
+								type="button"
+								onClick={() => setIsConfirmModalOpen(false)}
+								className="text-slate-400 hover:text-slate-600 p-1 rounded-md"
+							>
+								<X className="w-4 h-4" />
+							</button>
+						</div>
+
+						<div className="p-5 space-y-3.5 text-xs text-slate-700 bg-slate-50/50">
+							<div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1.5">
+								<p className="text-[11px] font-bold text-slate-400 uppercase font-mono tracking-wider">
+									Sasaran Penerima:
+								</p>
+								{targetType === "all" ? (
+									<p className="font-bold text-amber-900 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+										⚠️ Siaran Massal ke Seluruh Pegawai Terdaftar
+									</p>
+								) : (
+									<p className="font-bold text-slate-900">
+										{selectedEmployee?.label} (NIK: {selectedNik})
+									</p>
+								)}
+							</div>
+
+							<div className="p-3 bg-white rounded-lg border border-slate-200/80 space-y-1.5">
+								<p className="text-[11px] font-bold text-slate-400 uppercase font-mono tracking-wider">
+									Judul:
+								</p>
+								<p className="font-bold text-slate-900">{title}</p>
+
+								<p className="text-[11px] font-bold text-slate-400 uppercase font-mono tracking-wider pt-2">
+									Isi Pesan:
+								</p>
+								<p className="text-slate-700 italic bg-slate-50 p-2 rounded border border-slate-100">
+									"{message}"
+								</p>
+
+								{url && (
+									<div className="pt-2">
+										<p className="text-[11px] font-bold text-slate-400 uppercase font-mono tracking-wider">
+											Tautan:
+										</p>
+										<p className="text-sky-600 font-mono text-[11px] truncate">
+											{url}
+										</p>
+									</div>
+								)}
+							</div>
+						</div>
+
+						<div className="p-4 bg-white border-t border-slate-100 flex items-center justify-end gap-2.5">
+							<button
+								type="button"
+								onClick={() => setIsConfirmModalOpen(false)}
+								disabled={isSending}
+								className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+							>
+								Batal
+							</button>
+							<button
+								type="button"
+								onClick={handleExecuteSend}
+								disabled={isSending}
+								className="inline-flex items-center gap-2 px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-lg shadow-xs transition-all disabled:opacity-50"
+							>
+								{isSending ? (
+									<>
+										<Loader2 className="w-3.5 h-3.5 animate-spin" />
+										Mengirimkan...
+									</>
+								) : (
+									<>
+										<Send className="w-3.5 h-3.5" />
+										Ya, Kirim Sekarang
+									</>
+								)}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

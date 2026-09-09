@@ -18,15 +18,15 @@ export default function AdminSettingsPage() {
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 				<div className="bg-white p-6 rounded-lg shadow-sm border">
 					<div className="flex items-center gap-3 mb-4">
-						<Bell className="w-8 h-8 text-indigo-500" />
-						<h3 className="text-lg font-medium">Push Notification</h3>
+						<Bell className="w-8 h-8 text-sky-600" />
+						<h3 className="text-lg font-medium text-slate-800">Push Notification</h3>
 					</div>
-					<p className="text-gray-600 text-sm mb-4">
+					<p className="text-slate-600 text-sm mb-4">
 						Kirim push notification OneSignal ke pegawai tertentu atau broadcast
 					</p>
 					<Link
 						href="/dashboard/admin/push-notification"
-						className="inline-block text-center w-full px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 text-sm"
+						className="inline-block text-center w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm font-medium transition-colors"
 					>
 						Kelola Notifikasi
 					</Link>
