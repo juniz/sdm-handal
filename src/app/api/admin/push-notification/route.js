@@ -118,7 +118,11 @@ export async function POST(request) {
 		const appId =
 			process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ||
 			"2f714dce-3685-47a3-9a02-4350d1186f71";
-		const apiKey = process.env.ONESIGNAL_REST_API_KEY;
+		const rawApiKey = process.env.ONESIGNAL_REST_API_KEY;
+		const apiKey =
+			typeof rawApiKey === "string"
+				? rawApiKey.trim().replace(/^["']|["']$/g, "")
+				: "";
 
 		if (!apiKey) {
 			return NextResponse.json(
