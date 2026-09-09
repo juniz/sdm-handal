@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { getUser } from "@/lib/auth";
 
 // TEMPORARY DEBUG ENDPOINT — delete after diagnosis
@@ -43,6 +44,7 @@ export async function GET() {
 		keyLength: rawApiKey ? rawApiKey.length : 0,
 		keyPrefix: rawApiKey ? rawApiKey.substring(0, 12) : "(not set)",
 		keySuffix: rawApiKey ? rawApiKey.slice(-4) : "(not set)",
+		keyHash: rawApiKey ? createHash("sha256").update(rawApiKey).digest("hex").slice(0, 16) : "(not set)",
 		hasQuotes: rawApiKey ? /^["']|["']$/.test(rawApiKey.trim()) : false,
 		hasNewline: rawApiKey ? rawApiKey.includes("\n") || rawApiKey.includes("\r") : false,
 		onesignal: { status: osStatus, body: osBody, error: osError },
