@@ -160,6 +160,9 @@ export async function POST(request) {
 				targetNiks = rows.map((r) => String(r.nik)).filter(Boolean);
 			}
 
+			// Deduplicate target NIKs
+			targetNiks = Array.from(new Set(targetNiks));
+
 			if (targetNiks.length === 0) {
 				return NextResponse.json(
 					{
@@ -191,10 +194,19 @@ export async function POST(request) {
 		const result = await osResponse.json();
 
 		if (!osResponse.ok || (result.errors && !result.id)) {
+			let friendlyError = result.errors;
+			if (result?.errors?.invalid_aliases?.external_id) {
+				const unreg = result.errors.invalid_aliases.external_id;
+				const unregList = Array.isArray(unreg) ? unreg.join(", ") : String(unreg);
+				friendlyError = `Pegawai (${unregList}) belum mengaktifkan izin notifikasi di browser/perangkat. Buka Profil > Pengaturan Notifikasi untuk aktifkan.`;
+			} else if (Array.isArray(result.errors) && result.errors.includes("All included players are not subscribed")) {
+				friendlyError = "Belum ada pegawai yang berlangganan/mengaktifkan notifikasi push.";
+			}
+
 			return NextResponse.json(
 				{
 					status: "error",
-					error: result.errors || "Failed to send notification",
+					error: friendlyError || "Failed to send notification",
 				},
 				{ status: 400 }
 			);
