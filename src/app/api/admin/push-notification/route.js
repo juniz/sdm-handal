@@ -77,9 +77,16 @@ export async function POST(request) {
 				? body.url.trim()
 				: undefined;
 
-		if (target_type !== "single" && target_type !== "all") {
+		if (
+			target_type !== "single" &&
+			target_type !== "all" &&
+			target_type !== "department"
+		) {
 			return NextResponse.json(
-				{ status: "error", error: "target_type harus 'single' atau 'all'" },
+				{
+					status: "error",
+					error: "target_type harus 'single', 'department', atau 'all'",
+				},
 				{ status: 400 }
 			);
 		}
@@ -136,6 +143,32 @@ export async function POST(request) {
 
 		if (target_type === "all") {
 			payload.included_segments = ["Subscribed Users"];
+		} else if (target_type === "department") {
+			let targetNiks = Array.isArray(body?.external_ids)
+				? body.external_ids.map(String).filter(Boolean)
+				: [];
+
+			if (targetNiks.length === 0 && body?.department) {
+				const rows = await rawQuery(
+					"SELECT p.nik FROM pegawai p WHERE p.departemen = ? AND p.stts_aktif = 'AKTIF'",
+					[body.department]
+				);
+				targetNiks = rows.map((r) => String(r.nik)).filter(Boolean);
+			}
+
+			if (targetNiks.length === 0) {
+				return NextResponse.json(
+					{
+						status: "error",
+						error: "Tidak ada pegawai aktif ditemukan untuk unit/departemen yang dipilih",
+					},
+					{ status: 400 }
+				);
+			}
+
+			payload.include_aliases = {
+				external_id: targetNiks,
+			};
 		} else {
 			payload.include_aliases = {
 				external_id: [external_id],
