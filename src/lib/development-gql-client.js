@@ -420,11 +420,29 @@ export async function fetchDevelopmentRequests(
 	);
 
 	const res = data?.developmentRequests;
+	let masterData = normalizeMasterData(res?.masterData);
+	const hasMasterData =
+		(masterData.statuses && masterData.statuses.length > 0) ||
+		(masterData.priorities && masterData.priorities.length > 0) ||
+		(masterData.moduleTypes && masterData.moduleTypes.length > 0) ||
+		(masterData.departments && masterData.departments.length > 0);
+
+	if (!hasMasterData) {
+		try {
+			const fallbackMasterData = await fetchDevelopmentMasterData(token);
+			if (fallbackMasterData) {
+				masterData = fallbackMasterData;
+			}
+		} catch (err) {
+			console.warn("Fallback fetchDevelopmentMasterData failed:", err);
+		}
+	}
+
 	return {
 		total: res?.total || 0,
 		items: (res?.items || []).map(normalizeRequest),
 		statistics: normalizeStatistics(res?.statistics),
-		masterData: normalizeMasterData(res?.masterData),
+		masterData,
 	};
 }
 

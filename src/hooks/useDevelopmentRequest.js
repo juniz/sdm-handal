@@ -84,7 +84,15 @@ export const useDevelopmentRequest = (initialFilters = {}) => {
 				}
 
 				setStatistics(result.data.statistics);
-				setMasterData(result.data.masterData);
+				if (
+					result.data?.masterData &&
+					(result.data.masterData.statuses?.length > 0 ||
+						result.data.masterData.priorities?.length > 0 ||
+						result.data.masterData.moduleTypes?.length > 0 ||
+						result.data.masterData.departments?.length > 0)
+				) {
+					setMasterData(result.data.masterData);
+				}
 				setHasMore(result.data.pagination.hasMore);
 				setError(null);
 			} catch (err) {
