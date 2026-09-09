@@ -12,6 +12,7 @@ import {
 	RefreshCw,
 	Smartphone,
 	AlertCircle,
+	RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -190,11 +191,19 @@ export default function NotificationSettingsCard() {
 					}
 
 					if (isOptedIn) {
-						await pushSub.optOut();
+						try {
+							await pushSub.optOut();
+						} catch (optErr) {
+							console.warn("OneSignal remote optOut warning:", optErr);
+						}
 						setIsOptedIn(false);
 						toast.info("Notifikasi dinonaktifkan pada perangkat ini");
 					} else {
-						await pushSub.optIn();
+						try {
+							await pushSub.optIn();
+						} catch (optErr) {
+							console.warn("OneSignal remote optIn warning:", optErr);
+						}
 						setIsOptedIn(true);
 						if (pushSub.id) {
 							setSubscriptionId(pushSub.id);
@@ -212,6 +221,59 @@ export default function NotificationSettingsCard() {
 		} catch (err) {
 			clearTimeout(safetyTimeout);
 			console.error("Subscription toggle exception:", err);
+			setIsLoading(false);
+		}
+	};
+
+	const handleResetSubscription = async () => {
+		setIsLoading(true);
+		try {
+			if (typeof window !== "undefined") {
+				window.OneSignalDeferred = window.OneSignalDeferred || [];
+				window.OneSignalDeferred.push(async (OneSignal) => {
+					try {
+						await OneSignal.logout();
+					} catch (e) {
+						console.warn("OneSignal logout error:", e);
+					}
+				});
+
+				if (window.indexedDB?.databases) {
+					try {
+						const dbs = await window.indexedDB.databases();
+						for (const db of dbs) {
+							if (db.name && db.name.toLowerCase().includes("onesignal")) {
+								window.indexedDB.deleteDatabase(db.name);
+							}
+						}
+					} catch (e) {
+						console.warn("IDB delete error:", e);
+					}
+				}
+
+				Object.keys(localStorage).forEach((k) => {
+					if (k.toLowerCase().includes("onesignal")) {
+						localStorage.removeItem(k);
+					}
+				});
+
+				if ("serviceWorker" in navigator) {
+					const registrations = await navigator.serviceWorker.getRegistrations();
+					for (const reg of registrations) {
+						if (reg.active?.scriptURL?.includes("OneSignal")) {
+							await reg.unregister();
+						}
+					}
+				}
+
+				toast.success("Langganan direset. Halaman akan dimuat ulang...");
+				setTimeout(() => {
+					window.location.reload();
+				}, 800);
+			}
+		} catch (err) {
+			console.error("Reset subscription error:", err);
+			toast.error("Gagal mereset langganan");
 			setIsLoading(false);
 		}
 	};
@@ -366,35 +428,48 @@ export default function NotificationSettingsCard() {
 								: "Langganan perangkat ini sedang dinonaktifkan sementara."}
 						</p>
 
-						{isOptedIn ? (
+						<div className="flex items-center gap-2 shrink-0 flex-wrap">
 							<button
 								type="button"
-								onClick={handleToggleSubscription}
+								onClick={handleResetSubscription}
 								disabled={isLoading}
-								className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50 shrink-0 font-figtree"
+								className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors disabled:opacity-50 font-figtree"
+								title="Hapus cache dan daftarkan ulang perangkat ini ke OneSignal"
 							>
-								{isLoading ? (
-									<Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
-								) : (
-									<BellOff className="w-3.5 h-3.5 text-slate-500" />
-								)}
-								<span>Nonaktifkan di Perangkat Ini</span>
+								<RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+								<span>Reset Langganan</span>
 							</button>
-						) : (
-							<button
-								type="button"
-								onClick={handleToggleSubscription}
-								disabled={isLoading}
-								className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-lg transition-colors disabled:opacity-50 shrink-0 shadow-xs font-figtree"
-							>
-								{isLoading ? (
-									<Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-								) : (
-									<Bell className="w-3.5 h-3.5 text-white" />
-								)}
-								<span>Aktifkan Kembali Notifikasi</span>
-							</button>
-						)}
+
+							{isOptedIn ? (
+								<button
+									type="button"
+									onClick={handleToggleSubscription}
+									disabled={isLoading}
+									className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-colors disabled:opacity-50 font-figtree"
+								>
+									{isLoading ? (
+										<Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />
+									) : (
+										<BellOff className="w-3.5 h-3.5 text-slate-500" />
+									)}
+									<span>Nonaktifkan di Perangkat Ini</span>
+								</button>
+							) : (
+								<button
+									type="button"
+									onClick={handleToggleSubscription}
+									disabled={isLoading}
+									className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-[#0284C7] hover:bg-[#0369A1] rounded-lg transition-colors disabled:opacity-50 shadow-xs font-figtree"
+								>
+									{isLoading ? (
+										<Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+									) : (
+										<Bell className="w-3.5 h-3.5 text-white" />
+									)}
+									<span>Aktifkan Kembali Notifikasi</span>
+								</button>
+							)}
+						</div>
 					</div>
 				</div>
 			) : (
