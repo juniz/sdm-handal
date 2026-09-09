@@ -1,6 +1,7 @@
 "use client";
 
-import { Settings, Database, Shield, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Settings, Database, Shield, AlertTriangle, Bell } from "lucide-react";
 
 export default function AdminSettingsPage() {
 	return (
@@ -15,6 +16,22 @@ export default function AdminSettingsPage() {
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<div className="bg-white p-6 rounded-lg shadow-sm border">
+					<div className="flex items-center gap-3 mb-4">
+						<Bell className="w-8 h-8 text-indigo-500" />
+						<h3 className="text-lg font-medium">Push Notification</h3>
+					</div>
+					<p className="text-gray-600 text-sm mb-4">
+						Kirim push notification OneSignal ke pegawai tertentu atau broadcast
+					</p>
+					<Link
+						href="/dashboard/admin/push-notification"
+						className="inline-block text-center w-full px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 text-sm"
+					>
+						Kelola Notifikasi
+					</Link>
+				</div>
+
 				<div className="bg-white p-6 rounded-lg shadow-sm border">
 					<div className="flex items-center gap-3 mb-4">
 						<Database className="w-8 h-8 text-blue-500" />
