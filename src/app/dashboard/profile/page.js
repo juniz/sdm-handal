@@ -23,6 +23,7 @@ import { removeClientToken } from "@/lib/client-auth";
 import EducationHistorySection from "./EducationHistorySection";
 import SeminarHistorySection from "./SeminarHistorySection";
 import { printCVReport } from "@/components/profile/PrintCVReport";
+import NotificationSettingsCard from "@/components/profile/NotificationSettingsCard";
 import {
 	fetchProfileDetail,
 	mutationUpdateProfile,
@@ -806,6 +807,11 @@ export default function ProfilePage() {
 						<InfoItem icon={CreditCard} label="Rekening Gaji" value={profile.rekening} />
 					</div>
 				</motion.div>
+			</div>
+
+			{/* Notification Settings Bento Card */}
+			<div className="w-full">
+				<NotificationSettingsCard />
 			</div>
 
 			{/* Riwayat Pendidikan Bento Card */}
