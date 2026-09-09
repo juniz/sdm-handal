@@ -108,7 +108,7 @@ const nextConfig = {
 				value: [
 					"default-src 'self'",
 					`script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.onesignal.com https://onesignal.com https://*.onesignal.com${__impeccableLiveDev}`,
-					"style-src 'self' 'unsafe-inline'",
+					"style-src 'self' 'unsafe-inline' https://onesignal.com https://*.onesignal.com https://cdn.onesignal.com",
 					"img-src 'self' data: https:",
 					"font-src 'self'",
 					`connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001 https://onesignal.com https://*.onesignal.com${__impeccableLiveDev}`,
