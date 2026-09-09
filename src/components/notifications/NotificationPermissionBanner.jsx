@@ -29,6 +29,10 @@ export default function NotificationPermissionBanner() {
 
 	const handleEnable = async () => {
 		setIsLoading(true);
+		const safetyTimeout = setTimeout(() => {
+			setIsLoading(false);
+		}, 5000);
+
 		try {
 			if (typeof window !== "undefined") {
 				window.OneSignalDeferred = window.OneSignalDeferred || [];
@@ -48,11 +52,16 @@ export default function NotificationPermissionBanner() {
 						console.error("OneSignal permission request error:", error);
 						setIsVisible(false);
 					} finally {
+						clearTimeout(safetyTimeout);
 						setIsLoading(false);
 					}
 				});
+			} else {
+				clearTimeout(safetyTimeout);
+				setIsLoading(false);
 			}
 		} catch (error) {
+			clearTimeout(safetyTimeout);
 			console.error("Error activating notification:", error);
 			setIsLoading(false);
 		}

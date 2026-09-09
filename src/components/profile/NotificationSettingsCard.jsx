@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
 	Bell,
 	BellRing,
@@ -24,13 +24,33 @@ export default function NotificationSettingsCard() {
 	const [isSupported, setIsSupported] = useState(true);
 	const [copied, setCopied] = useState(false);
 
-	const syncPushState = useCallback(() => {
-		if (typeof window === "undefined") return;
+	useEffect(() => {
+		let isMounted = true;
+		let removeSubListener = null;
+		let removePermListener = null;
+
+		// Fallback timeout in case ad-blocker blocks OneSignalSDK and deferred callback never executes
+		const fallbackTimer = setTimeout(() => {
+			if (isMounted) {
+				setIsChecking(false);
+			}
+		}, 3500);
+
+		if (typeof window === "undefined") {
+			return () => {
+				isMounted = false;
+				clearTimeout(fallbackTimer);
+			};
+		}
 
 		if (!("Notification" in window)) {
 			setIsSupported(false);
 			setIsChecking(false);
-			return;
+			clearTimeout(fallbackTimer);
+			return () => {
+				isMounted = false;
+				clearTimeout(fallbackTimer);
+			};
 		}
 
 		setPermission(Notification.permission);
@@ -38,45 +58,62 @@ export default function NotificationSettingsCard() {
 		window.OneSignalDeferred = window.OneSignalDeferred || [];
 		window.OneSignalDeferred.push(async (OneSignal) => {
 			try {
+				if (!isMounted) return;
 				const pushSub = OneSignal.User?.PushSubscription;
 				if (pushSub) {
 					setIsOptedIn(Boolean(pushSub.optedIn));
 					setSubscriptionId(pushSub.id || null);
 
 					if (typeof pushSub.addEventListener === "function") {
-						pushSub.addEventListener("change", () => {
+						const onSubChange = () => {
+							if (!isMounted) return;
 							const current = OneSignal.User?.PushSubscription;
 							if (current) {
 								setIsOptedIn(Boolean(current.optedIn));
 								setSubscriptionId(current.id || null);
 							}
-						});
+						};
+						pushSub.addEventListener("change", onSubChange);
+						removeSubListener = () => {
+							if (typeof pushSub.removeEventListener === "function") {
+								pushSub.removeEventListener("change", onSubChange);
+							}
+						};
 					}
 				}
 
 				if (typeof OneSignal.Notifications?.addEventListener === "function") {
-					OneSignal.Notifications.addEventListener("permissionChange", () => {
+					const onPermChange = () => {
+						if (!isMounted) return;
 						if (typeof Notification !== "undefined") {
 							setPermission(Notification.permission);
 						}
-					});
+					};
+					OneSignal.Notifications.addEventListener("permissionChange", onPermChange);
+					removePermListener = () => {
+						if (typeof OneSignal.Notifications?.removeEventListener === "function") {
+							OneSignal.Notifications.removeEventListener("permissionChange", onPermChange);
+						}
+					};
 				}
 			} catch (err) {
 				console.error("Error reading OneSignal PushSubscription:", err);
 			} finally {
-				setIsChecking(false);
+				if (isMounted) {
+					setIsChecking(false);
+					clearTimeout(fallbackTimer);
+				}
 			}
 		});
-	}, []);
-
-	useEffect(() => {
-		syncPushState();
 
 		const handleFocus = () => {
 			if (typeof window !== "undefined" && "Notification" in window) {
-				setPermission(Notification.permission);
+				if (isMounted) {
+					setPermission(Notification.permission);
+				}
 				window.OneSignalDeferred = window.OneSignalDeferred || [];
 				window.OneSignalDeferred.push(async (OneSignal) => {
+					if (!isMounted) return;
 					const pushSub = OneSignal.User?.PushSubscription;
 					if (pushSub) {
 						setIsOptedIn(Boolean(pushSub.optedIn));
@@ -87,11 +124,21 @@ export default function NotificationSettingsCard() {
 		};
 
 		window.addEventListener("focus", handleFocus);
-		return () => window.removeEventListener("focus", handleFocus);
-	}, [syncPushState]);
+		return () => {
+			isMounted = false;
+			clearTimeout(fallbackTimer);
+			window.removeEventListener("focus", handleFocus);
+			if (removeSubListener) removeSubListener();
+			if (removePermListener) removePermListener();
+		};
+	}, []);
 
 	const handleRequestPermission = async () => {
 		setIsLoading(true);
+		const safetyTimeout = setTimeout(() => {
+			setIsLoading(false);
+		}, 5000);
+
 		try {
 			window.OneSignalDeferred = window.OneSignalDeferred || [];
 			window.OneSignalDeferred.push(async (OneSignal) => {
@@ -115,10 +162,12 @@ export default function NotificationSettingsCard() {
 					console.error("OneSignal requestPermission error:", err);
 					toast.error("Gagal meminta izin notifikasi");
 				} finally {
+					clearTimeout(safetyTimeout);
 					setIsLoading(false);
 				}
 			});
 		} catch (err) {
+			clearTimeout(safetyTimeout);
 			console.error("Permission request exception:", err);
 			setIsLoading(false);
 		}
@@ -126,6 +175,10 @@ export default function NotificationSettingsCard() {
 
 	const handleToggleSubscription = async () => {
 		setIsLoading(true);
+		const safetyTimeout = setTimeout(() => {
+			setIsLoading(false);
+		}, 5000);
+
 		try {
 			window.OneSignalDeferred = window.OneSignalDeferred || [];
 			window.OneSignalDeferred.push(async (OneSignal) => {
@@ -152,10 +205,12 @@ export default function NotificationSettingsCard() {
 					console.error("Error toggling push subscription:", err);
 					toast.error("Gagal mengubah status langganan notifikasi");
 				} finally {
+					clearTimeout(safetyTimeout);
 					setIsLoading(false);
 				}
 			});
 		} catch (err) {
+			clearTimeout(safetyTimeout);
 			console.error("Subscription toggle exception:", err);
 			setIsLoading(false);
 		}
@@ -163,6 +218,10 @@ export default function NotificationSettingsCard() {
 
 	const handleCopyId = async () => {
 		if (!subscriptionId) return;
+		if (typeof navigator === "undefined" || !navigator?.clipboard?.writeText) {
+			toast.error("Fitur salin tidak didukung oleh browser Anda");
+			return;
+		}
 		try {
 			await navigator.clipboard.writeText(subscriptionId);
 			setCopied(true);
