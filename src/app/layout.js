@@ -1,5 +1,6 @@
 import { Inter } from "next/font/google";
 import { Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "sonner";
 import PWAHandler from "@/components/PWAHandler";
@@ -144,7 +145,25 @@ export default function RootLayout({ children }) {
 			{/* impeccable-live-start */}
 <script src="http://localhost:8400/live.js?token=b98b77a1-a9bd-40dd-a9be-a1779e27cbdf"></script>
 {/* impeccable-live-end */}
-</body>
+				<Script
+					src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+					strategy="afterInteractive"
+				/>
+				<Script id="onesignal-init" strategy="afterInteractive">
+					{`
+						window.OneSignalDeferred = window.OneSignalDeferred || [];
+						OneSignalDeferred.push(async function(OneSignal) {
+							await OneSignal.init({
+								appId: "2f714dce-3685-47a3-9a02-4350d1186f71",
+								safari_web_id: "web.onesignal.auto.4d1813bb-fb28-4cd6-9039-144582b81585",
+								notifyButton: {
+									enable: true,
+								},
+							});
+						});
+					`}
+				</Script>
+			</body>
 		</html>
 	);
 }
