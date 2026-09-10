@@ -150,7 +150,6 @@ export async function POST(request) {
 				targetUrl = `${siteUrl.replace(/\/+$/, "")}${targetUrl}`;
 			}
 			payload.url = targetUrl;
-			payload.web_url = targetUrl;
 		}
 
 		if (target_type === "all") {
