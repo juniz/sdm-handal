@@ -153,10 +153,30 @@ export default function RootLayout({ children }) {
 							await OneSignal.init({
 								appId: "2f714dce-3685-47a3-9a02-4350d1186f71",
 								safari_web_id: "web.onesignal.auto.4d1813bb-fb28-4cd6-9039-144582b81585",
+								notificationClickHandlerMatch: "origin",
+								notificationClickHandlerAction: "navigate",
 								notifyButton: {
 									enable: false,
 								},
 							});
+
+							if (OneSignal.Notifications?.addEventListener) {
+								OneSignal.Notifications.addEventListener("click", function(event) {
+									const url = event?.notification?.launchURL;
+									if (url) {
+										try {
+											const target = new URL(url, window.location.origin);
+											if (target.origin === window.location.origin) {
+												window.location.href = target.pathname + target.search + target.hash;
+											} else {
+												window.location.href = url;
+											}
+										} catch {
+											window.location.href = url;
+										}
+									}
+								});
+							}
 						});
 					`}
 				</Script>

@@ -142,7 +142,15 @@ export async function POST(request) {
 		};
 
 		if (url) {
-			payload.url = url;
+			let targetUrl = url;
+			if (targetUrl.startsWith("/")) {
+				const siteUrl =
+					process.env.NEXT_PUBLIC_APP_URL ||
+					"https://presensi.itbhayangkara.id";
+				targetUrl = `${siteUrl.replace(/\/+$/, "")}${targetUrl}`;
+			}
+			payload.url = targetUrl;
+			payload.web_url = targetUrl;
 		}
 
 		if (target_type === "all") {
