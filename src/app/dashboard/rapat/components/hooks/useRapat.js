@@ -1,26 +1,40 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import moment from "moment-timezone";
 
 export const useRapat = () => {
 	const [rapatList, setRapatList] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [filterDate, setFilterDate] = useState(moment().format("YYYY-MM-DD"));
-	const [searchDate, setSearchDate] = useState(moment().format("YYYY-MM-DD")); // State untuk input pencarian tanggal
-	const [filterNamaRapat, setFilterNamaRapat] = useState("");
-	const [searchNamaRapat, setSearchNamaRapat] = useState(""); // State untuk input pencarian
-	const [filterNamaPeserta, setFilterNamaPeserta] = useState("");
-	const [searchNamaPeserta, setSearchNamaPeserta] = useState(""); // State untuk input pencarian nama peserta
+	const [searchNamaRapat, setSearchNamaRapat] = useState("");
+	const [searchNamaPeserta, setSearchNamaPeserta] = useState("");
+	const [debouncedNamaRapat, setDebouncedNamaRapat] = useState("");
+	const [debouncedNamaPeserta, setDebouncedNamaPeserta] = useState("");
 	const [isToday, setIsToday] = useState(true);
 	const [errors, setErrors] = useState({});
 
-	// Fetch data rapat
+	// Debounce search inputs by 300ms for smooth typing
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedNamaRapat(searchNamaRapat);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchNamaRapat]);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedNamaPeserta(searchNamaPeserta);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchNamaPeserta]);
+
+	// Fetch data rapat from API
 	const fetchRapat = useCallback(
 		async (
 			date = filterDate,
-			namaRapat = filterNamaRapat,
-			namaPeserta = filterNamaPeserta
+			namaRapat = debouncedNamaRapat,
+			namaPeserta = debouncedNamaPeserta
 		) => {
 			setLoading(true);
 			try {
@@ -40,7 +54,7 @@ export const useRapat = () => {
 				const data = await response.json();
 
 				if (data.status === "success") {
-					setRapatList(data.data);
+					setRapatList(data.data || []);
 					setIsToday(data.metadata?.filter?.isToday ?? false);
 				} else {
 					throw new Error(data.error || "Gagal mengambil data rapat");
@@ -52,10 +66,40 @@ export const useRapat = () => {
 				setLoading(false);
 			}
 		},
-		[filterDate, filterNamaRapat, filterNamaPeserta]
+		[filterDate, debouncedNamaRapat, debouncedNamaPeserta]
 	);
 
-	// Validasi form
+	// Group rapatList by rapat session title
+	const groupedRapat = useMemo(() => {
+		const map = new Map();
+
+		rapatList.forEach((item) => {
+			const key = item.rapat ? item.rapat.trim() : "Rapat Tanpa Judul";
+			if (!map.has(key)) {
+				map.set(key, {
+					namaRapat: key,
+					tanggal: item.tanggal,
+					pesertaList: [],
+				});
+			}
+			map.get(key).pesertaList.push(item);
+		});
+
+		return Array.from(map.values());
+	}, [rapatList]);
+
+	// Extract unique active meeting titles on the selected date for autocomplete suggestions
+	const existingMeetingTitles = useMemo(() => {
+		const titles = new Set();
+		rapatList.forEach((r) => {
+			if (r.rapat && r.rapat.trim()) {
+				titles.add(r.rapat.trim());
+			}
+		});
+		return Array.from(titles);
+	}, [rapatList]);
+
+	// Form validation
 	const validateForm = (formData, signPadRef) => {
 		const newErrors = {};
 
@@ -93,22 +137,21 @@ export const useRapat = () => {
 		try {
 			const method = modalMode === "add" ? "POST" : "PUT";
 			const url = "/api/rapat";
-			
-			// Untuk add, hitung urutan berdasarkan jumlah rapat pada tanggal yang sama
+
 			let urutan = 0;
 			if (modalMode === "add") {
-				// Ambil jumlah rapat pada tanggal yang sama untuk menentukan urutan
 				const currentDate = formData.tanggal;
 				const rapatOnSameDate = rapatList.filter(
-					(r) => moment(r.tanggal, "DD MMMM YYYY").format("YYYY-MM-DD") === currentDate
+					(r) =>
+						moment(r.tanggal, "DD MMMM YYYY").format("YYYY-MM-DD") ===
+						currentDate
 				);
-				// Gunakan urutan maksimum + 1, atau jumlah + 1 jika tidak ada urutan
-				const maxUrutan = rapatOnSameDate.length > 0
-					? Math.max(...rapatOnSameDate.map(r => r.urutan || 0))
-					: 0;
+				const maxUrutan =
+					rapatOnSameDate.length > 0
+						? Math.max(...rapatOnSameDate.map((r) => r.urutan || 0))
+						: 0;
 				urutan = maxUrutan + 1;
 			} else {
-				// Untuk edit, gunakan urutan yang sudah ada
 				urutan = selectedRapat?.urutan || 0;
 			}
 
@@ -133,13 +176,13 @@ export const useRapat = () => {
 			const data = await response.json();
 
 			if (data.status === "success") {
-				await fetchRapat();
+				await fetchRapat(filterDate, debouncedNamaRapat, debouncedNamaPeserta);
 				return {
 					success: true,
 					message:
 						modalMode === "add"
-							? "Data rapat berhasil ditambahkan"
-							: "Data rapat berhasil diperbarui",
+							? "Data presensi berhasil ditambahkan"
+							: "Data presensi berhasil diperbarui",
 				};
 			} else {
 				throw new Error(data.error || "Gagal menyimpan data");
@@ -164,10 +207,10 @@ export const useRapat = () => {
 			const data = await response.json();
 
 			if (data.status === "success") {
-				await fetchRapat();
+				await fetchRapat(filterDate, debouncedNamaRapat, debouncedNamaPeserta);
 				return {
 					success: true,
-					message: "Data rapat berhasil dihapus",
+					message: "Data presensi berhasil dihapus",
 				};
 			} else {
 				throw new Error(data.error || "Gagal menghapus data");
@@ -178,25 +221,17 @@ export const useRapat = () => {
 		}
 	};
 
-	// Fungsi untuk manual search
-	const handleSearch = () => {
-		setFilterDate(searchDate);
-		setFilterNamaRapat(searchNamaRapat);
-		setFilterNamaPeserta(searchNamaPeserta);
-	};
-
-	// Fungsi untuk reset search
+	// Reset search filters
 	const resetSearch = () => {
 		const today = moment().format("YYYY-MM-DD");
-		setSearchDate(today);
+		setFilterDate(today);
 		setSearchNamaRapat("");
 		setSearchNamaPeserta("");
-		setFilterDate(today);
-		setFilterNamaRapat("");
-		setFilterNamaPeserta("");
+		setDebouncedNamaRapat("");
+		setDebouncedNamaPeserta("");
 	};
 
-	// Update urutan rapat (hanya untuk IT)
+	// Update urutan rapat (for IT staff)
 	const updateUrutan = async (updates) => {
 		try {
 			const response = await fetch("/api/rapat", {
@@ -210,7 +245,7 @@ export const useRapat = () => {
 			const data = await response.json();
 
 			if (data.status === "success") {
-				await fetchRapat();
+				await fetchRapat(filterDate, debouncedNamaRapat, debouncedNamaPeserta);
 				return {
 					success: true,
 					message: "Urutan rapat berhasil diperbarui",
@@ -224,36 +259,26 @@ export const useRapat = () => {
 		}
 	};
 
-	// Effect untuk fetch data awal
+	// Re-fetch when filter parameters change
 	useEffect(() => {
-		fetchRapat();
-	}, []);
-
-	// Effect untuk fetch data saat filter berubah
-	useEffect(() => {
-		fetchRapat(filterDate, filterNamaRapat, filterNamaPeserta);
-	}, [filterDate, filterNamaRapat, filterNamaPeserta, fetchRapat]);
+		fetchRapat(filterDate, debouncedNamaRapat, debouncedNamaPeserta);
+	}, [filterDate, debouncedNamaRapat, debouncedNamaPeserta, fetchRapat]);
 
 	return {
 		rapatList,
+		groupedRapat,
+		existingMeetingTitles,
 		loading,
 		filterDate,
 		setFilterDate,
-		searchDate,
-		setSearchDate,
-		filterNamaRapat,
-		setFilterNamaRapat,
 		searchNamaRapat,
 		setSearchNamaRapat,
-		filterNamaPeserta,
-		setFilterNamaPeserta,
 		searchNamaPeserta,
 		setSearchNamaPeserta,
 		isToday,
 		errors,
 		setErrors,
 		fetchRapat,
-		handleSearch,
 		resetSearch,
 		validateForm,
 		submitRapat,

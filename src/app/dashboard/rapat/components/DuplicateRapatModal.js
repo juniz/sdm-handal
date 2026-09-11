@@ -153,23 +153,54 @@ const DuplicateRapatModal = ({
 		}
 	}, [selectedRapat]);
 
+	// Keyboard accessibility: escape to close
+	useEffect(() => {
+		if (showModal) {
+			const handleKeyDown = (e) => {
+				if (e.key === "Escape" && !loading && !isDuplicating) {
+					handleClose();
+				}
+			};
+			window.addEventListener("keydown", handleKeyDown);
+			return () => window.removeEventListener("keydown", handleKeyDown);
+		}
+	}, [showModal, loading, isDuplicating]);
+
 	if (!showModal) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+		<div
+			className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[110] p-4"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="duplicate-modal-title"
+			onClick={(e) => {
+				if (e.target === e.currentTarget && !loading && !isDuplicating) {
+					handleClose();
+				}
+			}}
+		>
 			<motion.div
-				initial={{ scale: 0.9, opacity: 0 }}
-				animate={{ scale: 1, opacity: 1 }}
-				className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] flex flex-col"
+				initial={{ scale: 0.95, opacity: 0, y: 10 }}
+				animate={{ scale: 1, opacity: 1, y: 0 }}
+				exit={{ scale: 0.95, opacity: 0, y: 10 }}
+				transition={{ duration: 0.15 }}
+				className="bg-white rounded-xl shadow-2xl border border-slate-200 p-6 w-full max-w-2xl max-h-[90vh] flex flex-col"
 			>
-				<div className="flex items-center justify-between mb-4">
-					<h3 className="text-lg font-semibold flex items-center gap-2">
-						<Copy className="w-5 h-5 text-blue-500" />
-						Duplikasi Rapat
+				<div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+					<h3
+						id="duplicate-modal-title"
+						className="text-base font-bold text-slate-900 flex items-center gap-2"
+					>
+						<Copy className="w-5 h-5 text-sky-600" />
+						Duplikasi Presensi Rapat (IT)
 					</h3>
 					<button
+						type="button"
 						onClick={handleClose}
-						className="text-gray-400 hover:text-gray-600 transition-colors"
+						disabled={loading || isDuplicating}
+						className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+						aria-label="Tutup dialog"
 					>
 						<X className="w-5 h-5" />
 					</button>
@@ -179,10 +210,10 @@ const DuplicateRapatModal = ({
 					{/* Search Section */}
 					<div className="space-y-3">
 						<div>
-							<label className="block text-sm font-medium text-gray-700 mb-1">
+							<label className="block text-sm font-semibold text-slate-700 mb-1">
 								Cari Nama Peserta
 							</label>
-							<p className="text-xs text-gray-500 mb-2">
+							<p className="text-xs text-slate-500 mb-2">
 								Pencarian berdasarkan nama peserta (maksimal 5 hasil terbaru)
 							</p>
 							<div className="relative">
@@ -196,27 +227,29 @@ const DuplicateRapatModal = ({
 											handleSearch();
 										}
 									}}
-									className="w-full px-3 py-2 pr-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									className="w-full px-3 py-2 pr-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
 								/>
 								{searchTerm && (
 									<button
+										type="button"
 										onClick={() => setSearchTerm("")}
-										className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+										className="absolute right-2 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
 									>
 										<X className="w-4 h-4" />
 									</button>
 								)}
 								{!searchTerm && (
-									<Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+									<Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
 								)}
 							</div>
 						</div>
 
 						<div className="flex gap-2">
 							<button
+								type="button"
 								onClick={handleSearch}
 								disabled={isSearching || !searchTerm.trim()}
-								className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors"
+								className="flex-1 bg-sky-600 hover:bg-sky-700 disabled:bg-slate-200 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm font-semibold shadow-xs"
 							>
 								{isSearching ? (
 									<Loader2 className="w-4 h-4 animate-spin" />
@@ -227,8 +260,9 @@ const DuplicateRapatModal = ({
 							</button>
 							{searchTerm && (
 								<button
+									type="button"
 									onClick={handleResetSearch}
-									className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+									className="bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-semibold"
 								>
 									<X className="w-4 h-4" />
 									<span>Reset</span>
@@ -239,17 +273,17 @@ const DuplicateRapatModal = ({
 
 					{/* Search Results */}
 					<div>
-						<h4 className="text-sm font-medium text-gray-700 mb-2">
+						<h4 className="text-sm font-semibold text-slate-700 mb-2">
 							Hasil Pencarian ({searchResults.length}
 							{searchResults.length >= 5 && " (maksimal 5 hasil terbaru)"})
 						</h4>
 						<div className="space-y-2 max-h-60 overflow-y-auto">
 							{isSearching ? (
 								<div className="flex justify-center items-center py-8">
-									<Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+									<Loader2 className="w-6 h-6 animate-spin text-sky-600" />
 								</div>
 							) : searchResults.length === 0 ? (
-								<div className="text-center py-8 text-gray-500 text-sm">
+								<div className="text-center py-8 text-slate-500 text-sm">
 									{searchTerm
 										? "Tidak ada rapat yang ditemukan"
 										: "Masukkan nama peserta untuk mencari"}
@@ -261,16 +295,16 @@ const DuplicateRapatModal = ({
 										onClick={() => setSelectedRapat(rapat)}
 										className={`p-3 border rounded-lg cursor-pointer transition-all ${
 											selectedRapat?.id === rapat.id
-												? "border-blue-500 bg-blue-50"
-												: "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+												? "border-sky-500 bg-sky-50/70"
+												: "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
 										}`}
 									>
 										<div className="flex items-start justify-between gap-3">
 											<div className="flex-1 min-w-0">
-												<h5 className="font-medium text-gray-900">
+												<h5 className="font-semibold text-slate-900">
 													{rapat.rapat}
 												</h5>
-												<div className="mt-1 space-y-1 text-sm text-gray-600">
+												<div className="mt-1 space-y-1 text-sm text-slate-600">
 													<p>
 														<span className="font-medium">Peserta:</span>{" "}
 														{rapat.nama}
@@ -279,8 +313,8 @@ const DuplicateRapatModal = ({
 														<span className="font-medium">Instansi:</span>{" "}
 														{rapat.instansi}
 													</p>
-													<p className="flex items-center gap-1">
-														<Calendar className="w-3 h-3" />
+													<p className="flex items-center gap-1 text-xs text-slate-500">
+														<Calendar className="w-3.5 h-3.5" />
 														{rapat.tanggal}
 													</p>
 												</div>
@@ -292,8 +326,8 @@ const DuplicateRapatModal = ({
 														<SignatureImage base64Data={rapat.tanda_tangan} />
 													</div>
 												) : (
-													<div className="hidden sm:flex items-center justify-center w-16 h-16 border border-gray-200 rounded bg-gray-50">
-														<span className="text-xs text-gray-400 text-center px-1">
+													<div className="hidden sm:flex items-center justify-center w-16 h-16 border border-slate-200 rounded-lg bg-slate-50">
+														<span className="text-xs text-slate-400 text-center px-1">
 															Tidak ada tanda tangan
 														</span>
 													</div>
@@ -301,7 +335,7 @@ const DuplicateRapatModal = ({
 												{/* Checkmark untuk selected */}
 												{selectedRapat?.id === rapat.id && (
 													<div className="ml-1">
-														<div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+														<div className="w-5 h-5 bg-sky-600 rounded-full flex items-center justify-center flex-shrink-0">
 															<svg
 																className="w-3 h-3 text-white"
 																fill="none"
@@ -328,35 +362,37 @@ const DuplicateRapatModal = ({
 
 					{/* Target Date and Nama Rapat Section */}
 					{selectedRapat && (
-						<div className="border-t pt-4 space-y-4">
+						<div className="border-t border-slate-200 pt-4 space-y-4">
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
+								<label className="block text-sm font-semibold text-slate-700 mb-1">
 									Tanggal untuk Rapat Baru
 								</label>
 								<input
 									type="date"
 									value={targetDate}
 									onChange={(e) => setTargetDate(e.target.value)}
-									className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
 								/>
-								<p className="text-xs text-gray-500 mt-1">
+								<p className="text-xs text-slate-500 mt-1">
 									Rapat akan diduplikasi ke tanggal:{" "}
-									{moment(targetDate).format("DD MMMM YYYY")}
+									<span className="font-semibold text-slate-700">
+										{moment(targetDate).format("DD MMMM YYYY")}
+									</span>
 								</p>
 							</div>
 
 							<div>
-								<label className="block text-sm font-medium text-gray-700 mb-1">
-									Nama Rapat Baru <span className="text-gray-400">(Opsional)</span>
+								<label className="block text-sm font-semibold text-slate-700 mb-1">
+									Nama Rapat Baru <span className="text-slate-400 font-normal">(Opsional)</span>
 								</label>
 								<input
 									type="text"
 									placeholder={`Kosongkan untuk menggunakan: "${selectedRapat.rapat}"`}
 									value={targetNamaRapat}
 									onChange={(e) => setTargetNamaRapat(e.target.value)}
-									className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+									className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
 								/>
-								<p className="text-xs text-gray-500 mt-1">
+								<p className="text-xs text-slate-500 mt-1">
 									{targetNamaRapat.trim()
 										? `Nama rapat baru: "${targetNamaRapat}"`
 										: `Menggunakan nama rapat: "${selectedRapat.rapat}"`}
@@ -367,11 +403,11 @@ const DuplicateRapatModal = ({
 				</div>
 
 				{/* Action Buttons */}
-				<div className="flex justify-end space-x-2 mt-6 pt-4 border-t">
+				<div className="flex justify-end space-x-2 mt-6 pt-4 border-t border-slate-100">
 					<button
 						type="button"
 						onClick={handleClose}
-						className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+						className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
 						disabled={loading}
 					>
 						Batal
@@ -380,10 +416,10 @@ const DuplicateRapatModal = ({
 						type="button"
 						onClick={handleDuplicate}
 						disabled={!selectedRapat || loading || isDuplicating}
-						className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+						className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors flex items-center gap-2 ${
 							!selectedRapat || loading || isDuplicating
-								? "bg-gray-300 cursor-not-allowed text-gray-500"
-								: "bg-blue-500 hover:bg-blue-600 text-white"
+								? "bg-slate-200 cursor-not-allowed text-slate-400"
+								: "bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
 						}`}
 						title={
 							selectedRapat
@@ -403,7 +439,7 @@ const DuplicateRapatModal = ({
 						) : (
 							<>
 								<Copy className="w-4 h-4" />
-								<span>Duplikasi</span>
+								<span>Duplikasi Presensi</span>
 							</>
 						)}
 					</button>
