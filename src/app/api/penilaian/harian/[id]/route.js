@@ -4,6 +4,7 @@ import { jwtVerify } from "jose";
 import { selectFirst, select, insert, update, delete_, rawQuery } from "@/lib/db-helper";
 import moment from "moment-timezone";
 import { getPenilaianInputLimitDays } from "@/lib/penilaian-config";
+import { sendPushNotification } from "@/lib/onesignal";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -429,6 +430,42 @@ export async function POST(request, { params }) {
 				where: { id: id }
 			});
 
+			// Push notification ke supervisor jika status submitted
+			if (newStatus === "submitted") {
+				try {
+					const supervisorId = await getSupervisorIdForEmployee(harian.pegawai_id);
+					if (supervisorId) {
+						const [pegawaiRow, supervisorRow] = await Promise.all([
+							selectFirst({
+								table: "pegawai",
+								where: { id: harian.pegawai_id },
+								select: ["nama"]
+							}),
+							selectFirst({
+								table: "pegawai",
+								where: { id: supervisorId },
+								select: ["nik"]
+							})
+						]);
+
+						if (supervisorRow?.nik) {
+							const namaPegawai = pegawaiRow?.nama || "Pegawai";
+							const tglFormatted = moment(harian.tanggal).format("DD/MM/YYYY");
+							sendPushNotification({
+								targetNiks: [supervisorRow.nik],
+								title: "Penilaian Harian Menunggu Persetujuan",
+								message: `${namaPegawai} telah mengirim penilaian harian tanggal ${tglFormatted}. Menunggu persetujuan Anda.`,
+								url: "/dashboard/penilaian-kinerja/approval"
+							}).catch((err) =>
+								console.warn("Background push error (submit penilaian):", err)
+							);
+						}
+					}
+				} catch (err) {
+					console.warn("Could not dispatch submit push notification:", err);
+				}
+			}
+
 			let successMessage = "Penilaian berhasil dikirim untuk approval supervisor";
 			if (isCuti) {
 				successMessage = "Penilaian cuti berhasil disetujui otomatis";
@@ -516,6 +553,37 @@ export async function POST(request, { params }) {
 				where: { id: id }
 			});
 
+			// Push notification ke pegawai saat penilaian disetujui
+			try {
+				const [pegawaiRow, supervisorRow] = await Promise.all([
+					selectFirst({
+						table: "pegawai",
+						where: { id: harian.pegawai_id },
+						select: ["nik"]
+					}),
+					selectFirst({
+						table: "pegawai",
+						where: { id: loggedInUser.id },
+						select: ["nama"]
+					})
+				]);
+
+				if (pegawaiRow?.nik) {
+					const namaSupervisor = supervisorRow?.nama || loggedInUser.nama || "Supervisor";
+					const tglFormatted = moment(harian.tanggal).format("DD/MM/YYYY");
+					sendPushNotification({
+						targetNiks: [pegawaiRow.nik],
+						title: "Penilaian Harian Disetujui",
+						message: `Penilaian harian Anda tanggal ${tglFormatted} telah disetujui oleh ${namaSupervisor}.`,
+						url: "/dashboard/penilaian-kinerja/riwayat"
+					}).catch((err) =>
+						console.warn("Background push error (approve penilaian):", err)
+					);
+				}
+			} catch (err) {
+				console.warn("Could not dispatch approve push notification:", err);
+			}
+
 			return NextResponse.json({
 				success: true,
 				message: "Penilaian harian berhasil disetujui",
@@ -543,6 +611,38 @@ export async function POST(request, { params }) {
 				},
 				where: { id: id }
 			});
+
+			// Push notification ke pegawai saat penilaian diminta revisi
+			try {
+				const [pegawaiRow, supervisorRow] = await Promise.all([
+					selectFirst({
+						table: "pegawai",
+						where: { id: harian.pegawai_id },
+						select: ["nik"]
+					}),
+					selectFirst({
+						table: "pegawai",
+						where: { id: loggedInUser.id },
+						select: ["nama"]
+					})
+				]);
+
+				if (pegawaiRow?.nik) {
+					const namaSupervisor = supervisorRow?.nama || loggedInUser.nama || "Supervisor";
+					const tglFormatted = moment(harian.tanggal).format("DD/MM/YYYY");
+					const dateParam = moment(harian.tanggal).format("YYYY-MM-DD");
+					sendPushNotification({
+						targetNiks: [pegawaiRow.nik],
+						title: "Penilaian Harian Perlu Revisi",
+						message: `Penilaian harian Anda tanggal ${tglFormatted} dikembalikan untuk direvisi oleh ${namaSupervisor}. Catatan: ${catatan_supervisor.trim()}.`,
+						url: `/dashboard/penilaian-kinerja/input?date=${dateParam}`
+					}).catch((err) =>
+						console.warn("Background push error (revisi penilaian):", err)
+					);
+				}
+			} catch (err) {
+				console.warn("Could not dispatch revisi push notification:", err);
+			}
 
 			return NextResponse.json({
 				success: true,
