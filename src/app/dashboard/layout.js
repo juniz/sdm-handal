@@ -142,6 +142,23 @@ export default function DashboardLayout({ children }) {
 								} catch (err) {
 									console.warn("OneSignal login error:", err);
 								}
+
+								// Auto-prompt permission if status is default
+								if (
+									typeof Notification !== "undefined" &&
+									Notification.permission === "default"
+								) {
+									setTimeout(async () => {
+										try {
+											await OneSignal.Notifications.requestPermission();
+										} catch (permErr) {
+											console.warn(
+												"Auto request notification permission error:",
+												permErr
+											);
+										}
+									}, 1500);
+								}
 							}
 						});
 					}
