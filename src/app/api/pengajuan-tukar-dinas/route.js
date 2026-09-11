@@ -3,6 +3,7 @@ import moment from "moment-timezone";
 import "moment/locale/id";
 import { select, insert, update, rawQuery } from "@/lib/db-helper";
 import { getUser } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/onesignal";
 
 // Set locale ke Indonesia
 moment.locale("id");
@@ -284,6 +285,19 @@ export async function POST(request) {
 			},
 		});
 
+		// Kirim push notification ke penanggung jawab jika ada
+		if (nik_pj) {
+			const namaPemohon = pegawaiPemohon[0]?.nama || "Pegawai";
+			sendPushNotification({
+				targetNiks: [nik_pj],
+				title: "Pengajuan Tukar Dinas Baru",
+				message: `${namaPemohon} mengajukan tukar dinas (${shift1} tgl ${tgl_dinas} ⇄ ${shift2} tgl ${tgl_ganti}). Perlu persetujuan Anda.`,
+				url: "/dashboard/pengajuan-tukar-dinas",
+			}).catch((err) =>
+				console.warn("Background push error (POST tudin):", err)
+			);
+		}
+
 		return NextResponse.json({
 			status: 201,
 			message: "Pengajuan tukar dinas berhasil disubmit",
@@ -352,7 +366,7 @@ export async function PUT(request) {
 
 		// Ambil data pengajuan untuk validasi nik_pj
 		const pengajuanData = await rawQuery(
-			`SELECT nik_pj FROM pengajuan_tudin WHERE no_pengajuan = ?`,
+			`SELECT nik, nik_pj FROM pengajuan_tudin WHERE no_pengajuan = ?`,
 			[no_pengajuan]
 		);
 
@@ -407,6 +421,39 @@ export async function PUT(request) {
 			data: updateData,
 			where: { no_pengajuan: no_pengajuan },
 		});
+
+		// Kirim push notification ke pemohon terkait status pengajuan
+		if (pengajuan.nik && (status === "Disetujui" || status === "Ditolak")) {
+			try {
+				const pjData = await rawQuery(
+					`SELECT nama FROM pegawai WHERE nik = ?`,
+					[userNik]
+				);
+				const namaPJ = pjData[0]?.nama || "Penanggung Jawab";
+
+				let notifTitle = "";
+				let notifMessage = "";
+
+				if (status === "Disetujui") {
+					notifTitle = "Pengajuan Tukar Dinas Disetujui";
+					notifMessage = `Pengajuan tukar dinas Anda (${no_pengajuan}) telah disetujui oleh ${namaPJ}.`;
+				} else {
+					notifTitle = "Pengajuan Tukar Dinas Ditolak";
+					notifMessage = `Pengajuan tukar dinas Anda (${no_pengajuan}) ditolak oleh ${namaPJ}. Alasan: ${alasan_ditolak}.`;
+				}
+
+				sendPushNotification({
+					targetNiks: [pengajuan.nik],
+					title: notifTitle,
+					message: notifMessage,
+					url: "/dashboard/pengajuan-tukar-dinas",
+				}).catch((err) =>
+					console.warn("Background push error (PUT tudin):", err)
+				);
+			} catch (notifErr) {
+				console.warn("Could not dispatch decision push notification:", notifErr);
+			}
+		}
 
 		return NextResponse.json({
 			status: 200,
