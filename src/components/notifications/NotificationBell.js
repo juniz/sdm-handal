@@ -14,11 +14,6 @@ import moment from "moment";
 import "moment/locale/id";
 
 const NotificationBell = () => {
-	// Disable notifications jika environment variable diset ke true
-	if (process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS === "true") {
-		return null;
-	}
-
 	const {
 		notifications,
 		unreadCount,
@@ -27,6 +22,11 @@ const NotificationBell = () => {
 		markAllAsRead,
 	} = useUserNotifications();
 	const [isOpen, setIsOpen] = useState(false);
+
+	// Disable notifications jika environment variable diset ke true
+	if (process.env.NEXT_PUBLIC_DISABLE_NOTIFICATIONS === "true") {
+		return null;
+	}
 
 	const handleNotificationClick = async (notification) => {
 		if (!notification.is_read) {

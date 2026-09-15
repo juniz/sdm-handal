@@ -42,10 +42,13 @@ export function useUserNotifications() {
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ id }),
 			});
-			setNotifications((prev) =>
-				prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-			);
-			setUnreadCount((prev) => Math.max(0, prev - 1));
+			setNotifications((prev) => {
+				const target = prev.find((n) => n.id === id);
+				if (target && !target.is_read) {
+					setUnreadCount((c) => Math.max(0, c - 1));
+				}
+				return prev.map((n) => (n.id === id ? { ...n, is_read: true } : n));
+			});
 		} catch (err) {
 			console.error("Failed to mark notification as read:", err);
 		}

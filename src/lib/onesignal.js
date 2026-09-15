@@ -22,20 +22,6 @@ export async function sendPushNotification({
 			return { success: false, error: "Title and message are required" };
 		}
 
-		const appId =
-			process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ||
-			"2f714dce-3685-47a3-9a02-4350d1186f71";
-		const rawApiKey = process.env.ONESIGNAL_REST_API_KEY;
-		const apiKey =
-			typeof rawApiKey === "string"
-				? rawApiKey.trim().replace(/^["']|["']$/g, "")
-				: "";
-
-		if (!apiKey) {
-			console.warn("OneSignal REST API key is not configured; skipping push");
-			return { success: false, error: "API key not configured" };
-		}
-
 		const siteUrl =
 			process.env.NEXT_PUBLIC_APP_URL ||
 			"https://presensi.itbhayangkara.id";
@@ -68,6 +54,20 @@ export async function sendPushNotification({
 			}
 		} catch (persistErr) {
 			console.warn("Auto-persist notification error:", persistErr.message);
+		}
+
+		const appId =
+			process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID ||
+			"2f714dce-3685-47a3-9a02-4350d1186f71";
+		const rawApiKey = process.env.ONESIGNAL_REST_API_KEY;
+		const apiKey =
+			typeof rawApiKey === "string"
+				? rawApiKey.trim().replace(/^["']|["']$/g, "")
+				: "";
+
+		if (!apiKey) {
+			console.warn("OneSignal REST API key is not configured; skipping push");
+			return { success: true, warning: "API key not configured, in-app notification saved" };
 		}
 
 		const payload = {
