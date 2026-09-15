@@ -25,17 +25,21 @@ export async function GET(request) {
 
 		let imageBuffer = null;
 
-		// 1. Primary: CartoDB Voyager
-		try {
-			const cartoUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png`;
-			const cartoRes = await fetch(cartoUrl, {
-				headers,
-			});
-			if (cartoRes.ok) {
-				imageBuffer = await cartoRes.arrayBuffer();
+		const cartoKey = process.env.CARTO_API_KEY;
+
+		// 1. Primary: CartoDB Voyager (requires API key)
+		if (cartoKey) {
+			try {
+				const cartoUrl = `https://basemaps.cartocdn.com/rastertiles/voyager/${z}/${x}/${y}.png?key=${encodeURIComponent(cartoKey)}`;
+				const cartoRes = await fetch(cartoUrl, {
+					headers,
+				});
+				if (cartoRes.ok) {
+					imageBuffer = await cartoRes.arrayBuffer();
+				}
+			} catch {
+				// Fallback to OSM if CartoDB fails
 			}
-		} catch {
-			// Fallback to OSM if CartoDB fails
 		}
 
 		// 2. Fallback: OpenStreetMap
