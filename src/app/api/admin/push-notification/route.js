@@ -152,8 +152,21 @@ export async function POST(request) {
 			payload.url = targetUrl;
 		}
 
+		let persistNiks = [];
+
 		if (target_type === "all") {
 			payload.included_segments = ["Subscribed Users"];
+			try {
+				const rows = await rawQuery(
+					"SELECT nik FROM pegawai WHERE stts_aktif = 'AKTIF'"
+				);
+				persistNiks = rows.map((r) => String(r.nik)).filter(Boolean);
+			} catch (dbErr) {
+				console.warn(
+					"Failed to query active employees for notif persistence:",
+					dbErr.message
+				);
+			}
 		} else if (target_type === "department") {
 			let targetNiks = Array.isArray(body?.external_ids)
 				? body.external_ids.map(String).filter(Boolean)
@@ -183,10 +196,12 @@ export async function POST(request) {
 			payload.include_aliases = {
 				external_id: targetNiks,
 			};
+			persistNiks = targetNiks;
 		} else {
 			payload.include_aliases = {
 				external_id: [external_id],
 			};
+			persistNiks = [external_id];
 		}
 
 		const osResponse = await fetch("https://api.onesignal.com/notifications", {
@@ -216,6 +231,37 @@ export async function POST(request) {
 					error: friendlyError || "Failed to send notification",
 				},
 				{ status: 400 }
+			);
+		}
+
+		// Auto-persist notification to user_notifications table
+		try {
+			if (persistNiks.length > 0) {
+				const notifType =
+					target_type === "all" || target_type === "department"
+						? "broadcast"
+						: "system";
+				const chunkSize = 100;
+				for (let i = 0; i < persistNiks.length; i += chunkSize) {
+					const chunk = persistNiks.slice(i, i + chunkSize);
+					const placeholders = chunk.map(() => "(?, ?, ?, ?, ?, 0)").join(", ");
+					const values = chunk.flatMap((nik) => [
+						nik,
+						title,
+						message,
+						payload.url || null,
+						notifType,
+					]);
+					await rawQuery(
+						`INSERT INTO user_notifications (nik, title, message, url, type, is_read) VALUES ${placeholders}`,
+						values
+					);
+				}
+			}
+		} catch (persistErr) {
+			console.warn(
+				"Auto-persist notification to user_notifications failed:",
+				persistErr.message
 			);
 		}
 
