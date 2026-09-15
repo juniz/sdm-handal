@@ -45,6 +45,31 @@ export async function sendPushNotification({
 			targetUrl = `${siteUrl.replace(/\/+$/, "")}${targetUrl}`;
 		}
 
+		// Auto-persist notification to user_notifications table for each target NIK
+		try {
+			const { insert } = await import("@/lib/db-helper");
+			for (const nik of niks) {
+				await insert({
+					table: "user_notifications",
+					data: {
+						nik: nik,
+						title: title,
+						message: message,
+						url: targetUrl,
+						type: "system",
+						is_read: 0,
+					},
+				}).catch((dbErr) =>
+					console.warn(
+						`Failed to log notification for NIK ${nik}:`,
+						dbErr.message
+					)
+				);
+			}
+		} catch (persistErr) {
+			console.warn("Auto-persist notification error:", persistErr.message);
+		}
+
 		const payload = {
 			app_id: appId,
 			target_channel: "push",

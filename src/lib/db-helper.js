@@ -88,6 +88,7 @@ const ALLOWED_TABLES = [
 	"rekap_bulanan",
 	"jasa_dasar_pegawai",
 	"master_kegiatan_kerja",
+	"user_notifications",
 ];
 
 /**

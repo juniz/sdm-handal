@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -5,28 +7,11 @@ import {
 	BellRing,
 	CheckCheck,
 	X,
-	Ticket,
 	Clock,
-	Flag,
-	User,
 } from "lucide-react";
-import useNotifications from "@/hooks/useNotifications";
-import { useUser } from "@/hooks/useUser";
-
-const getPriorityColor = (priority) => {
-	switch (priority?.toLowerCase()) {
-		case "low":
-			return "text-green-600";
-		case "medium":
-			return "text-yellow-600";
-		case "high":
-			return "text-red-600";
-		case "critical":
-			return "text-purple-600";
-		default:
-			return "text-gray-600";
-	}
-};
+import { useUserNotifications } from "@/hooks/useUserNotifications";
+import moment from "moment";
+import "moment/locale/id";
 
 const NotificationBellMobile = () => {
 	const {
@@ -35,18 +20,16 @@ const NotificationBellMobile = () => {
 		loading,
 		markAsRead,
 		markAllAsRead,
-	} = useNotifications();
-	const { user } = useUser();
+	} = useUserNotifications();
 	const [isOpen, setIsOpen] = useState(false);
-
-	// Hanya tampilkan notifikasi jika user adalah departemen IT
-	if (!user || user.departemen !== "IT") {
-		return null;
-	}
 
 	const handleNotificationClick = async (notification) => {
 		if (!notification.is_read) {
-			await markAsRead(notification.assignment_id);
+			await markAsRead(notification.id);
+		}
+		setIsOpen(false);
+		if (notification.url) {
+			window.location.href = notification.url;
 		}
 	};
 
@@ -56,20 +39,21 @@ const NotificationBellMobile = () => {
 
 	return (
 		<div className="relative">
-			{/* Bell Icon Trigger - Styled as a soft button next to search */}
+			{/* Bell Icon Trigger */}
 			<button
 				onClick={() => setIsOpen(!isOpen)}
 				className={`relative w-12 h-12 flex items-center justify-center rounded-[20px] bg-white border border-slate-200/40 shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300 active:scale-95 ${
 					isOpen ? "text-[#0093dd] ring-2 ring-[#0093dd]/20" : "text-slate-500"
 				}`}
+				aria-label="Notifikasi"
 			>
 				{unreadCount > 0 ? (
-					<BellRing className={`w-5 h-5 ${isOpen ? "animate-none" : "animate-bounce"}`} />
+					<BellRing className={`w-5 h-5 text-[#0093dd] ${isOpen ? "animate-none" : "animate-bounce"}`} />
 				) : (
 					<Bell className="w-5 h-5" />
 				)}
 
-				{/* Soft Notification Badge - Repositioned to not cover the icon */}
+				{/* Soft Notification Badge */}
 				{unreadCount > 0 && (
 					<span className="absolute -top-1 -right-1 bg-red-500 text-white border-2 border-white text-[9px] rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center font-bold shadow-md transform translate-x-1/4 -translate-y-1/4">
 						{unreadCount > 9 ? "9+" : unreadCount}
@@ -122,9 +106,10 @@ const NotificationBellMobile = () => {
 									{unreadCount > 0 && (
 										<button
 											onClick={handleMarkAllAsRead}
-											className="text-[11px] font-bold text-[#0093dd] bg-[#0093dd]/5 px-3 py-2 rounded-xl active:bg-[#0093dd]/10 transition-colors"
+											className="text-[11px] font-bold text-[#0093dd] bg-[#0093dd]/5 px-3 py-2 rounded-xl active:bg-[#0093dd]/10 transition-colors flex items-center gap-1"
 										>
-											Baca Semua
+											<CheckCheck className="w-3.5 h-3.5" />
+											<span>Baca Semua</span>
 										</button>
 									)}
 									<button
@@ -138,7 +123,7 @@ const NotificationBellMobile = () => {
 
 							{/* Content */}
 							<div className="flex-1 overflow-y-auto overscroll-contain pb-10">
-								{loading ? (
+								{loading && notifications.length === 0 ? (
 									<div className="p-12 text-center">
 										<div className="w-10 h-10 border-4 border-[#0093dd]/20 border-t-[#0093dd] rounded-full animate-spin mx-auto" />
 										<p className="text-sm text-slate-400 mt-4 font-medium">Memuat pemberitahuan...</p>
@@ -155,7 +140,7 @@ const NotificationBellMobile = () => {
 									<div className="divide-y divide-slate-50">
 										{notifications.map((notification) => (
 											<motion.div
-												key={notification.assignment_id}
+												key={notification.id}
 												whileTap={{ scale: 0.98 }}
 												className={`p-5 flex gap-4 transition-colors ${
 													!notification.is_read
@@ -168,7 +153,7 @@ const NotificationBellMobile = () => {
 													<div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
 														!notification.is_read ? "bg-[#0093dd]/20 shadow-[0_4px_12px_rgba(0,147,221,0.2)]" : "bg-slate-100"
 													}`}>
-														<Ticket className={`w-6 h-6 ${!notification.is_read ? "text-[#0093dd]" : "text-slate-400"}`} />
+														<Bell className={`w-6 h-6 ${!notification.is_read ? "text-[#0093dd]" : "text-slate-400"}`} />
 													</div>
 													{!notification.is_read && (
 														<span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full" />
@@ -177,29 +162,18 @@ const NotificationBellMobile = () => {
 
 												<div className="flex-1 min-w-0">
 													<div className="flex justify-between items-start mb-1">
-														<span className="text-[10px] font-bold text-[#0093dd] bg-[#0093dd]/10 px-2 py-0.5 rounded-md uppercase tracking-wider">
-															{notification.no_ticket || `#${notification.ticket_id}`}
-														</span>
 														<span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
 															<Clock className="w-3 h-3" />
-															{notification.time_ago}
+															{moment(notification.created_at).fromNow()}
 														</span>
 													</div>
 													
 													<h4 className={`text-[13px] leading-snug mb-1 ${!notification.is_read ? "font-bold text-slate-800" : "font-medium text-slate-600"}`}>
 														{notification.title}
 													</h4>
-													
-													<div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-														<div className="flex items-center gap-1">
-															<Flag className={`w-3 h-3 ${getPriorityColor(notification.priority_name)}`} />
-															<span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{notification.priority_name}</span>
-														</div>
-														<div className="flex items-center gap-1">
-															<User className="w-3 h-3 text-slate-400" />
-															<span className="text-[11px] font-medium text-slate-400 truncate">Dari: {notification.requester_name}</span>
-														</div>
-													</div>
+													<p className="text-xs text-slate-500 line-clamp-2">
+														{notification.message}
+													</p>
 												</div>
 											</motion.div>
 										))}
