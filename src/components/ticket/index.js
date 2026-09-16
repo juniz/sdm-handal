@@ -6,3 +6,4 @@ export { default as TicketModal } from "./TicketModal";
 export { default as Pagination } from "./Pagination";
 export { default as EmptyState } from "./EmptyState";
 export { default as CloseTicketModal } from "./CloseTicketModal";
+export { default as DeleteTicketModal } from "./DeleteTicketModal";
