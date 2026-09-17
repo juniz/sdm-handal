@@ -415,7 +415,7 @@ export default function IndexRemunerasiSection() {
 		<Card>
 			<CardHeader className="space-y-2 px-4 sm:px-6">
 				<CardTitle className="flex items-center gap-2 text-xl font-bold">
-					<Briefcase className="w-5 h-5 text-[#0093dd]" />
+					<Briefcase className="w-5 h-5 text-sky-600" />
 					Index Remunerasi
 				</CardTitle>
 				<p className="text-xs sm:text-sm text-slate-500 max-w-3xl leading-relaxed">
@@ -451,20 +451,20 @@ export default function IndexRemunerasiSection() {
 
 						<style jsx>{`
 							.pgw-subtab-trigger {
-								font-size: 13px;
+								font-size: 12px;
 								font-weight: 500;
 								padding: 8px 16px;
 								border-radius: 8px 8px 0 0;
 								border-bottom: 2px solid transparent;
 								background: transparent;
-								color: #64748b;
+								color: #475569;
 								transition: all 0.2s ease;
 								white-space: nowrap;
 							}
 							.pgw-subtab-trigger[data-state="active"] {
-								color: #0093dd;
+								color: #0284c7;
 								background: #f0f9ff;
-								border-bottom-color: #0093dd;
+								border-bottom-color: #0284c7;
 								font-weight: 600;
 							}
 							.pgw-tab-list::-webkit-scrollbar { display: none; }

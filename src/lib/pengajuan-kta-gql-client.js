@@ -71,8 +71,8 @@ export function normalizePengajuanKta(item) {
 		status: item.status,
 		alasan_ditolak: item.alasanDitolak || null,
 		alasanDitolak: item.alasanDitolak || null,
-		created_at: item.createdAt,
-		updated_at: item.updatedAt,
+		created_at: item.createdAt || new Date().toISOString(),
+		updated_at: item.updatedAt || item.createdAt || new Date().toISOString(),
 	};
 }
 

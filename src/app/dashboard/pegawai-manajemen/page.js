@@ -59,15 +59,6 @@ export default function PegawaiManajemenPage() {
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap');
-
-        .pgw-root {
-          font-family: 'Source Sans 3', system-ui, sans-serif;
-        }
-        .pgw-heading {
-          font-family: 'Lexend', system-ui, sans-serif;
-        }
-
         /* Page entrance animation */
         @keyframes pgw-fade-up {
           from { opacity: 0; transform: translateY(8px); }
@@ -91,10 +82,9 @@ export default function PegawaiManajemenPage() {
           gap: 10px;
           min-height: 48px;
           padding: 0 24px;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 500;
-          font-family: 'Source Sans 3', system-ui, sans-serif;
-          color: #64748b;
+          color: #475569;
           border-bottom: 3px solid transparent;
           border-radius: 0;
           background: transparent;
@@ -106,21 +96,21 @@ export default function PegawaiManajemenPage() {
           flex-shrink: 0;
         }
         .pgw-tab-trigger:hover:not([data-state="active"]) {
-          color: #0093dd;
+          color: #0284c7;
           background: #f0f9ff;
         }
         .pgw-tab-trigger:focus-visible {
-          outline: 3px solid #0093dd;
+          outline: 3px solid #0284c7;
           border-radius: 4px;
         }
         .pgw-tab-trigger[data-state="active"] {
-          color: #0093dd;
-          border-bottom-color: #0093dd;
+          color: #0284c7;
+          border-bottom-color: #0284c7;
           font-weight: 600;
           background: transparent;
         }
         .pgw-tab-trigger[data-state="active"] .pgw-tab-icon {
-          color: #0093dd;
+          color: #0284c7;
           transform: scale(1.1);
         }
         .pgw-tab-icon {
@@ -129,7 +119,7 @@ export default function PegawaiManajemenPage() {
           transition: all 0.2s ease;
         }
         .pgw-tab-trigger:hover .pgw-tab-icon {
-          color: #0093dd;
+          color: #0284c7;
         }
         
         .pgw-tab-list-container {
@@ -199,7 +189,7 @@ export default function PegawaiManajemenPage() {
         >
           <Link
             href="/dashboard"
-            className="flex items-center gap-1 hover:text-[#0093dd] transition-colors focus-visible:outline-none focus-visible:text-[#0093dd]"
+            className="flex items-center gap-1 hover:text-sky-600 transition-colors focus-visible:outline-none focus-visible:text-sky-600"
           >
             <LayoutDashboard size={14} className="sm:size-[16px]" />
             <span className="hidden xs:inline">Dashboard</span>

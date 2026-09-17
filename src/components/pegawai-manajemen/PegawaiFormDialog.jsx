@@ -153,6 +153,25 @@ const SearchableSelect = ({ value, onChange, options, placeholder }) => {
 	);
 };
 
+const TAB_FIELD_MAP = {
+	pribadi: ["nik", "nama"],
+	jabatan: ["jbtn", "departemen"],
+	remunerasi: [],
+	kepegawaian: [],
+	gaji: [],
+	lainnya: [],
+};
+
+const formatRupiah = (val) => {
+	const num = Number(val);
+	if (isNaN(num) || num === 0) return "Rp 0";
+	return new Intl.NumberFormat("id-ID", {
+		style: "currency",
+		currency: "IDR",
+		maximumFractionDigits: 0,
+	}).format(num);
+};
+
 export default function PegawaiFormDialog({
 	open,
 	onOpenChange,
@@ -170,6 +189,8 @@ export default function PegawaiFormDialog({
 	emergencyIndexList,
 }) {
 	const [form, setForm] = useState(defaultForm);
+	const [activeTab, setActiveTab] = useState("pribadi");
+	const [fieldErrors, setFieldErrors] = useState({});
 	const [submitting, setSubmitting] = useState(false);
 	const isEdit = !!pegawai?.id;
 
@@ -188,6 +209,9 @@ export default function PegawaiFormDialog({
 				console.error("Failed to fetch next NIK:", err);
 			}
 		};
+
+		setFieldErrors({});
+		setActiveTab("pribadi");
 
 		if (pegawai) {
 			setForm({
@@ -216,15 +240,55 @@ export default function PegawaiFormDialog({
 
 	const handleChange = (field, value) => {
 		setForm((prev) => ({ ...prev, [field]: value }));
+		if (fieldErrors[field]) {
+			setFieldErrors((prev) => {
+				const updated = { ...prev };
+				delete updated[field];
+				return updated;
+			});
+		}
 		if (field === "departemen") {
 			setForm((prev) => ({ ...prev, indexins: value || prev.indexins }));
 		}
 	};
 
+	const validateForm = () => {
+		const errs = {};
+		if (!form.nik || !form.nik.trim()) {
+			errs.nik = "NIK wajib diisi";
+		}
+		if (!form.nama || !form.nama.trim()) {
+			errs.nama = "Nama lengkap wajib diisi";
+		}
+		if (!form.jbtn || !form.jbtn.trim()) {
+			errs.jbtn = "Jabatan wajib diisi";
+		}
+		if (!form.departemen || !String(form.departemen).trim()) {
+			errs.departemen = "Departemen wajib dipilih";
+		}
+		return errs;
+	};
+
+	const getTabErrorCount = (tabKey) => {
+		const fields = TAB_FIELD_MAP[tabKey] || [];
+		return fields.filter((f) => fieldErrors[f]).length;
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
-		if (!form.nik || !form.nama || !form.jbtn || !form.departemen) {
-			toast.error("NIK, Nama, Jabatan, dan Departemen wajib diisi");
+		const validationErrors = validateForm();
+		if (Object.keys(validationErrors).length > 0) {
+			setFieldErrors(validationErrors);
+			for (const [tabKey, fields] of Object.entries(TAB_FIELD_MAP)) {
+				if (fields.some((f) => validationErrors[f])) {
+					setActiveTab(tabKey);
+					const firstErrorField = fields.find((f) => validationErrors[f]);
+					toast.error(
+						`Field wajib pada tab ${tabKey.toUpperCase()}: ${validationErrors[firstErrorField]}`
+					);
+					break;
+				}
+			}
 			return;
 		}
 		setSubmitting(true);
@@ -267,12 +331,7 @@ export default function PegawaiFormDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className="min-h-[520px] max-h-[90vh] overflow-y-auto p-6 sm:p-8"
-				style={{
-					width: "min(56rem, 95vw)",
-					maxWidth: "min(56rem, 95vw)",
-					minWidth: "min(56rem, 95vw)",
-				}}
+				className="sm:max-w-4xl w-[95vw] min-h-[520px] max-h-[90vh] overflow-y-auto p-6 sm:p-8"
 				onCloseAutoFocus={(e) => {
 					e.preventDefault();
 				}}
@@ -296,13 +355,23 @@ export default function PegawaiFormDialog({
 				</DialogHeader>
 
 				<form onSubmit={handleSubmit} className="min-w-0">
-					<Tabs defaultValue="pribadi" className="w-full">
+					<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 						<TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 h-11">
-							<TabsTrigger value="pribadi" className="text-sm">
+							<TabsTrigger value="pribadi" className="text-sm relative">
 								Pribadi
+								{getTabErrorCount("pribadi") > 0 && (
+									<span className="ml-1.5 px-1.5 py-0.2 rounded-full text-xs bg-red-100 text-red-700 font-semibold">
+										{getTabErrorCount("pribadi")}
+									</span>
+								)}
 							</TabsTrigger>
-							<TabsTrigger value="jabatan" className="text-sm">
+							<TabsTrigger value="jabatan" className="text-sm relative">
 								Jabatan
+								{getTabErrorCount("jabatan") > 0 && (
+									<span className="ml-1.5 px-1.5 py-0.2 rounded-full text-xs bg-red-100 text-red-700 font-semibold">
+										{getTabErrorCount("jabatan")}
+									</span>
+								)}
 							</TabsTrigger>
 							<TabsTrigger value="remunerasi" className="text-sm">
 								Faktor Remunerasi
@@ -321,23 +390,39 @@ export default function PegawaiFormDialog({
 						<TabsContent value="pribadi" className="space-y-5 pt-6 w-full">
 							<div className="flex flex-col gap-5 w-full">
 								<div className="min-w-0">
-									<Label>NIK *</Label>
+									<Label className={cn(fieldErrors.nik && "text-red-600 font-medium")}>
+										NIK *
+									</Label>
 									<Input
 										value={form.nik}
 										onChange={(e) => handleChange("nik", e.target.value)}
 										placeholder="NIK"
 										disabled={isEdit}
-										className="w-full"
+										className={cn(
+											"w-full",
+											fieldErrors.nik && "border-red-500 focus-visible:ring-red-400"
+										)}
 									/>
+									{fieldErrors.nik && (
+										<p className="text-xs text-red-600 mt-1">{fieldErrors.nik}</p>
+									)}
 								</div>
 								<div className="min-w-0">
-									<Label>Nama *</Label>
+									<Label className={cn(fieldErrors.nama && "text-red-600 font-medium")}>
+										Nama *
+									</Label>
 									<Input
 										value={form.nama}
 										onChange={(e) => handleChange("nama", e.target.value)}
 										placeholder="Nama lengkap"
-										className="w-full"
+										className={cn(
+											"w-full",
+											fieldErrors.nama && "border-red-500 focus-visible:ring-red-400"
+										)}
 									/>
+									{fieldErrors.nama && (
+										<p className="text-xs text-red-600 mt-1">{fieldErrors.nama}</p>
+									)}
 								</div>
 								<div className="min-w-0">
 									<Label>Jenis Kelamin</Label>
@@ -418,22 +503,38 @@ export default function PegawaiFormDialog({
 						<TabsContent value="jabatan" className="space-y-5 pt-6 w-full">
 							<div className="flex flex-col gap-5 w-full">
 								<div className="min-w-0">
-									<Label>Jabatan *</Label>
+									<Label className={cn(fieldErrors.jbtn && "text-red-600 font-medium")}>
+										Jabatan *
+									</Label>
 									<Input
 										value={form.jbtn}
 										onChange={(e) => handleChange("jbtn", e.target.value)}
 										placeholder="Nama jabatan"
-										className="w-full"
+										className={cn(
+											"w-full",
+											fieldErrors.jbtn && "border-red-500 focus-visible:ring-red-400"
+										)}
 									/>
+									{fieldErrors.jbtn && (
+										<p className="text-xs text-red-600 mt-1">{fieldErrors.jbtn}</p>
+									)}
 								</div>
 								<div className="min-w-0">
-									<Label>Departemen *</Label>
+									<Label className={cn(fieldErrors.departemen && "text-red-600 font-medium")}>
+										Departemen *
+									</Label>
 									<SearchableSelect
 										value={form.departemen}
 										onChange={(v) => handleChange("departemen", v)}
-										options={(departemenList || []).map(d => ({ value: d.dep_id, label: d.nama }))}
+										options={(departemenList || []).map((d) => ({
+											value: d.dep_id,
+											label: d.nama,
+										}))}
 										placeholder="Pilih Departemen"
 									/>
+									{fieldErrors.departemen && (
+										<p className="text-xs text-red-600 mt-1">{fieldErrors.departemen}</p>
+									)}
 								</div>
 								<div className="min-w-0">
 									<Label>Bidang</Label>
@@ -606,7 +707,12 @@ export default function PegawaiFormDialog({
 						<TabsContent value="gaji" className="space-y-5 pt-6 w-full">
 							<div className="flex flex-col gap-5 w-full">
 								<div className="min-w-0">
-									<Label>Gaji Pokok</Label>
+									<div className="flex items-center justify-between">
+										<Label>Gaji Pokok</Label>
+										<span className="text-xs font-mono text-slate-500">
+											{formatRupiah(form.gapok)}
+										</span>
+									</div>
 									<Input
 										type="number"
 										min={0}
@@ -615,11 +721,16 @@ export default function PegawaiFormDialog({
 										onChange={(e) =>
 											handleChange("gapok", parseFloat(e.target.value) || 0)
 										}
-										className="w-full"
+										className="w-full mt-1.5"
 									/>
 								</div>
 								<div className="min-w-0">
-									<Label>Pengurang</Label>
+									<div className="flex items-center justify-between">
+										<Label>Pengurang</Label>
+										<span className="text-xs font-mono text-slate-500">
+											{formatRupiah(form.pengurang)}
+										</span>
+									</div>
 									<Input
 										type="number"
 										min={0}
@@ -628,7 +739,7 @@ export default function PegawaiFormDialog({
 										onChange={(e) =>
 											handleChange("pengurang", parseFloat(e.target.value) || 0)
 										}
-										className="w-full"
+										className="w-full mt-1.5"
 									/>
 								</div>
 								<div className="min-w-0">
