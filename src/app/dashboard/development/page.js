@@ -21,6 +21,7 @@ import {
 	Edit,
 	Trash2,
 	Printer,
+	Loader2,
 } from "lucide-react";
 import moment from "moment";
 import { RequestCard, RequestModal, DevelopmentPrintModal, DevelopmentListPrintView } from "@/components/development";
@@ -68,11 +69,10 @@ export default function DevelopmentRequestsPage() {
 	};
 
 	const handleOpenPrintModal = async () => {
-		setShowPrintModal(true);
 		try {
 			setIsFetchingPrintData(true);
 			const params = new URLSearchParams({
-				limit: "200",
+				limit: "1000",
 				offset: "0",
 				status: selectedStatus,
 				priority: selectedPriority,
@@ -89,14 +89,16 @@ export default function DevelopmentRequestsPage() {
 
 			const response = await fetch(`/api/development?${params}`, { headers });
 			const result = await response.json();
-			if (result.success && result.data?.requests) {
+			if (response.ok && result.data?.requests) {
 				setAllPrintRequests(result.data.requests);
 			} else {
 				setAllPrintRequests(requests);
 			}
+			setShowPrintModal(true);
 		} catch (err) {
 			console.error("Error fetching print data:", err);
 			setAllPrintRequests(requests);
+			setShowPrintModal(true);
 		} finally {
 			setIsFetchingPrintData(false);
 		}
@@ -388,11 +390,16 @@ export default function DevelopmentRequestsPage() {
 						<button
 							type="button"
 							onClick={handleOpenPrintModal}
-							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors min-w-0 flex-1 sm:flex-initial text-sm sm:text-base font-medium shadow-xs"
+							disabled={isFetchingPrintData}
+							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors min-w-0 flex-1 sm:flex-initial text-sm sm:text-base font-medium shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
 							title="Cetak Laporan Rekapitulasi"
 						>
-							<Printer className="w-4 h-4 flex-shrink-0 text-slate-600" />
-							<span>Cetak Rekap</span>
+							{isFetchingPrintData ? (
+								<Loader2 className="w-4 h-4 flex-shrink-0 animate-spin text-slate-600" />
+							) : (
+								<Printer className="w-4 h-4 flex-shrink-0 text-slate-600" />
+							)}
+							<span>{isFetchingPrintData ? "Memuat..." : "Cetak Rekap"}</span>
 						</button>
 						<button
 							onClick={() => setShowCreateModal(true)}
