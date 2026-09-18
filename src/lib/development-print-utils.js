@@ -9,14 +9,13 @@ export const triggerBrowserPrint = () => {
 };
 
 /**
- * Mathematical conversion from oklch(...) CSS color to standard rgba(...)
- * Ensures complete compatibility with html2canvas and canvas renderers.
+ * Convert oklch(...) CSS color to standard rgba(...) string.
  */
-const oklchToRgb = (str) => {
+const oklchToRgba = (str) => {
 	const match = str.match(
 		/oklch\(\s*([\d.%]+)\s+([\d.%]+)\s+([\d.%]+)(?:\s*\/\s*([\d.%]+))?\s*\)/i
 	);
-	if (!match) return "#1e293b";
+	if (!match) return null;
 
 	let L = parseFloat(match[1]);
 	let C = parseFloat(match[2]);
@@ -28,6 +27,31 @@ const oklchToRgb = (str) => {
 	const a = C * Math.cos(hRad);
 	const b = C * Math.sin(hRad);
 
+	return oklabValuesToRgba(L, a, b, A);
+};
+
+/**
+ * Convert oklab(...) CSS color to standard rgba(...) string.
+ */
+const oklabToRgba = (str) => {
+	const match = str.match(
+		/oklab\(\s*([\d.%]+)\s+([-\d.%]+)\s+([-\d.%]+)(?:\s*\/\s*([\d.%]+))?\s*\)/i
+	);
+	if (!match) return null;
+
+	let L = parseFloat(match[1]);
+	let a = parseFloat(match[2]);
+	let b = parseFloat(match[3]);
+	let A = match[4] ? parseFloat(match[4]) : 1;
+	if (match[1].endsWith("%")) L /= 100;
+
+	return oklabValuesToRgba(L, a, b, A);
+};
+
+/**
+ * Shared OKLab L,a,b → sRGB rgba() conversion.
+ */
+const oklabValuesToRgba = (L, a, b, A) => {
 	const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
 	const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
 	const s_ = L - 0.0894841775 * a - 1.291485548 * b;
@@ -47,11 +71,32 @@ const oklchToRgb = (str) => {
 	return `rgba(${clamp(r)}, ${clamp(g)}, ${clamp(b_rgb)}, ${A})`;
 };
 
-const replaceOklchInString = (str) => {
-	if (!str || typeof str !== "string" || !str.includes("oklch")) return str;
-	return str.replace(/oklch\([^)]+\)/gi, (match) => {
+/**
+ * Regex matching all modern CSS color functions html2canvas cannot parse:
+ * oklch(), oklab(), lab(), lch(), color(), light-dark()
+ */
+const UNSUPPORTED_COLOR_RE = /(?:oklch|oklab|lab|lch|color|light-dark)\([^)]*(?:\([^)]*\))?[^)]*\)/gi;
+
+const hasUnsupportedColor = (str) =>
+	typeof str === "string" &&
+	(str.includes("oklch") ||
+		str.includes("oklab") ||
+		str.includes("lab(") ||
+		str.includes("lch(") ||
+		str.includes("color(") ||
+		str.includes("light-dark("));
+
+/**
+ * Replace all unsupported CSS color functions with rgba equivalents or fallback.
+ */
+const sanitizeColorString = (str) => {
+	if (!str || !hasUnsupportedColor(str)) return str;
+	return str.replace(UNSUPPORTED_COLOR_RE, (match) => {
 		try {
-			return oklchToRgb(match);
+			if (match.startsWith("oklch")) return oklchToRgba(match) || "#1e293b";
+			if (match.startsWith("oklab")) return oklabToRgba(match) || "#1e293b";
+			// For lab(), lch(), color(), light-dark() — no math converter, use safe fallback
+			return "#1e293b";
 		} catch {
 			return "#1e293b";
 		}
@@ -59,7 +104,8 @@ const replaceOklchInString = (str) => {
 };
 
 /**
- * Creates a proxied getComputedStyle to sanitize any returned oklch color values.
+ * Creates a proxied getComputedStyle to sanitize any unsupported color values
+ * before html2canvas tries to parse them.
  */
 const createStyleProxy = (originalFn, context) => {
 	return function (el, pseudo) {
@@ -69,14 +115,14 @@ const createStyleProxy = (originalFn, context) => {
 		return new Proxy(style, {
 			get(target, prop) {
 				const val = target[prop];
-				if (typeof val === "string" && val.includes("oklch")) {
-					return replaceOklchInString(val);
+				if (typeof val === "string" && hasUnsupportedColor(val)) {
+					return sanitizeColorString(val);
 				}
 				if (typeof val === "function") {
 					if (prop === "getPropertyValue") {
 						return function (name) {
 							const v = target.getPropertyValue(name);
-							return replaceOklchInString(v);
+							return sanitizeColorString(v);
 						};
 					}
 					return val.bind(target);
@@ -141,8 +187,8 @@ export const exportToPdfFromElement = async (
 				// Sanitize all <style> tags in the cloned document
 				const styles = clonedDoc.querySelectorAll("style");
 				styles.forEach((styleTag) => {
-					if (styleTag.textContent && styleTag.textContent.includes("oklch")) {
-						styleTag.textContent = replaceOklchInString(styleTag.textContent);
+					if (styleTag.textContent && hasUnsupportedColor(styleTag.textContent)) {
+						styleTag.textContent = sanitizeColorString(styleTag.textContent);
 					}
 				});
 			},
