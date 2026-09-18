@@ -48,9 +48,28 @@ export default function DevelopmentDetailPrintView({
 	};
 
 	return (
-		<div className="text-black font-sans text-xs bg-white w-full leading-normal">
+		<div className="text-black font-sans text-xs bg-white w-full leading-normal print-doc-container">
+			<style dangerouslySetInnerHTML={{ __html: `
+				.print-doc-container {
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+					color: #000000 !important;
+					background: #ffffff !important;
+				}
+				.print-table {
+					width: 100% !important;
+					border-collapse: collapse !important;
+					border: 1px solid #000000 !important;
+				}
+				.print-table th, .print-table td {
+					border: 1px solid #000000 !important;
+					padding: 3px 6px !important;
+				}
+				.print-border-double {
+					border-bottom: 4px double #000000 !important;
+				}
+			` }} />
 			{/* Kop Formulir Resmi Kedinasan Polri / RSB Nganjuk */}
-			<div className="border-b-4 border-double border-black pb-2.5 mb-2.5 print-avoid-break">
+			<div className="border-b-4 border-double border-black pb-2.5 mb-2.5 print-avoid-break print-border-double">
 				<div className="flex items-center justify-between gap-3">
 					<div className="flex items-center gap-3">
 						<img
@@ -101,7 +120,7 @@ export default function DevelopmentDetailPrintView({
 				<div className="bg-white border border-black px-2.5 py-0.5 font-bold text-[9.5px] uppercase tracking-wide text-black font-mono mb-1">
 					Bagian I: Data Pemohon & Identitas Tiket
 				</div>
-				<table className="w-full border-collapse border border-black text-[9.5px]">
+				<table className="w-full border-collapse border border-black text-[9.5px] print-table">
 					<tbody>
 						<tr className="border-b border-black">
 							<td className="w-1/4 px-2.5 py-1 font-bold text-black border-r border-black">
@@ -199,7 +218,7 @@ export default function DevelopmentDetailPrintView({
 				<div className="bg-white border border-black px-2.5 py-0.5 font-bold text-[9.5px] uppercase tracking-wide text-black font-mono mb-1">
 					Bagian III: Verifikasi & Persetujuan Manajemen
 				</div>
-				<table className="w-full border-collapse border border-black text-[9.5px]">
+				<table className="w-full border-collapse border border-black text-[9.5px] print-table">
 					<tbody>
 						<tr className="border-b border-black">
 							<td className="w-1/4 px-2.5 py-1 font-bold text-black border-r border-black">
@@ -242,7 +261,7 @@ export default function DevelopmentDetailPrintView({
 				<div className="bg-white border border-black px-2.5 py-0.5 font-bold text-[9.5px] uppercase tracking-wide text-black font-mono mb-1">
 					Bagian IV: Penugasan Teknis & Pelaksanaan IT
 				</div>
-				<table className="w-full border-collapse border border-black text-[9.5px]">
+				<table className="w-full border-collapse border border-black text-[9.5px] print-table">
 					<tbody>
 						<tr className="border-b border-black">
 							<td className="w-1/4 px-2.5 py-1 font-bold text-black border-r border-black">

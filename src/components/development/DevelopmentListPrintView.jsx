@@ -62,9 +62,28 @@ export default function DevelopmentListPrintView({
 	};
 
 	return (
-		<div className="text-black font-sans text-xs bg-white w-full">
+		<div className="text-black font-sans text-xs bg-white w-full print-doc-container">
+			<style dangerouslySetInnerHTML={{ __html: `
+				.print-doc-container {
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+					color: #000000 !important;
+					background: #ffffff !important;
+				}
+				.print-table {
+					width: 100% !important;
+					border-collapse: collapse !important;
+					border: 1px solid #000000 !important;
+				}
+				.print-table th, .print-table td {
+					border: 1px solid #000000 !important;
+					padding: 4px 6px !important;
+				}
+				.print-border-double {
+					border-bottom: 4px double #000000 !important;
+				}
+			` }} />
 			{/* Kop Resmi Kedinasan Polri / RSB Nganjuk */}
-			<div className="border-b-4 border-double border-black pb-3 mb-3">
+			<div className="border-b-4 border-double border-black pb-3 mb-3 print-border-double">
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex items-center gap-3.5">
 						<img
@@ -126,7 +145,7 @@ export default function DevelopmentListPrintView({
 
 			{/* Tabel Daftar Pengajuan (Monokrom) */}
 			<div className="mb-4 overflow-x-auto">
-				<table className="w-full border-collapse border border-black text-[10px] leading-tight">
+				<table className="w-full border-collapse border border-black text-[10px] leading-tight print-table">
 					<thead>
 						<tr className="bg-white text-black font-bold uppercase font-mono text-[9px] border-b-2 border-black">
 							<th className="border border-black px-1.5 py-2 text-center w-7">No</th>

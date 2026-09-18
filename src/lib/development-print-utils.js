@@ -33,7 +33,25 @@ export const triggerBrowserPrint = (
 
 	const doc = iframe.contentWindow.document;
 
-	// Extract style and link tags from main document
+	// 1. Extract all stylesheet rules directly from CSSOM (synchronous, complete Tailwind rules)
+	let inlineCssRules = "";
+	try {
+		Array.from(document.styleSheets).forEach((sheet) => {
+			try {
+				if (sheet.cssRules) {
+					Array.from(sheet.cssRules).forEach((rule) => {
+						inlineCssRules += rule.cssText + "\n";
+					});
+				}
+			} catch {
+				// Ignore cross-origin access blocks if any
+			}
+		});
+	} catch {
+		// Fallback safe
+	}
+
+	// 2. Extract style and link tags from main document as fallback
 	const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
 		.map((el) => el.outerHTML)
 		.join("\n");
@@ -47,19 +65,52 @@ export const triggerBrowserPrint = (
 			<title>Cetak Dokumen</title>
 			${styles}
 			<style>
+				${inlineCssRules}
+			</style>
+			<style>
 				@page {
 					size: ${orientation === "landscape" ? "A4 landscape" : "A4 portrait"};
 					margin: 8mm 8mm;
+				}
+				* {
+					box-sizing: border-box !important;
+					-webkit-print-color-adjust: exact !important;
+					print-color-adjust: exact !important;
 				}
 				html, body {
 					margin: 0 !important;
 					padding: 0 !important;
 					background: #ffffff !important;
 					color: #000000 !important;
-					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
 				}
-				* {
-					box-sizing: border-box !important;
+				table {
+					border-collapse: collapse !important;
+					width: 100% !important;
+				}
+				th, td {
+					border: 1px solid #000000 !important;
+				}
+				.border-black {
+					border-color: #000000 !important;
+				}
+				.border {
+					border: 1px solid #000000 !important;
+				}
+				.border-b-4 {
+					border-bottom: 4px double #000000 !important;
+				}
+				.border-b-2 {
+					border-bottom: 2px solid #000000 !important;
+				}
+				.border-t-2 {
+					border-top: 2px solid #000000 !important;
+				}
+				.border-b {
+					border-bottom: 1px solid #000000 !important;
+				}
+				.border-r {
+					border-right: 1px solid #000000 !important;
 				}
 				.print-avoid-break, tr {
 					page-break-inside: avoid !important;
@@ -82,16 +133,27 @@ export const triggerBrowserPrint = (
 	`);
 	doc.close();
 
-	// Wait for iframe content to render before opening print dialog
-	setTimeout(() => {
-		try {
-			iframe.contentWindow.focus();
-			iframe.contentWindow.print();
-		} catch (err) {
-			console.error("Iframe print error:", err);
-			window.print();
-		}
-	}, 350);
+	// 3. Wait for all images to load before printing
+	const images = Array.from(doc.images);
+	const imagePromises = images.map((img) => {
+		if (img.complete) return Promise.resolve();
+		return new Promise((resolve) => {
+			img.onload = resolve;
+			img.onerror = resolve;
+		});
+	});
+
+	Promise.all(imagePromises).then(() => {
+		setTimeout(() => {
+			try {
+				iframe.contentWindow.focus();
+				iframe.contentWindow.print();
+			} catch (err) {
+				console.error("Iframe print error:", err);
+				window.print();
+			}
+		}, 150);
+	});
 };
 
 /**
