@@ -26,6 +26,7 @@ import {
 	GitBranch,
 	Target,
 	Settings,
+	Printer,
 } from "lucide-react";
 import moment from "moment";
 import { getClientToken } from "@/lib/client-auth";
@@ -34,6 +35,8 @@ import {
 	ApprovalPanel,
 	AssignmentPanel,
 	ProgressTracker,
+	DevelopmentPrintModal,
+	DevelopmentDetailPrintView,
 } from "@/components/development";
 
 export default function DevelopmentRequestDetail() {
@@ -49,6 +52,7 @@ export default function DevelopmentRequestDetail() {
 	const [newNote, setNewNote] = useState("");
 	const [isAddingNote, setIsAddingNote] = useState(false);
 	const [user, setUser] = useState(null);
+	const [showPrintModal, setShowPrintModal] = useState(false);
 	const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
 	const showToast = (message, type = "success") => {
@@ -503,6 +507,16 @@ export default function DevelopmentRequestDetail() {
 						</button>
 					)}
 					<button
+						type="button"
+						onClick={() => setShowPrintModal(true)}
+						className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium shadow-xs"
+						title="Cetak Formulir Pengajuan Pengembangan"
+					>
+						<Printer className="w-4 h-4 text-slate-600" />
+						<span className="hidden sm:inline">Cetak Form</span>
+						<span className="sm:hidden">Cetak</span>
+					</button>
+					<button
 						onClick={fetchRequestDetail}
 						className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
 					>
@@ -945,6 +959,22 @@ export default function DevelopmentRequestDetail() {
 					)}
 				</div>
 			</div>
+
+			{/* Print Modal */}
+			<DevelopmentPrintModal
+				isOpen={showPrintModal}
+				onClose={() => setShowPrintModal(false)}
+				title={`Formulir Pengajuan: ${request?.no_request || ""}`}
+				fileName={`form-pengajuan-${request?.no_request || params.id}`}
+				orientation="portrait"
+			>
+				<DevelopmentDetailPrintView
+					request={request}
+					statusHistory={statusHistory}
+					notes={notes}
+					user={user}
+				/>
+			</DevelopmentPrintModal>
 
 			{/* Toast Notification */}
 			{toast.show && (
