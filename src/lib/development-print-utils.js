@@ -9,6 +9,85 @@ export const triggerBrowserPrint = () => {
 };
 
 /**
+ * Mathematical conversion from oklch(...) CSS color to standard rgba(...)
+ * Ensures complete compatibility with html2canvas and canvas renderers.
+ */
+const oklchToRgb = (str) => {
+	const match = str.match(
+		/oklch\(\s*([\d.%]+)\s+([\d.%]+)\s+([\d.%]+)(?:\s*\/\s*([\d.%]+))?\s*\)/i
+	);
+	if (!match) return "#1e293b";
+
+	let L = parseFloat(match[1]);
+	let C = parseFloat(match[2]);
+	let H = parseFloat(match[3]);
+	let A = match[4] ? parseFloat(match[4]) : 1;
+	if (match[1].endsWith("%")) L /= 100;
+
+	const hRad = (H * Math.PI) / 180;
+	const a = C * Math.cos(hRad);
+	const b = C * Math.sin(hRad);
+
+	const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+	const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+	const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+
+	const l = l_ * l_ * l_;
+	const m = m_ * m_ * m_;
+	const s = s_ * s_ * s_;
+
+	let r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+	let g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+	let b_rgb = -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s;
+
+	const gamma = (x) =>
+		x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(Math.max(0, x), 1 / 2.4) - 0.055;
+	const clamp = (x) => Math.min(255, Math.max(0, Math.round(gamma(x) * 255)));
+
+	return `rgba(${clamp(r)}, ${clamp(g)}, ${clamp(b_rgb)}, ${A})`;
+};
+
+const replaceOklchInString = (str) => {
+	if (!str || typeof str !== "string" || !str.includes("oklch")) return str;
+	return str.replace(/oklch\([^)]+\)/gi, (match) => {
+		try {
+			return oklchToRgb(match);
+		} catch {
+			return "#1e293b";
+		}
+	});
+};
+
+/**
+ * Creates a proxied getComputedStyle to sanitize any returned oklch color values.
+ */
+const createStyleProxy = (originalFn, context) => {
+	return function (el, pseudo) {
+		const style = originalFn.call(context, el, pseudo);
+		if (!style) return style;
+
+		return new Proxy(style, {
+			get(target, prop) {
+				const val = target[prop];
+				if (typeof val === "string" && val.includes("oklch")) {
+					return replaceOklchInString(val);
+				}
+				if (typeof val === "function") {
+					if (prop === "getPropertyValue") {
+						return function (name) {
+							const v = target.getPropertyValue(name);
+							return replaceOklchInString(v);
+						};
+					}
+					return val.bind(target);
+				}
+				return val;
+			},
+		});
+	};
+};
+
+/**
  * Export specific HTML element to PDF file via html2canvas & jsPDF.
  * Dynamically imports libraries to prevent SSR hydration errors.
  * 
@@ -33,11 +112,16 @@ export const exportToPdfFromElement = async (
 	const orientation = options.orientation === "landscape" ? "l" : "p";
 	const cleanFileName = fileName.endsWith(".pdf") ? fileName : `${fileName}.pdf`;
 
+	const originalWindowGetComputedStyle = window.getComputedStyle;
+
 	try {
+		// 1. Intercept main window getComputedStyle so html2canvas's parseBackgroundColor never sees oklch
+		window.getComputedStyle = createStyleProxy(originalWindowGetComputedStyle, window);
+
 		const html2canvas = (await import("html2canvas")).default;
 		const { jsPDF } = await import("jspdf");
 
-		// Render element to canvas with high resolution scale
+		// 2. Render element to canvas with high resolution scale and internal iframe interception
 		const canvas = await html2canvas(element, {
 			scale: 2,
 			useCORS: true,
@@ -46,11 +130,19 @@ export const exportToPdfFromElement = async (
 			logging: false,
 			windowWidth: element.scrollWidth,
 			onclone: (clonedDoc) => {
-				// Strip any residual oklch color references in cloned styles
+				// Intercept getComputedStyle inside the cloned document iframe
+				if (clonedDoc.defaultView) {
+					clonedDoc.defaultView.getComputedStyle = createStyleProxy(
+						clonedDoc.defaultView.getComputedStyle,
+						clonedDoc.defaultView
+					);
+				}
+
+				// Sanitize all <style> tags in the cloned document
 				const styles = clonedDoc.querySelectorAll("style");
 				styles.forEach((styleTag) => {
 					if (styleTag.textContent && styleTag.textContent.includes("oklch")) {
-						styleTag.textContent = styleTag.textContent.replace(/oklch\([^)]+\)/gi, "#1e293b");
+						styleTag.textContent = replaceOklchInString(styleTag.textContent);
 					}
 				});
 			},
@@ -88,5 +180,8 @@ export const exportToPdfFromElement = async (
 	} catch (error) {
 		console.error("Failed to export PDF:", error);
 		throw error;
+	} finally {
+		// Restore original getComputedStyle
+		window.getComputedStyle = originalWindowGetComputedStyle;
 	}
 };
