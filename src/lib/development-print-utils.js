@@ -167,6 +167,12 @@ export const exportToPdfFromElement = async (
 		const html2canvas = (await import("html2canvas")).default;
 		const { jsPDF } = await import("jspdf");
 
+		// Temporarily reset minHeight & padding on capture element so it captures only actual content height
+		const prevMinHeight = element.style.minHeight;
+		const prevBoxShadow = element.style.boxShadow;
+		element.style.minHeight = "auto";
+		element.style.boxShadow = "none";
+
 		// 2. Render element to canvas with high resolution scale and internal iframe interception
 		const canvas = await html2canvas(element, {
 			scale: 2,
@@ -191,8 +197,20 @@ export const exportToPdfFromElement = async (
 						styleTag.textContent = sanitizeColorString(styleTag.textContent);
 					}
 				});
+
+				// Reset clone minHeight to prevent artificial trailing page
+				const clonedTarget = clonedDoc.getElementById(elementId);
+				if (clonedTarget) {
+					clonedTarget.style.minHeight = "auto";
+					clonedTarget.style.boxShadow = "none";
+					clonedTarget.style.border = "none";
+				}
 			},
 		});
+
+		// Restore element styles
+		element.style.minHeight = prevMinHeight;
+		element.style.boxShadow = prevBoxShadow;
 
 		const imgData = canvas.toDataURL("image/png");
 		const pdf = new jsPDF(orientation, "mm", "a4");
@@ -206,19 +224,23 @@ export const exportToPdfFromElement = async (
 		// Calculate scaled height matching pdfWidth
 		const renderHeight = (imgHeight * pdfWidth) / imgWidth;
 
-		let heightLeft = renderHeight;
-		let position = 0;
+		// If content fits within a single A4 page (with a 4mm tolerance), render single page only
+		if (renderHeight <= pdfHeight + 4) {
+			pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, renderHeight, "", "FAST");
+		} else {
+			// Multi-page slicing without duplicate overlaps
+			let heightLeft = renderHeight;
+			let page = 0;
 
-		// First page
-		pdf.addImage(imgData, "PNG", 0, position, pdfWidth, renderHeight, "", "FAST");
-		heightLeft -= pdfHeight;
-
-		// Subsequent pages if content overflows A4 height
-		while (heightLeft > 0) {
-			position = heightLeft - renderHeight;
-			pdf.addPage();
-			pdf.addImage(imgData, "PNG", 0, position, pdfWidth, renderHeight, "", "FAST");
-			heightLeft -= pdfHeight;
+			while (heightLeft > 4) {
+				if (page > 0) {
+					pdf.addPage();
+				}
+				const position = -(page * pdfHeight);
+				pdf.addImage(imgData, "PNG", 0, position, pdfWidth, renderHeight, "", "FAST");
+				heightLeft -= pdfHeight;
+				page++;
+			}
 		}
 
 		pdf.save(cleanFileName);

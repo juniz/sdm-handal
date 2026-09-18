@@ -37,49 +37,102 @@ export default function DevelopmentPrintModal({
 	};
 
 	return (
-		<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-hidden">
+		<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-4 overflow-hidden print-modal-backdrop">
 			{/* Print stylesheet */}
 			<style dangerouslySetInnerHTML={{ __html: `
 				@page {
 					size: ${orientation === "landscape" ? "A4 landscape" : "A4 portrait"};
-					margin: 8mm 10mm;
+					margin: 8mm 8mm;
 				}
 				@media print {
 					html, body {
 						background: #ffffff !important;
 						margin: 0 !important;
 						padding: 0 !important;
+						height: auto !important;
+						min-height: 0 !important;
+						overflow: visible !important;
 					}
-					body * {
-						visibility: hidden;
+
+					/* Hide all siblings in body so no phantom background pages exist */
+					body > *:not(.print-modal-backdrop) {
+						display: none !important;
 					}
-					#development-print-content,
-					#development-print-content * {
-						visibility: visible;
-					}
-					#development-print-content {
-						position: absolute;
-						left: 0;
-						top: 0;
+
+					/* Unfix modal so browser print engine can paginate freely */
+					.print-modal-backdrop {
+						position: static !important;
+						inset: auto !important;
+						display: block !important;
+						background: transparent !important;
+						padding: 0 !important;
+						margin: 0 !important;
+						overflow: visible !important;
+						height: auto !important;
+						min-height: 0 !important;
 						width: 100% !important;
+					}
+
+					.print-modal-container {
+						position: static !important;
+						display: block !important;
+						width: 100% !important;
+						max-width: 100% !important;
+						height: auto !important;
+						max-height: none !important;
+						overflow: visible !important;
+						border: none !important;
+						box-shadow: none !important;
+						background: transparent !important;
+						padding: 0 !important;
+						margin: 0 !important;
+					}
+
+					.print-modal-scroll-area {
+						display: block !important;
+						overflow: visible !important;
+						height: auto !important;
+						background: transparent !important;
+						padding: 0 !important;
+						margin: 0 !important;
+					}
+
+					#development-print-content {
+						position: static !important;
+						display: block !important;
+						width: 100% !important;
+						max-width: 100% !important;
+						min-height: 0 !important;
+						height: auto !important;
 						margin: 0 !important;
 						padding: 0 !important;
 						box-shadow: none !important;
 						border: none !important;
 						background: #ffffff !important;
+						overflow: visible !important;
 					}
+
 					.no-print, header, aside, nav, .bottom-navigation, [role="navigation"] {
 						display: none !important;
 						visibility: hidden !important;
 					}
-					.print-avoid-break {
-						page-break-inside: avoid;
-						break-inside: avoid;
+
+					.print-avoid-break, tr {
+						page-break-inside: avoid !important;
+						break-inside: avoid !important;
+					}
+
+					thead {
+						display: table-header-group !important;
+					}
+
+					tfoot {
+						display: table-footer-group !important;
 					}
 				}
 			`}} />
 
-			<div className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl h-[92vh] max-h-[900px] overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+			<div className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl h-[92vh] max-h-[900px] overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200 print-modal-container">
 				{/* Modal Header */}
 				<div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-slate-200 bg-slate-50 no-print flex-shrink-0">
 					<div className="flex items-center gap-2.5">
@@ -154,7 +207,7 @@ export default function DevelopmentPrintModal({
 				)}
 
 				{/* Modal Body: A4 Paper Preview */}
-				<div className="flex-1 overflow-y-auto bg-slate-200/80 p-3 sm:p-6 flex justify-center items-start">
+				<div className="flex-1 overflow-y-auto bg-slate-200/80 p-3 sm:p-6 flex justify-center items-start print-modal-scroll-area">
 					<div
 						id="development-print-content"
 						className={`bg-white shadow-md border border-slate-300 transition-all ${
