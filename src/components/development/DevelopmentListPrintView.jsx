@@ -221,7 +221,7 @@ export default function DevelopmentListPrintView({
 			</div>
 
 			{/* Ringkasan Status (Monokrom) */}
-			<div className="border border-black p-2.5 bg-white mb-6 print-avoid-break text-black">
+			<div className="border border-black p-2.5 bg-white mb-2 print-avoid-break text-black">
 				<div className="font-bold text-[10px] text-black uppercase tracking-wider mb-1.5 font-mono">
 					Ringkasan Status Permintaan
 				</div>
@@ -246,22 +246,6 @@ export default function DevelopmentListPrintView({
 						<span>Ditolak: </span>
 						<strong className="font-bold text-black">{statistics.rejected || 0}</strong>
 					</div>
-				</div>
-			</div>
-
-			{/* Kolom Tanda Tangan Pengesahan (Monokrom) */}
-			<div className="grid grid-cols-2 gap-8 text-center pt-2 print-avoid-break text-black">
-				<div>
-					<p className="text-[10px] text-black mb-1">Dibuat Oleh,</p>
-					<p className="text-[10px] font-bold text-black">Petugas / Operator SIMRS</p>
-					<div className="h-16 border-b border-black w-44 mx-auto mb-1"></div>
-					<p className="text-[10px] font-bold text-black">( ............................................ )</p>
-				</div>
-				<div>
-					<p className="text-[10px] text-black mb-1">Mengetahui,</p>
-					<p className="text-[10px] font-bold text-black">Kepala Sub Bagian IT & SIMRS</p>
-					<div className="h-16 border-b border-black w-44 mx-auto mb-1"></div>
-					<p className="text-[10px] font-bold text-black">( ............................................ )</p>
 				</div>
 			</div>
 		</div>

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Printer, Download, X, Loader2, FileText } from "lucide-react";
-import { exportToPdfFromElement, triggerBrowserPrint } from "@/lib/development-print-utils";
+import { Printer, X, FileText } from "lucide-react";
+import { triggerBrowserPrint } from "@/lib/development-print-utils";
 
 export default function DevelopmentPrintModal({
 	isOpen,
@@ -12,28 +11,10 @@ export default function DevelopmentPrintModal({
 	orientation = "portrait", // "portrait" | "landscape"
 	children,
 }) {
-	const [isDownloading, setIsDownloading] = useState(false);
-	const [downloadError, setDownloadError] = useState(null);
-
 	if (!isOpen) return null;
 
 	const handleBrowserPrint = () => {
 		triggerBrowserPrint("development-print-content", orientation);
-	};
-
-	const handleDownloadPdf = async () => {
-		try {
-			setIsDownloading(true);
-			setDownloadError(null);
-			await exportToPdfFromElement("development-print-content", fileName, {
-				orientation,
-			});
-		} catch (err) {
-			console.error("Gagal mendownload PDF:", err);
-			setDownloadError("Gagal memproses file PDF. Silakan gunakan cetak browser.");
-		} finally {
-			setIsDownloading(false);
-		}
 	};
 
 	return (
@@ -74,7 +55,7 @@ export default function DevelopmentPrintModal({
 								{title}
 							</h3>
 							<p className="text-xs text-slate-500">
-								Format A4 ({orientation === "landscape" ? "Landscape" : "Portrait"}) • Siap dicetak atau diunduh
+								Format A4 ({orientation === "landscape" ? "Landscape" : "Portrait"}) • Siap dicetak
 							</p>
 						</div>
 					</div>
@@ -94,26 +75,6 @@ export default function DevelopmentPrintModal({
 
 						<button
 							type="button"
-							onClick={handleDownloadPdf}
-							disabled={isDownloading}
-							className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-xs sm:text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-							title="Download berkas PDF"
-						>
-							{isDownloading ? (
-								<>
-									<Loader2 className="w-4 h-4 animate-spin" />
-									<span>Memproses...</span>
-								</>
-							) : (
-								<>
-									<Download className="w-4 h-4" />
-									<span>Unduh PDF</span>
-								</>
-							)}
-						</button>
-
-						<button
-							type="button"
 							onClick={onClose}
 							className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors ml-1"
 							title="Tutup dialog"
@@ -122,19 +83,6 @@ export default function DevelopmentPrintModal({
 						</button>
 					</div>
 				</div>
-
-				{downloadError && (
-					<div className="bg-rose-50 border-b border-rose-200 px-4 py-2 text-xs text-rose-700 no-print flex items-center justify-between">
-						<span>{downloadError}</span>
-						<button
-							type="button"
-							onClick={() => setDownloadError(null)}
-							className="text-rose-500 hover:text-rose-700"
-						>
-							<X className="w-3.5 h-3.5" />
-						</button>
-					</div>
-				)}
 
 				{/* Modal Body: A4 Paper Preview */}
 				<div className="flex-1 overflow-y-auto bg-slate-200/80 p-3 sm:p-6 flex justify-center items-start print-modal-scroll-area">
