@@ -45,6 +45,15 @@ export const exportToPdfFromElement = async (
 			backgroundColor: "#ffffff",
 			logging: false,
 			windowWidth: element.scrollWidth,
+			onclone: (clonedDoc) => {
+				// Strip any residual oklch color references in cloned styles
+				const styles = clonedDoc.querySelectorAll("style");
+				styles.forEach((styleTag) => {
+					if (styleTag.textContent && styleTag.textContent.includes("oklch")) {
+						styleTag.textContent = styleTag.textContent.replace(/oklch\([^)]+\)/gi, "#1e293b");
+					}
+				});
+			},
 		});
 
 		const imgData = canvas.toDataURL("image/png");
