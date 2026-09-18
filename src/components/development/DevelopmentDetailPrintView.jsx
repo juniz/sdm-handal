@@ -13,7 +13,7 @@ export default function DevelopmentDetailPrintView({
 }) {
 	if (!request) {
 		return (
-			<div className="p-8 text-center text-slate-500 font-mono text-sm">
+			<div className="p-8 text-center text-black font-mono text-sm">
 				Data pengajuan tidak ditemukan untuk dicetak.
 			</div>
 		);
@@ -48,11 +48,11 @@ export default function DevelopmentDetailPrintView({
 	};
 
 	return (
-		<div className="text-slate-900 font-sans text-xs bg-white w-full">
-			{/* Kop Formulir Resmi */}
-			<div className="border-b-2 border-slate-900 pb-3 mb-4">
+		<div className="text-black font-sans text-xs bg-white w-full">
+			{/* Kop Formulir Resmi Kedinasan Polri / RSB Nganjuk */}
+			<div className="border-b-4 border-double border-black pb-3 mb-3">
 				<div className="flex items-center justify-between gap-4">
-					<div className="flex items-center gap-3">
+					<div className="flex items-center gap-3.5">
 						<img
 							src="/logo-kop.png"
 							alt="Logo Instansi"
@@ -62,88 +62,105 @@ export default function DevelopmentDetailPrintView({
 							}}
 						/>
 						<div>
-							<h3 className="text-[10px] font-bold tracking-wider uppercase text-slate-600 font-mono">
-								SISTEM INFORMASI MANAJEMEN SUMBER DAYA MANUSIA
+							<h3 className="text-[11px] font-bold tracking-wide uppercase text-black leading-tight">
+								POLRI DAERAH JAWA TIMUR
 							</h3>
-							<h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 uppercase">
-								Formulir Permintaan Pengembangan Sistem Informasi
+							<h3 className="text-[11px] font-bold tracking-wide uppercase text-black leading-tight">
+								BIDANG KEDOKTERAN DAN KESEHATAN
+							</h3>
+							<h1 className="text-sm sm:text-base font-black tracking-wide text-black uppercase leading-tight">
+								RUMAH SAKIT BHAYANGKARA TK. III NGANJUK
 							</h1>
-							<p className="text-[10px] text-slate-500 font-mono">
-								Software Development Request Form (SDRF)
+							<p className="text-[9px] text-black font-sans mt-0.5">
+								Jl. Wachid Hasyim No. 119 Nganjuk • Telp. (0358) 321882
 							</p>
 						</div>
 					</div>
-					<div className="text-right text-[10px] font-mono text-slate-600 flex-shrink-0">
-						<div className="border border-slate-400 p-1.5 rounded bg-slate-50">
-							<div className="text-slate-500 text-[9px]">NOMOR TIKET</div>
-							<div className="font-bold text-slate-900 text-xs">{request.no_request || "-"}</div>
+					<div className="text-right text-[9.5px] font-mono text-black flex-shrink-0">
+						<div className="border border-black p-1.5 bg-white">
+							<div className="text-black font-bold text-[8.5px]">NOMOR TIKET</div>
+							<div className="font-black text-black text-xs">{request.no_request || "-"}</div>
 						</div>
-						<div className="mt-1 text-[9px]">Dicetak: {formattedPrintDate} WIB</div>
+						<div className="mt-1 text-[8.5px]">Dicetak: {formattedPrintDate} WIB</div>
 					</div>
 				</div>
 			</div>
 
+			{/* Judul Dokumen */}
+			<div className="text-center my-3">
+				<h2 className="text-sm sm:text-base font-black text-black uppercase tracking-wider underline">
+					FORMULIR PERMINTAAN PENGEMBANGAN SISTEM INFORMASI
+				</h2>
+				<p className="text-[9.5px] text-black font-mono mt-0.5">
+					Software Development Request Form (SDRF)
+				</p>
+			</div>
+
 			{/* Bagian I: Data Pemohon & Tiket */}
-			<div className="mb-4 print-avoid-break">
-				<div className="bg-slate-100 border border-slate-400 px-3 py-1 font-bold text-[10.5px] uppercase tracking-wide text-slate-800 font-mono mb-2">
+			<div className="mb-3.5 print-avoid-break">
+				<div className="bg-white border border-black px-3 py-1 font-bold text-[10px] uppercase tracking-wide text-black font-mono mb-1.5">
 					Bagian I: Data Pemohon & Identitas Tiket
 				</div>
-				<table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+				<table className="w-full border-collapse border border-black text-[10px]">
 					<tbody>
-						<tr className="border-b border-slate-200">
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								Nomor Tiket
 							</td>
-							<td className="w-1/4 px-3 py-1.5 font-bold font-mono text-slate-900 border-r border-slate-200">
+							<td className="w-1/4 px-3 py-1.5 font-bold font-mono text-black border-r border-black">
 								{request.no_request || "-"}
 							</td>
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								Tanggal Pengajuan
 							</td>
-							<td className="w-1/4 px-3 py-1.5 text-slate-900">
+							<td className="w-1/4 px-3 py-1.5 text-black">
 								{formatDate(request.submission_date)}
 							</td>
 						</tr>
-						<tr className="border-b border-slate-200">
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Nama Pemohon
 							</td>
-							<td className="px-3 py-1.5 font-semibold text-slate-900 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-semibold text-black border-r border-black">
 								{request.user_name || "-"}
 							</td>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								NIP / NIK Pemohon
 							</td>
-							<td className="px-3 py-1.5 font-mono text-slate-800">
+							<td className="px-3 py-1.5 font-mono text-black">
 								{request.user_id || "-"}
 							</td>
 						</tr>
-						<tr className="border-b border-slate-200">
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Departemen / Unit
 							</td>
-							<td className="px-3 py-1.5 text-slate-800 border-r border-slate-200">
+							<td className="px-3 py-1.5 text-black border-r border-black">
 								{request.departemen_name || "-"}
 							</td>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Kategori Modul
 							</td>
-							<td className="px-3 py-1.5 font-medium text-slate-900">
+							<td className="px-3 py-1.5 font-medium text-black">
 								{request.module_type || "-"}
 							</td>
 						</tr>
 						<tr>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Prioritas
 							</td>
-							<td className="px-3 py-1.5 font-semibold text-slate-900 border-r border-slate-200">
-								{request.priority || request.priority_level || "Normal"}
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
+								<span className="border border-black px-1 py-0.5 uppercase text-[9px]">
+									{request.priority || request.priority_level || "Normal"}
+								</span>
 							</td>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Status Saat Ini
 							</td>
-							<td className="px-3 py-1.5 font-bold uppercase text-slate-900">
-								{formatStatusIndonesian(request.current_status)}
+							<td className="px-3 py-1.5 font-bold uppercase text-black">
+								<span className="border border-black px-1.5 py-0.5 text-[9px]">
+									{formatStatusIndonesian(request.current_status)}
+								</span>
 							</td>
 						</tr>
 					</tbody>
@@ -151,25 +168,25 @@ export default function DevelopmentDetailPrintView({
 			</div>
 
 			{/* Bagian II: Rincian Kebutuhan Pengembangan */}
-			<div className="mb-4 print-avoid-break">
-				<div className="bg-slate-100 border border-slate-400 px-3 py-1 font-bold text-[10.5px] uppercase tracking-wide text-slate-800 font-mono mb-2">
+			<div className="mb-3.5 print-avoid-break">
+				<div className="bg-white border border-black px-3 py-1 font-bold text-[10px] uppercase tracking-wide text-black font-mono mb-1.5">
 					Bagian II: Rincian Spesifikasi Kebutuhan Sistem
 				</div>
-				<div className="border border-slate-300 rounded divide-y divide-slate-200 text-[10.5px]">
-					<div className="p-2.5 bg-slate-50/50">
-						<div className="text-slate-500 font-medium text-[9.5px] uppercase mb-0.5">Judul Permintaan / Modul</div>
-						<div className="font-bold text-slate-900 text-sm">{request.title}</div>
+				<div className="border border-black divide-y divide-black text-[10px]">
+					<div className="p-2 bg-white">
+						<div className="text-black font-bold text-[9px] uppercase mb-0.5">Judul Permintaan / Modul</div>
+						<div className="font-bold text-black text-xs sm:text-sm">{request.title}</div>
 					</div>
-					<div className="p-2.5">
-						<div className="text-slate-500 font-medium text-[9.5px] uppercase mb-1">Deskripsi Spesifikasi / Kebutuhan Fitur</div>
-						<div className="text-slate-800 leading-relaxed whitespace-pre-wrap">
+					<div className="p-2 bg-white">
+						<div className="text-black font-bold text-[9px] uppercase mb-1">Deskripsi Spesifikasi / Kebutuhan Fitur</div>
+						<div className="text-black leading-relaxed whitespace-pre-wrap font-sans">
 							{request.description || "-"}
 						</div>
 					</div>
 					{(request.business_impact || request.impact_analysis) && (
-						<div className="p-2.5 bg-slate-50/50">
-							<div className="text-slate-500 font-medium text-[9.5px] uppercase mb-1">Dampak Terhadap Alur Kerja / Layanan</div>
-							<div className="text-slate-800 leading-relaxed whitespace-pre-wrap">
+						<div className="p-2 bg-white">
+							<div className="text-black font-bold text-[9px] uppercase mb-1">Dampak Terhadap Alur Kerja / Layanan</div>
+							<div className="text-black leading-relaxed whitespace-pre-wrap font-sans">
 								{request.business_impact || request.impact_analysis}
 							</div>
 						</div>
@@ -178,39 +195,41 @@ export default function DevelopmentDetailPrintView({
 			</div>
 
 			{/* Bagian III: Verifikasi & Persetujuan (Approval) */}
-			<div className="mb-4 print-avoid-break">
-				<div className="bg-slate-100 border border-slate-400 px-3 py-1 font-bold text-[10.5px] uppercase tracking-wide text-slate-800 font-mono mb-2">
+			<div className="mb-3.5 print-avoid-break">
+				<div className="bg-white border border-black px-3 py-1 font-bold text-[10px] uppercase tracking-wide text-black font-mono mb-1.5">
 					Bagian III: Verifikasi & Persetujuan Manajemen
 				</div>
-				<table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+				<table className="w-full border-collapse border border-black text-[10px]">
 					<tbody>
-						<tr className="border-b border-slate-200">
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								Status Persetujuan
 							</td>
-							<td className="w-1/4 px-3 py-1.5 font-bold uppercase text-slate-900 border-r border-slate-200">
-								{request.approval_status || (request.current_status === "Rejected" ? "DITOLAK" : request.current_status === "Draft" ? "DRAFT" : "DISETUJUI")}
+							<td className="w-1/4 px-3 py-1.5 font-bold uppercase text-black border-r border-black">
+								<span className="border border-black px-1.5 py-0.5 text-[9px]">
+									{request.approval_status || (request.current_status === "Rejected" ? "DITOLAK" : request.current_status === "Draft" ? "DRAFT" : "DISETUJUI")}
+								</span>
 							</td>
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								Tanggal Approval
 							</td>
-							<td className="w-1/4 px-3 py-1.5 text-slate-900">
+							<td className="w-1/4 px-3 py-1.5 text-black font-mono">
 								{formatDate(request.approval_date || request.updated_at)}
 							</td>
 						</tr>
-						<tr className="border-b border-slate-200">
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Penyetuju / Approver
 							</td>
-							<td colSpan={3} className="px-3 py-1.5 font-semibold text-slate-900">
+							<td colSpan={3} className="px-3 py-1.5 font-bold text-black">
 								{request.approved_by_name || request.approver_name || "-"}
 							</td>
 						</tr>
 						<tr>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Catatan Persetujuan
 							</td>
-							<td colSpan={3} className="px-3 py-1.5 text-slate-800 italic">
+							<td colSpan={3} className="px-3 py-1.5 text-black italic">
 								{request.approval_notes || request.approval_reason || "Tidak ada catatan khusus."}
 							</td>
 						</tr>
@@ -220,36 +239,36 @@ export default function DevelopmentDetailPrintView({
 
 			{/* Bagian IV: Penugasan & Pelaksanaan IT */}
 			<div className="mb-4 print-avoid-break">
-				<div className="bg-slate-100 border border-slate-400 px-3 py-1 font-bold text-[10.5px] uppercase tracking-wide text-slate-800 font-mono mb-2">
+				<div className="bg-white border border-black px-3 py-1 font-bold text-[10px] uppercase tracking-wide text-black font-mono mb-1.5">
 					Bagian IV: Penugasan Teknis & Pelaksanaan IT
 				</div>
-				<table className="w-full border-collapse border border-slate-300 text-[10.5px]">
+				<table className="w-full border-collapse border border-black text-[10px]">
 					<tbody>
-						<tr className="border-b border-slate-200">
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+						<tr className="border-b border-black">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								PIC Developer / Teknisi
 							</td>
-							<td className="w-1/4 px-3 py-1.5 font-semibold text-slate-900 border-r border-slate-200">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								{request.assigned_to_name || request.developer_name || "-"}
 							</td>
-							<td className="w-1/4 bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="w-1/4 px-3 py-1.5 font-bold text-black border-r border-black">
 								Progres Pengerjaan
 							</td>
-							<td className="w-1/4 px-3 py-1.5 font-bold font-mono text-slate-900">
+							<td className="w-1/4 px-3 py-1.5 font-bold font-mono text-black">
 								{request.progress_percentage ?? 0}%
 							</td>
 						</tr>
 						<tr>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Target Selesai
 							</td>
-							<td className="px-3 py-1.5 font-mono text-slate-800 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-mono text-black border-r border-black">
 								{formatDate(request.expected_completion_date)}
 							</td>
-							<td className="bg-slate-50 px-3 py-1.5 font-medium text-slate-600 border-r border-slate-200">
+							<td className="px-3 py-1.5 font-bold text-black border-r border-black">
 								Realisasi Selesai
 							</td>
-							<td className="px-3 py-1.5 font-mono text-slate-800">
+							<td className="px-3 py-1.5 font-mono text-black">
 								{formatDate(request.actual_completion_date)}
 							</td>
 						</tr>
@@ -258,46 +277,46 @@ export default function DevelopmentDetailPrintView({
 			</div>
 
 			{/* Bagian V: Lembar Pengesahan (3 Kolom Tanda Tangan) */}
-			<div className="pt-3 print-avoid-break border-t border-slate-300">
-				<div className="text-[10px] text-slate-500 font-mono mb-2 text-center uppercase tracking-wider">
-					Lembar Pengesahan Pelaksanaan Pengembangan Sistem
+			<div className="pt-2 print-avoid-break border-t-2 border-black">
+				<div className="text-[9.5px] text-black font-mono mb-2 text-center uppercase tracking-wider font-bold">
+					LEMBAR PENGESAHAN PERMINTAAN PENGEMBANGAN SISTEM
 				</div>
-				<div className="grid grid-cols-3 gap-4 text-center">
+				<div className="grid grid-cols-3 gap-3 text-center">
 					{/* Pemohon */}
-					<div className="border border-slate-300 p-2.5 rounded bg-white">
-						<p className="text-[9.5px] text-slate-500 mb-0.5">Pemohon,</p>
-						<p className="text-[10px] font-semibold text-slate-800">Staff / Petugas Pengaju</p>
-						<div className="h-16 border-b border-slate-400 w-36 mx-auto mb-1"></div>
-						<p className="text-[10px] font-bold text-slate-900 truncate px-1">
-							{request.user_name || "( .................................... )"}
+					<div className="border border-black p-2 bg-white">
+						<p className="text-[9px] text-black mb-0.5">Pemohon,</p>
+						<p className="text-[9.5px] font-bold text-black">Staff / Pengaju</p>
+						<div className="h-16 border-b border-black w-32 mx-auto mb-1"></div>
+						<p className="text-[9.5px] font-bold text-black truncate px-1">
+							{request.user_name || "( ................................ )"}
 						</p>
-						<p className="text-[8.5px] font-mono text-slate-500">
+						<p className="text-[8px] font-mono text-black">
 							{request.user_id ? `NIP: ${request.user_id}` : ""}
 						</p>
 					</div>
 
 					{/* Atasan Pemohon */}
-					<div className="border border-slate-300 p-2.5 rounded bg-white">
-						<p className="text-[9.5px] text-slate-500 mb-0.5">Menyetujui,</p>
-						<p className="text-[10px] font-semibold text-slate-800">Ka. Instalasi / Departemen</p>
-						<div className="h-16 border-b border-slate-400 w-36 mx-auto mb-1"></div>
-						<p className="text-[10px] font-bold text-slate-900 truncate px-1">
-							{request.approved_by_name || "( .................................... )"}
+					<div className="border border-black p-2 bg-white">
+						<p className="text-[9px] text-black mb-0.5">Menyetujui,</p>
+						<p className="text-[9.5px] font-bold text-black">Ka. Instalasi / Departemen</p>
+						<div className="h-16 border-b border-black w-32 mx-auto mb-1"></div>
+						<p className="text-[9.5px] font-bold text-black truncate px-1">
+							{request.approved_by_name || "( ................................ )"}
 						</p>
-						<p className="text-[8.5px] font-mono text-slate-500">
+						<p className="text-[8px] font-mono text-black truncate">
 							{request.departemen_name || ""}
 						</p>
 					</div>
 
 					{/* Penanggung Jawab IT */}
-					<div className="border border-slate-300 p-2.5 rounded bg-white">
-						<p className="text-[9.5px] text-slate-500 mb-0.5">Pelaksana IT,</p>
-						<p className="text-[10px] font-semibold text-slate-800">Lead Developer / Ka. SIMRS</p>
-						<div className="h-16 border-b border-slate-400 w-36 mx-auto mb-1"></div>
-						<p className="text-[10px] font-bold text-slate-900 truncate px-1">
-							{request.assigned_to_name || "( .................................... )"}
+					<div className="border border-black p-2 bg-white">
+						<p className="text-[9px] text-black mb-0.5">Pelaksana IT,</p>
+						<p className="text-[9.5px] font-bold text-black">Lead Dev / Ka. SIMRS</p>
+						<div className="h-16 border-b border-black w-32 mx-auto mb-1"></div>
+						<p className="text-[9.5px] font-bold text-black truncate px-1">
+							{request.assigned_to_name || "( ................................ )"}
 						</p>
-						<p className="text-[8.5px] font-mono text-slate-500">
+						<p className="text-[8px] font-mono text-black">
 							Tim Pengembang SIMRS
 						</p>
 					</div>
