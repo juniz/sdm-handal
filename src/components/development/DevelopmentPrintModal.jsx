@@ -18,7 +18,7 @@ export default function DevelopmentPrintModal({
 	if (!isOpen) return null;
 
 	const handleBrowserPrint = () => {
-		triggerBrowserPrint();
+		triggerBrowserPrint("development-print-content", orientation);
 	};
 
 	const handleDownloadPdf = async () => {
@@ -45,87 +45,17 @@ export default function DevelopmentPrintModal({
 					margin: 8mm 8mm;
 				}
 				@media print {
-					html, body {
-						background: #ffffff !important;
-						margin: 0 !important;
-						padding: 0 !important;
-						height: auto !important;
-						min-height: 0 !important;
-						overflow: visible !important;
-					}
-
-					/* Hide all siblings in body so no phantom background pages exist */
-					body > *:not(.print-modal-backdrop) {
-						display: none !important;
-					}
-
-					/* Unfix modal so browser print engine can paginate freely */
-					.print-modal-backdrop {
-						position: static !important;
-						inset: auto !important;
-						display: block !important;
-						background: transparent !important;
-						padding: 0 !important;
-						margin: 0 !important;
-						overflow: visible !important;
-						height: auto !important;
-						min-height: 0 !important;
-						width: 100% !important;
-					}
-
-					.print-modal-container {
-						position: static !important;
-						display: block !important;
-						width: 100% !important;
-						max-width: 100% !important;
-						height: auto !important;
-						max-height: none !important;
-						overflow: visible !important;
-						border: none !important;
-						box-shadow: none !important;
-						background: transparent !important;
-						padding: 0 !important;
-						margin: 0 !important;
-					}
-
-					.print-modal-scroll-area {
-						display: block !important;
-						overflow: visible !important;
-						height: auto !important;
-						background: transparent !important;
-						padding: 0 !important;
-						margin: 0 !important;
-					}
-
-					#development-print-content {
-						position: static !important;
-						display: block !important;
-						width: 100% !important;
-						max-width: 100% !important;
-						min-height: 0 !important;
-						height: auto !important;
-						margin: 0 !important;
-						padding: 0 !important;
-						box-shadow: none !important;
-						border: none !important;
-						background: #ffffff !important;
-						overflow: visible !important;
-					}
-
 					.no-print, header, aside, nav, .bottom-navigation, [role="navigation"] {
 						display: none !important;
 						visibility: hidden !important;
 					}
-
 					.print-avoid-break, tr {
 						page-break-inside: avoid !important;
 						break-inside: avoid !important;
 					}
-
 					thead {
 						display: table-header-group !important;
 					}
-
 					tfoot {
 						display: table-footer-group !important;
 					}

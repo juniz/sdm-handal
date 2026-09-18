@@ -2,10 +2,96 @@
  * Utility helper for printing and PDF generation in Development modules.
  */
 
-export const triggerBrowserPrint = () => {
-	if (typeof window !== "undefined") {
+export const triggerBrowserPrint = (
+	elementId = "development-print-content",
+	orientation = "portrait"
+) => {
+	if (typeof window === "undefined") return;
+
+	const element = document.getElementById(elementId);
+	if (!element) {
 		window.print();
+		return;
 	}
+
+	// Remove old print iframe if present
+	const oldIframe = document.getElementById("print-isolated-iframe");
+	if (oldIframe) {
+		oldIframe.remove();
+	}
+
+	// Create a hidden isolated iframe
+	const iframe = document.createElement("iframe");
+	iframe.id = "print-isolated-iframe";
+	iframe.style.position = "fixed";
+	iframe.style.right = "0";
+	iframe.style.bottom = "0";
+	iframe.style.width = "0";
+	iframe.style.height = "0";
+	iframe.style.border = "0";
+	document.body.appendChild(iframe);
+
+	const doc = iframe.contentWindow.document;
+
+	// Extract style and link tags from main document
+	const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+		.map((el) => el.outerHTML)
+		.join("\n");
+
+	doc.open();
+	doc.write(`
+		<!DOCTYPE html>
+		<html lang="id">
+		<head>
+			<meta charset="utf-8" />
+			<title>Cetak Dokumen</title>
+			${styles}
+			<style>
+				@page {
+					size: ${orientation === "landscape" ? "A4 landscape" : "A4 portrait"};
+					margin: 8mm 8mm;
+				}
+				html, body {
+					margin: 0 !important;
+					padding: 0 !important;
+					background: #ffffff !important;
+					color: #000000 !important;
+					font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+				}
+				* {
+					box-sizing: border-box !important;
+				}
+				.print-avoid-break, tr {
+					page-break-inside: avoid !important;
+					break-inside: avoid !important;
+				}
+				thead {
+					display: table-header-group !important;
+				}
+				tfoot {
+					display: table-footer-group !important;
+				}
+			</style>
+		</head>
+		<body style="background: white !important; margin: 0 !important; padding: 0 !important;">
+			<div style="width: 100% !important; margin: 0 !important; padding: 0 !important; background: white !important;">
+				${element.innerHTML}
+			</div>
+		</body>
+		</html>
+	`);
+	doc.close();
+
+	// Wait for iframe content to render before opening print dialog
+	setTimeout(() => {
+		try {
+			iframe.contentWindow.focus();
+			iframe.contentWindow.print();
+		} catch (err) {
+			console.error("Iframe print error:", err);
+			window.print();
+		}
+	}, 350);
 };
 
 /**
