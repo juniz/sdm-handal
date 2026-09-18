@@ -71,26 +71,26 @@ export default function DevelopmentDetailPrintView({
 			{/* Kop Formulir Resmi Kedinasan Polri / RSB Nganjuk */}
 			<div className="border-b-4 border-double border-black pb-2 mb-2.5 print-avoid-break print-border-double">
 				<div className="flex items-center justify-between gap-3">
-					<div className="flex-shrink-0">
+					<div className="flex items-center gap-3">
 						<img
 							src="/logo-kop.png"
 							alt="Logo Instansi"
-							className="h-14 w-auto object-contain"
+							className="h-14 w-auto object-contain flex-shrink-0"
 							onError={(e) => {
 								e.currentTarget.style.display = "none";
 							}}
 						/>
-					</div>
-					<div className="flex-1 text-center px-2">
-						<h3 className="text-[11px] font-bold tracking-wide uppercase text-black leading-tight">
-							POLRI DAERAH JAWA TIMUR
-						</h3>
-						<h3 className="text-[11px] font-bold tracking-wide uppercase text-black leading-tight">
-							BIDANG KEDOKTERAN DAN KESEHATAN
-						</h3>
-						<h1 className="text-sm sm:text-base font-black tracking-wide text-black uppercase leading-tight mt-0.5">
-							RUMAH SAKIT BHAYANGKARA TK. III NGANJUK
-						</h1>
+						<div className="text-center">
+							<h3 className="text-[10.5px] font-bold tracking-wide uppercase text-black leading-tight">
+								POLRI DAERAH JAWA TIMUR
+							</h3>
+							<h3 className="text-[10.5px] font-bold tracking-wide uppercase text-black leading-tight">
+								BIDANG KEDOKTERAN DAN KESEHATAN
+							</h3>
+							<h1 className="text-xs sm:text-sm font-black tracking-wide text-black uppercase leading-tight mt-0.5">
+								RUMAH SAKIT BHAYANGKARA TK. III NGANJUK
+							</h1>
+						</div>
 					</div>
 					<div className="text-right text-[8.5px] font-mono text-black flex-shrink-0">
 						<div className="border border-black p-1 bg-white text-center">
