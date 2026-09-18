@@ -20,9 +20,10 @@ import {
 	Eye,
 	Edit,
 	Trash2,
+	Printer,
 } from "lucide-react";
 import moment from "moment";
-import { RequestCard, RequestModal } from "@/components/development";
+import { RequestCard, RequestModal, DevelopmentPrintModal, DevelopmentListPrintView } from "@/components/development";
 import { getClientToken } from "@/lib/client-auth";
 
 export default function DevelopmentRequestsPage() {
@@ -56,11 +57,49 @@ export default function DevelopmentRequestsPage() {
 	// Modal states
 	const [showCreateModal, setShowCreateModal] = useState(false);
 	const [selectedRequest, setSelectedRequest] = useState(null);
+	const [showPrintModal, setShowPrintModal] = useState(false);
+	const [allPrintRequests, setAllPrintRequests] = useState([]);
+	const [isFetchingPrintData, setIsFetchingPrintData] = useState(false);
 	const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
 	const showToast = (message, type = "success") => {
 		setToast({ show: true, message, type });
 		setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3500);
+	};
+
+	const handleOpenPrintModal = async () => {
+		setShowPrintModal(true);
+		try {
+			setIsFetchingPrintData(true);
+			const params = new URLSearchParams({
+				limit: "200",
+				offset: "0",
+				status: selectedStatus,
+				priority: selectedPriority,
+				module_type: selectedModuleType,
+				department: selectedDepartment,
+				search: debouncedSearchTerm,
+			});
+
+			const token = getClientToken();
+			const headers = {};
+			if (token) {
+				headers["Authorization"] = `Bearer ${token}`;
+			}
+
+			const response = await fetch(`/api/development?${params}`, { headers });
+			const result = await response.json();
+			if (result.success && result.data?.requests) {
+				setAllPrintRequests(result.data.requests);
+			} else {
+				setAllPrintRequests(requests);
+			}
+		} catch (err) {
+			console.error("Error fetching print data:", err);
+			setAllPrintRequests(requests);
+		} finally {
+			setIsFetchingPrintData(false);
+		}
 	};
 
 	const handleStatusFilterClick = (statusKey) => {
@@ -341,10 +380,19 @@ export default function DevelopmentRequestsPage() {
 					<div className="flex gap-2 justify-center sm:justify-end">
 						<button
 							onClick={handleRefresh}
-							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-w-0 flex-1 sm:flex-initial"
+							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors min-w-0 flex-1 sm:flex-initial text-sm sm:text-base"
 						>
 							<RefreshCw className="w-4 h-4 flex-shrink-0" />
-							<span className="text-sm sm:text-base">Refresh</span>
+							<span>Refresh</span>
+						</button>
+						<button
+							type="button"
+							onClick={handleOpenPrintModal}
+							className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors min-w-0 flex-1 sm:flex-initial text-sm sm:text-base font-medium shadow-xs"
+							title="Cetak Laporan Rekapitulasi"
+						>
+							<Printer className="w-4 h-4 flex-shrink-0 text-slate-600" />
+							<span>Cetak Rekap</span>
 						</button>
 						<button
 							onClick={() => setShowCreateModal(true)}
@@ -849,6 +897,28 @@ export default function DevelopmentRequestsPage() {
 				request={selectedRequest}
 				masterData={masterData}
 			/>
+
+			{/* Print Modal */}
+			<DevelopmentPrintModal
+				isOpen={showPrintModal}
+				onClose={() => setShowPrintModal(false)}
+				title="Laporan Rekapitulasi Pengajuan Pengembangan Sistem"
+				fileName={`rekap-pengembangan-modul-${moment().format("YYYYMMDD")}`}
+				orientation="landscape"
+			>
+				<DevelopmentListPrintView
+					requests={allPrintRequests.length > 0 ? allPrintRequests : requests}
+					statistics={statistics}
+					filters={{
+						selectedStatus,
+						selectedPriority,
+						selectedModuleType,
+						selectedDepartment,
+						searchTerm: debouncedSearchTerm,
+					}}
+					masterData={masterData}
+				/>
+			</DevelopmentPrintModal>
 
 			{/* Toast Notification */}
 			{toast.show && (
