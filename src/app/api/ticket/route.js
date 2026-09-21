@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { select, insert, update, selectFirst, rawQuery } from "@/lib/db-helper";
 import { getUser } from "@/lib/auth";
 import moment from "moment-timezone";
+import { sendPushNotification } from "@/lib/onesignal";
 
 moment.tz.setDefault("Asia/Jakarta");
 
@@ -313,6 +314,33 @@ export async function POST(request) {
 			defaultStatus.status_id,
 			user.username
 		);
+
+		// Dispatch notification to active IT staff
+		try {
+			const itStaff = await rawQuery(
+				"SELECT nik FROM pegawai WHERE departemen = 'IT' AND stts_aktif != 'KELUAR'"
+			);
+			const targetNiks = itStaff.map((s) => s.nik).filter(Boolean);
+
+			if (targetNiks.length > 0) {
+				const priorityRow = await selectFirst({
+					table: "priorities_ticket",
+					where: { priority_id: parseInt(priority_id) },
+				});
+				const priorityName = priorityRow ? priorityRow.priority_name : "Normal";
+
+				sendPushNotification({
+					targetNiks,
+					title: `Tiket IT Baru: ${ticketNumber}`,
+					message: `${title.trim()} - Prioritas: ${priorityName} (${user.nama || user.username})`,
+					url: "/dashboard/ticket-assignment",
+				}).catch((notifErr) =>
+					console.warn("Failed to dispatch ticket creation notification:", notifErr)
+				);
+			}
+		} catch (notifErr) {
+			console.warn("Error preparing ticket creation notification:", notifErr);
+		}
 
 		return NextResponse.json({
 			status: "success",
