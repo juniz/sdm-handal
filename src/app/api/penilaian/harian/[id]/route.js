@@ -414,7 +414,7 @@ export async function POST(request, { params }) {
 
 			const autoApprovalCatatan = isCuti
 				? `[Auto-Approved Sistem: Cuti ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_cuti_no || "-"}]`
-				: `[Auto-Approved Sistem: Izin ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_izin_no || "-"}]`;
+				: `[Auto-Approved Sistem: Izin ${(harian.nilai_kondisi || "").replace(/^izin_/, "").replace(/_/g, " ")} - Ref: ${harian.ref_izin_no || "-"}]`;
 
 			await update({
 				table: "penilaian_harian",

@@ -368,9 +368,10 @@ export async function POST(request) {
 			if (!pegawai_id || !tanggal) continue;
 
 			const isIzin =
-				jenis_dispensasi === "izin_dinas" ||
-				["Dinas Luar Kota", "Perjalanan Dinas", "Lain-lain"].includes(urgensi || "") ||
-				String(urgensi).toLowerCase().includes("dinas");
+				(jenis_dispensasi === "izin_dinas" ||
+					["Dinas Luar Kota", "Perjalanan Dinas", "Lain-lain"].includes(urgensi || "") ||
+					String(urgensi).toLowerCase().includes("dinas")) &&
+				urgensi !== "Dinas Dalam Kota";
 			const formattedDate = moment(tanggal).format("YYYY-MM-DD");
 			const refNo = no_pengajuan || "-";
 			const urgensiText = urgensi || (isIzin ? "Resmi" : "Tahunan");

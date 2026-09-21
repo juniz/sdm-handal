@@ -487,7 +487,7 @@ export async function POST(request) {
 			catatan_supervisor: isBypassed
 				? (isCuti
 					? `[Auto-Approved Sistem: Cuti ${(resAbsen.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${resAbsen.ref_no || "-"}]`
-					: `[Auto-Approved Sistem: Izin ${(resAbsen.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${resAbsen.ref_no || "-"}]`)
+					: `[Auto-Approved Sistem: Izin ${(resAbsen.nilai_kondisi || "").replace(/^izin_/, "").replace(/_/g, " ")} - Ref: ${resAbsen.ref_no || "-"}]`)
 				: null,
 			dibuat_oleh: pegawaiId
 		};
