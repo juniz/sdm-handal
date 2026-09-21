@@ -27,11 +27,11 @@ import {
 	UserCheck,
 	CalendarDays,
 	Sparkles,
-	Briefcase,
 } from "lucide-react";
 import moment from "moment";
 import "moment/locale/id";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import {
 	fetchDeteksiCutiGql,
 	executeBypassCutiGql,
@@ -196,12 +196,13 @@ export default function DeteksiCutiPage() {
 				let summaryData = null;
 
 				try {
+					const normDispensasi = tipeDispensasi === "cuti" ? "CUTI" : (tipeDispensasi === "izin_dinas" ? "DINAS_LUAR" : tipeDispensasi);
 					const filter = {
 						tanggalAwal,
 						tanggalAkhir,
 						departemen: selectedDepartment !== "ALL" ? selectedDepartment : undefined,
 						statusFilter: statusFilter !== "ALL" ? statusFilter : undefined,
-						tipeDispensasi: tipeDispensasi !== "ALL" ? tipeDispensasi : undefined,
+						tipeDispensasi: normDispensasi !== "ALL" ? normDispensasi : undefined,
 						searchTerm: debouncedSearch || undefined,
 					};
 					const gqlRes = await fetchDeteksiCutiGql(filter);
@@ -215,12 +216,13 @@ export default function DeteksiCutiPage() {
 					}
 				} catch (gqlErr) {
 					console.warn("GraphQL fetch failed, falling back to REST:", gqlErr);
+					const normDispensasi = tipeDispensasi === "cuti" ? "CUTI" : (tipeDispensasi === "izin_dinas" ? "DINAS_LUAR" : tipeDispensasi);
 					const params = new URLSearchParams({
 						tanggal_awal: tanggalAwal,
 						tanggal_akhir: tanggalAkhir,
 						departemen: selectedDepartment,
 						status_filter: statusFilter,
-						tipe_dispensasi: tipeDispensasi,
+						tipe_dispensasi: normDispensasi,
 						search: debouncedSearch,
 					});
 
@@ -267,13 +269,13 @@ export default function DeteksiCutiPage() {
 
 	// Helper breakdown summary for modals
 	const getBreakdownText = (items) => {
-		const cutiCount = items.filter((i) => i.jenis_dispensasi !== "izin_dinas").length;
-		const dinasCount = items.filter((i) => i.jenis_dispensasi === "izin_dinas").length;
+		const cutiCount = items.filter((i) => i.jenis_dispensasi === "cuti").length;
+		const izinCount = items.filter((i) => i.jenis_dispensasi !== "cuti").length;
 
-		if (cutiCount > 0 && dinasCount > 0) {
-			return `${items.length} data (${cutiCount} Cuti, ${dinasCount} Dinas Luar Kota)`;
-		} else if (dinasCount > 0) {
-			return `${dinasCount} data Dinas Luar Kota`;
+		if (cutiCount > 0 && izinCount > 0) {
+			return `${items.length} data (${cutiCount} Cuti, ${izinCount} Izin)`;
+		} else if (izinCount > 0) {
+			return `${izinCount} data Izin`;
 		} else {
 			return `${cutiCount} data Cuti`;
 		}
@@ -321,7 +323,7 @@ export default function DeteksiCutiPage() {
 		setIsProcessing(true);
 		setConfirmModal((prev) => ({ ...prev, isOpen: false }));
 
-		const toastId = toast.loading(`Memproses bypass untuk ${itemsToProcess.length} data cuti & dinas luar...`);
+		const toastId = toast.loading(`Memproses bypass untuk ${itemsToProcess.length} data cuti & izin...`);
 
 		try {
 			const formattedItems = itemsToProcess.map((item) => ({
@@ -385,11 +387,11 @@ export default function DeteksiCutiPage() {
 	// Prompt Single Bypass (Tab 1)
 	const handleSingleBypass = (item) => {
 		if (item.status_bypass === "approved_100") return;
-		const isDinas = item.jenis_dispensasi === "izin_dinas";
-		const tipeLabel = isDinas ? "Dinas Luar Kota" : "Cuti";
+		const isIzin = item.jenis_dispensasi !== "cuti";
+		const tipeLabel = isIzin ? `Izin (${item.urgensi || "Dinas & Lainnya"})` : `Cuti (${item.urgensi || "Cuti"})`;
 		setConfirmModal({
 			isOpen: true,
-			title: `Konfirmasi Bypass ${tipeLabel}`,
+			title: `Konfirmasi Bypass ${isIzin ? "Izin" : "Cuti"}`,
 			description: `Lakukan bypass penilaian harian 100% untuk ${item.pegawai_nama} (${tipeLabel}) pada tanggal ${moment(
 				item.tanggal
 			).format("dddd, DD MMMM YYYY")} (Shift: ${item.shift})?`,
@@ -424,7 +426,7 @@ export default function DeteksiCutiPage() {
 		const itemsToProcess = leaveData.filter((item) => item.status_bypass !== "approved_100");
 
 		if (itemsToProcess.length === 0) {
-			toast.info("Semua cuti / dinas luar dalam filter saat ini sudah Disetujui 100%");
+			toast.info("Semua cuti / izin dalam filter saat ini sudah Disetujui 100%");
 			return;
 		}
 
@@ -542,75 +544,7 @@ export default function DeteksiCutiPage() {
 		}
 	};
 
-	// Dispensasi category badge (Cuti vs Dinas Luar Kota)
-	const getDispensasiBadge = (item) => {
-		if (item.jenis_dispensasi === "izin_dinas") {
-			return (
-				<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
-					<Briefcase className="w-3 h-3" />
-					DINAS LUAR
-				</span>
-			);
-		}
-		return (
-			<span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">
-				<Calendar className="w-3 h-3" />
-				CUTI
-			</span>
-		);
-	};
 
-	// Urgensi / Leave Type badge styles
-	const getUrgensiBadge = (urgensi) => {
-		const label = urgensi || "Lainnya";
-		switch (urgensi) {
-			case "Dinas Luar Kota":
-			case "Dinas Luar":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
-						{label}
-					</span>
-				);
-			case "Tahunan":
-			case "Tahunan ke luar negeri":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800">
-						{label}
-					</span>
-				);
-			case "Sakit":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
-						{label}
-					</span>
-				);
-			case "Melahirkan":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800">
-						{label}
-					</span>
-				);
-			case "Ibadah Keagamaan":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
-						{label}
-					</span>
-				);
-			case "Istimewa":
-			case "Karena Alasan Penting":
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
-						{label}
-					</span>
-				);
-			default:
-				return (
-					<span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-						{label}
-					</span>
-				);
-		}
-	};
 
 	// Status Penilaian Harian badge
 	const getStatusPenilaianBadge = (item) => {
@@ -869,7 +803,7 @@ export default function DeteksiCutiPage() {
 								>
 									<option value="ALL">Semua Tipe</option>
 									<option value="cuti">Hanya Cuti</option>
-									<option value="izin_dinas">Hanya Dinas Luar Kota</option>
+									<option value="DINAS_LUAR">Hanya Izin (Dinas & Lainnya)</option>
 								</select>
 							</div>
 
@@ -1099,8 +1033,15 @@ export default function DeteksiCutiPage() {
 														</td>
 														<td className="py-3.5 px-4 space-y-1">
 															<div className="flex items-center gap-1.5 flex-wrap">
-																{getDispensasiBadge(item)}
-																{item.urgensi && getUrgensiBadge(item.urgensi)}
+																{item.jenis_dispensasi === "cuti" ? (
+																	<Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+																		Cuti: {item.urgensi}
+																	</Badge>
+																) : (
+																	<Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+																		Izin: {item.urgensi}
+																	</Badge>
+																)}
 															</div>
 															<div className="text-xs font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1">
 																<FileText className="w-3 h-3" />
@@ -1175,8 +1116,15 @@ export default function DeteksiCutiPage() {
 													</div>
 												</div>
 												<div className="flex flex-col items-end gap-1">
-													{getDispensasiBadge(item)}
-													{item.urgensi && getUrgensiBadge(item.urgensi)}
+													{item.jenis_dispensasi === "cuti" ? (
+														<Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+															Cuti: {item.urgensi}
+														</Badge>
+													) : (
+														<Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+															Izin: {item.urgensi}
+														</Badge>
+													)}
 												</div>
 											</div>
 
@@ -1593,7 +1541,7 @@ export default function DeteksiCutiPage() {
 							<ul className="list-disc list-inside space-y-0.5 text-slate-500 dark:text-slate-400 pl-1">
 								<li>Penilaian harian otomatis dibuat/diupdate ke status Disetujui (Approved).</li>
 								<li>Skor absensi dan kegiatan harian diatur ke 100%.</li>
-								<li>Tercatat sumber absensi cuti / dinas luar & referensi nomor pengajuan resmi.</li>
+								<li>Tercatat sumber absensi cuti / izin & referensi nomor pengajuan resmi.</li>
 							</ul>
 						</div>
 

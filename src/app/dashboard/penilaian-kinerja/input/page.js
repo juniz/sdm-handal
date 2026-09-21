@@ -185,8 +185,9 @@ function DailyInputContent() {
 						setAttendanceInfo(attData);
 						
 						const isAttCuti = attData.sumber === "cuti" || (attData.nilai_kondisi && attData.nilai_kondisi.startsWith("cuti_")) || attData.nilai_kondisi === "sakit";
-						// If the resolved attendance is dinas luar kota or cuti, auto-submit and approve!
-						if (attData.nilai_kondisi === "izin_dinas_luar" || isAttCuti) {
+						const isAttIzin = attData.sumber === "izin" && attData.nilai_kondisi !== "izin_dinas_dalam";
+						// If the resolved attendance is non-dinas-dalam izin or cuti, auto-submit and approve!
+						if (isAttIzin || isAttCuti) {
 							const submitRes = await fetch(`/api/penilaian/harian/${harianData.data.id}`, {
 								method: "POST",
 								headers: { "Content-Type": "application/json" },
@@ -250,7 +251,8 @@ function DailyInputContent() {
 					setAttendanceInfo(attData);
 
 					const isAttCuti = attData.sumber === "cuti" || (attData.nilai_kondisi && attData.nilai_kondisi.startsWith("cuti_")) || attData.nilai_kondisi === "sakit";
-					if (attData.nilai_kondisi === "izin_dinas_luar" || isAttCuti) {
+					const isAttIzin = attData.sumber === "izin" && attData.nilai_kondisi !== "izin_dinas_dalam";
+					if (isAttIzin || isAttCuti) {
 						// Auto-create and auto-approve immediately
 						const createRes = await fetch("/api/penilaian/harian", {
 							method: "POST",
@@ -263,10 +265,10 @@ function DailyInputContent() {
 								setHarianRecord(createData.data);
 								const defaultActivityTitle = isAttCuti 
 									? `Melaksanakan Cuti ${(attData.nilai_kondisi || "").replace(/_/g, " ")}`.trim()
-									: "Melaksanakan Tugas / Perjalanan Dinas Luar Kota";
+									: (attData.nilai_kondisi === "izin_dinas_luar" ? "Melaksanakan Tugas / Perjalanan Dinas Luar Kota" : `Melaksanakan Izin: ${(attData.nilai_kondisi || "resmi").replace(/_/g, " ")}`);
 								const defaultActivityDesc = isAttCuti 
 									? `Cuti resmi sesuai pengajuan nomor ${attData.ref_no || ""}`.trim()
-									: `Tugas dinas luar kota sesuai pengajuan izin resmi ${attData.ref_no || ""}`.trim();
+									: `Izin resmi sesuai pengajuan nomor ${attData.ref_no || ""}`.trim();
 								setActivities([
 									{
 										id: null,
@@ -576,8 +578,22 @@ function DailyInputContent() {
 	const completedWeight = activities.reduce((acc, curr) => acc + (curr.status_selesai === "selesai" ? getWeight(curr.prioritas) : 0), 0);
 
 	const isCutiPegawai = attendanceInfo?.sumber === "cuti" || harianRecord?.sumber_absensi === "cuti" || (attendanceInfo?.nilai_kondisi && attendanceInfo.nilai_kondisi.startsWith("cuti_")) || attendanceInfo?.nilai_kondisi === "sakit";
-	const isDinasLuarKota = attendanceInfo?.nilai_kondisi === "izin_dinas_luar" || harianRecord?.nilai_kondisi === "izin_dinas_luar";
-	const isBypassedLeaveOrDuty = isDinasLuarKota || isCutiPegawai;
+	const isIzinBypassed = (attendanceInfo?.sumber === "izin" || harianRecord?.sumber_absensi === "izin") && (attendanceInfo?.nilai_kondisi !== "izin_dinas_dalam" && harianRecord?.nilai_kondisi !== "izin_dinas_dalam");
+	const isBypassedLeaveOrDuty = isIzinBypassed || isCutiPegawai;
+
+	const getIzinUrgensi = () => {
+		if (attendanceInfo?.urgensi) return attendanceInfo.urgensi;
+		if (harianRecord?.catatan_supervisor) {
+			const match = harianRecord.catatan_supervisor.match(/Izin\s+([^-\]]+?)(?:\s*-\s*Ref|\s*\]|$)/i);
+			if (match && match[1]?.trim()) return match[1].trim();
+		}
+		const nk = attendanceInfo?.nilai_kondisi || harianRecord?.nilai_kondisi;
+		if (nk === "izin_dinas_luar") return "Dinas Luar Kota";
+		if (nk === "izin_dinas") return "Perjalanan Dinas";
+		if (nk === "izin_lainnya") return "Lain-lain";
+		return "Resmi";
+	};
+	const izinUrgensi = getIzinUrgensi();
 
 	const estSkorKegiatan = isBypassedLeaveOrDuty ? 100 : (totalWeight > 0 ? Math.round((completedWeight / totalWeight) * 100) : 0);
 	const estSkorAbsensi = isBypassedLeaveOrDuty ? 100 : (attendanceInfo ? Number(attendanceInfo.skor_absensi || 0) : 0);
@@ -671,20 +687,20 @@ function DailyInputContent() {
 				</div>
 			)}
 
-			{isDinasLuarKota && (
-				<div className="p-4 md:p-5 bg-sky-50 border border-sky-200/80 text-sky-900 rounded-2xl flex items-start gap-3.5 shadow-xs">
-					<div className="w-9 h-9 rounded-xl bg-sky-100/80 text-sky-600 flex items-center justify-center shrink-0 mt-0.5 border border-sky-200">
+			{isIzinBypassed && (
+				<div className="p-4 md:p-5 bg-indigo-50 border border-indigo-200/80 text-indigo-900 rounded-2xl flex items-start gap-3.5 shadow-xs">
+					<div className="w-9 h-9 rounded-xl bg-indigo-100/80 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 border border-indigo-200">
 						<Briefcase className="h-5 w-5" />
 					</div>
 					<div className="flex-1">
 						<div className="flex flex-wrap items-center gap-2">
-							<h4 className="font-bold text-sm font-figtree text-sky-950">Izin Dinas Luar Kota Terverifikasi</h4>
-							<span className="px-2 py-0.5 bg-sky-200/60 text-sky-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider font-mono">
+							<h4 className="font-bold text-sm font-figtree text-indigo-950">Izin Terverifikasi</h4>
+							<span className="px-2 py-0.5 bg-indigo-200/60 text-indigo-800 text-[10px] font-extrabold rounded-full uppercase tracking-wider font-mono">
 								Auto-Approved 100%
 							</span>
 						</div>
-						<p className="text-xs mt-1 font-medium text-sky-800/90 leading-relaxed">
-							Penilaian kinerja harian untuk tanggal ini telah otomatis diproses dan disetujui penuh oleh sistem. Anda tidak diwajibkan melakukan presensi kantor maupun pengisian daftar kegiatan kerja harian.
+						<p className="text-xs mt-1 font-medium text-indigo-800/90 leading-relaxed">
+							Penilaian kinerja harian untuk tanggal ini telah otomatis diproses dan disetujui penuh oleh sistem (Bypass Izin: {izinUrgensi}). Anda tidak diwajibkan melakukan presensi kantor maupun pengisian daftar kegiatan kerja harian.
 						</p>
 					</div>
 				</div>
@@ -909,16 +925,16 @@ function DailyInputContent() {
 							/* Start draft CTA */
 							<div className="bg-white border border-slate-200/60 rounded-2xl p-10 text-center shadow-sm">
 								<div className="w-14 h-14 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-									{isBypassedLeaveOrDuty ? <Briefcase className={`h-6 w-6 ${isCutiPegawai ? "text-emerald-600" : "text-sky-600"}`} /> : <Edit3 className="h-6 w-6" />}
+									{isBypassedLeaveOrDuty ? <Briefcase className={`h-6 w-6 ${isCutiPegawai ? "text-emerald-600" : "text-indigo-600"}`} /> : <Edit3 className="h-6 w-6" />}
 								</div>
 								<h3 className="text-lg font-bold text-slate-800 font-figtree mb-1">
-									{isCutiPegawai ? "Cuti Pegawai Terverifikasi" : isDinasLuarKota ? "Izin Dinas Luar Kota" : "Mulai Laporan Harian"}
+									{isCutiPegawai ? "Cuti Pegawai Terverifikasi" : isIzinBypassed ? `Izin Terverifikasi (${izinUrgensi})` : "Mulai Laporan Harian"}
 								</h3>
 								<p className="text-slate-500 text-sm max-w-sm mx-auto mb-6">
 									{isCutiPegawai
 										? "Laporan kinerja harian untuk cuti pegawai otomatis disetujui penuh oleh sistem (Bypass Cuti)."
-										: isDinasLuarKota
-										? "Laporan kinerja harian untuk izin dinas luar kota otomatis disetujui penuh oleh sistem."
+										: isIzinBypassed
+										? `Penilaian kinerja harian untuk tanggal ini telah otomatis diproses dan disetujui penuh oleh sistem (Bypass Izin: ${izinUrgensi}).`
 										: isDeadlinePassed 
 										? "Batas waktu pengisian telah lewat. Laporan kinerja harian untuk tanggal ini tidak dapat dibuat lagi."
 										: "Buat draf laporan kinerja baru untuk mengisi item kegiatan yang Anda selesaikan hari ini."}
@@ -1204,9 +1220,9 @@ function DailyInputContent() {
 													<>
 														Penilaian harian ini telah <strong className="text-emerald-700">disetujui otomatis</strong> oleh sistem karena Anda tercatat sedang cuti terverifikasi (Bypass Cuti).
 													</>
-												) : isDinasLuarKota ? (
+												) : isIzinBypassed ? (
 													<>
-														Penilaian harian ini telah <strong className="text-sky-700">disetujui otomatis</strong> oleh sistem karena Anda memiliki izin dinas luar kota resmi yang disetujui.
+														Penilaian harian ini telah <strong className="text-indigo-700">disetujui otomatis</strong> oleh sistem (Bypass Izin: {izinUrgensi}).
 													</>
 												) : isDeadlinePassed ? (
 													<>
