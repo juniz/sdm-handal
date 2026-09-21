@@ -102,7 +102,7 @@ const ShiftModal = ({
 	const handleSetLibur = async () => {
 		try {
 			setIsSaving(true);
-			await onSave(selectedDate, "L", targetTable);
+			await onSave(selectedDate, "", targetTable);
 			onClose();
 		} catch (err) {
 			// error handled in parent
@@ -251,7 +251,7 @@ const ShiftModal = ({
 							disabled={isLoading || isSaving}
 							className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-100 transition-colors disabled:opacity-50"
 						>
-							Set Libur (L)
+							Set Libur
 						</button>
 						<div className="flex justify-end gap-2 w-full">
 							<button
@@ -555,14 +555,13 @@ export default function SchedulePage() {
 	const stats = useMemo(() => {
 		let regularCount = 0;
 		let additionalCount = 0;
-		let offCount = 0;
 
 		const currentMonthStr = currentMonth.format("YYYY-MM");
+		const daysInMonth = currentMonth.daysInMonth();
 
 		Object.entries(scheduleData).forEach(([dateKey, shift]) => {
-			if (dateKey.startsWith(currentMonthStr)) {
-				if (shift === "L") offCount++;
-				else if (shift) regularCount++;
+			if (dateKey.startsWith(currentMonthStr) && shift) {
+				regularCount++;
 			}
 		});
 
@@ -571,6 +570,8 @@ export default function SchedulePage() {
 				additionalCount++;
 			}
 		});
+
+		const offCount = Math.max(0, daysInMonth - regularCount);
 
 		return { regularCount, additionalCount, offCount };
 	}, [scheduleData, additionalScheduleData, currentMonth]);
@@ -601,16 +602,20 @@ export default function SchedulePage() {
 			}
 
 			// Update state locally
+			const updateState = (prev) => {
+				const next = { ...prev };
+				if (shift && shift !== "L") {
+					next[formattedDate] = shift;
+				} else {
+					delete next[formattedDate];
+				}
+				return next;
+			};
+
 			if (table === "jadwal_tambahan") {
-				setAdditionalScheduleData((prev) => ({
-					...prev,
-					[formattedDate]: shift,
-				}));
+				setAdditionalScheduleData(updateState);
 			} else {
-				setScheduleData((prev) => ({
-					...prev,
-					[formattedDate]: shift,
-				}));
+				setScheduleData(updateState);
 			}
 
 			toast.success(`Jadwal tanggal ${date.format("DD MMMM YYYY")} berhasil disimpan`);

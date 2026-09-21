@@ -40,6 +40,9 @@ export async function POST(request) {
 		const tanggal = momentDate.format("D");
 		const columnName = `h${tanggal}`;
 
+		// Value to save: empty string represents off day in jadwal_pegawai ENUM
+		const shiftValue = !shift || shift === "L" ? "" : String(shift).trim();
+
 		// Buat object dengan semua kolom h1-h31 berisi empty string
 		const initialData = {};
 		for (let i = 1; i <= 31; i++) {
@@ -62,7 +65,7 @@ export async function POST(request) {
 			result = await update({
 				table,
 				data: {
-					[columnName]: shift,
+					[columnName]: shiftValue,
 				},
 				where: {
 					id: idPegawai,
@@ -72,7 +75,7 @@ export async function POST(request) {
 			});
 		} else {
 			// Update nilai shift untuk kolom yang dipilih
-			initialData[columnName] = shift;
+			initialData[columnName] = shiftValue;
 
 			// Buat jadwal baru dengan semua kolom
 			result = await insert({
