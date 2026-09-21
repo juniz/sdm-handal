@@ -22,6 +22,17 @@ export function mapCutiToKondisi(urgensi) {
 	return map[urgensi] || "cuti_lainnya";
 }
 
+// Mapping urgensi izin to parameter_penilaian nilai_kondisi
+export function mapIzinToKondisi(urgensi) {
+	const map = {
+		"Perjalanan Dinas": "izin_dinas",
+		"Dinas Dalam Kota": "izin_dinas_dalam",
+		"Dinas Luar Kota": "izin_dinas_luar",
+		"Lain-lain": "izin_lainnya",
+	};
+	return map[urgensi] || "izin_lainnya";
+}
+
 // Authenticate and verify user authorization (IT, SDM, HRD, SPI)
 async function verifyAuth() {
 	const cookieStore = await cookies();
@@ -120,12 +131,7 @@ export async function GET(request) {
 				LEFT JOIN departemen d ON d.dep_id = p.departemen
 				WHERE pi.tanggal_awal <= ? AND pi.tanggal_akhir >= ?
 					AND (LOWER(pi.status) LIKE '%setuju%' OR LOWER(pi.status) LIKE '%approved%' OR LOWER(pi.status) LIKE '%acc%')
-					AND (
-						LOWER(TRIM(pi.urgensi)) LIKE '%dinas luar%'
-						OR LOWER(TRIM(pi.urgensi)) LIKE '%luar kota%'
-						OR LOWER(TRIM(pi.urgensi)) LIKE '%perjalanan dinas%'
-						OR LOWER(TRIM(pi.urgensi)) = 'dinas luar kota'
-					)
+					AND TRIM(pi.urgensi) != 'Dinas Dalam Kota'
 			) as combined
 			WHERE 1=1
 		`;
@@ -133,7 +139,7 @@ export async function GET(request) {
 
 		if (tipeDispensasi === "CUTI") {
 			baseQuery += ` AND jenis_dispensasi = 'cuti'`;
-		} else if (tipeDispensasi === "DINAS_LUAR") {
+		} else if (tipeDispensasi === "DINAS_LUAR" || tipeDispensasi === "IZIN") {
 			baseQuery += ` AND jenis_dispensasi = 'izin_dinas'`;
 		}
 
@@ -293,7 +299,7 @@ export async function GET(request) {
 					departemen_nama: pc.departemen_nama,
 					no_pengajuan: pc.no_pengajuan,
 					urgensi: pc.urgensi,
-					nilai_kondisi: isIzin ? "izin_dinas_luar" : mapCutiToKondisi(pc.urgensi),
+					nilai_kondisi: isIzin ? mapIzinToKondisi(pc.urgensi) : mapCutiToKondisi(pc.urgensi),
 					jenis_dispensasi: pc.jenis_dispensasi || (isIzin ? "izin_dinas" : "cuti"),
 					ref_cuti_no: isIzin ? null : (ph?.ref_cuti_no || pc.no_pengajuan),
 					ref_izin_no: isIzin ? (ph?.ref_izin_no || pc.no_pengajuan) : null,
@@ -361,11 +367,30 @@ export async function POST(request) {
 			const { pegawai_id, tanggal, no_pengajuan, urgensi, shift, jenis_dispensasi } = item;
 			if (!pegawai_id || !tanggal) continue;
 
-			const isIzin = jenis_dispensasi === "izin_dinas" || String(urgensi).toLowerCase().includes("dinas");
+			const isIzin =
+				jenis_dispensasi === "izin_dinas" ||
+				["Dinas Luar Kota", "Perjalanan Dinas", "Lain-lain"].includes(urgensi || "") ||
+				String(urgensi).toLowerCase().includes("dinas");
 			const formattedDate = moment(tanggal).format("YYYY-MM-DD");
-			const nilaiKondisi = isIzin ? "izin_dinas_luar" : mapCutiToKondisi(urgensi);
-			const urgensiText = urgensi || (isIzin ? "Dinas Luar Kota" : "Tahunan");
 			const refNo = no_pengajuan || "-";
+			const urgensiText = urgensi || (isIzin ? "Resmi" : "Tahunan");
+
+			const nilaiKondisi = isIzin ? mapIzinToKondisi(urgensi) : mapCutiToKondisi(urgensi);
+
+			const catatanSupervisor = isIzin
+				? `[Auto-Approved Sistem: Izin ${urgensi || "Resmi"} - Ref: ${refNo}]`
+				: `[Auto-Approved Sistem: Cuti ${urgensiText} - Ref: ${refNo}]`;
+
+			const isDinasLuar = urgensi === "Dinas Luar Kota";
+			const judulKegiatan = isIzin
+				? (isDinasLuar
+					? "Melaksanakan Tugas / Perjalanan Dinas Luar Kota"
+					: `Melaksanakan Izin: ${urgensi || "Resmi"}`)
+				: `Melaksanakan Cuti ${urgensiText}`;
+
+			const penjabaranKegiatan = isIzin
+				? `Izin resmi (${urgensi || ""}) sesuai pengajuan nomor ${no_pengajuan || ""}`.trim()
+				: `Cuti ${urgensiText} sesuai pengajuan resmi ${refNo}`.trim();
 
 			// Check existing penilaian_harian
 			const existing = await selectFirst({
@@ -394,7 +419,7 @@ export async function POST(request) {
 						status: "approved",
 						approved_at: new Date(),
 						approved_by: loggedInUser.id,
-						catatan_supervisor: `[Auto-Approved Sistem: ${isIzin ? "Dinas Luar Kota" : `Cuti ${urgensiText}`} - Ref: ${refNo}]`,
+						catatan_supervisor: catatanSupervisor,
 						dibuat_oleh: loggedInUser.id
 					}
 				});
@@ -404,8 +429,8 @@ export async function POST(request) {
 					table: "kegiatan_harian",
 					data: {
 						penilaian_id: insertResult.insertId,
-						judul_kegiatan: isIzin ? "Melaksanakan Tugas Dinas Luar Kota" : `Melaksanakan Cuti ${urgensiText}`,
-						penjabaran: isIzin ? `Dinas luar kota resmi sesuai pengajuan ${refNo}`.trim() : `Cuti ${urgensiText} sesuai pengajuan resmi ${refNo}`.trim(),
+						judul_kegiatan: judulKegiatan,
+						penjabaran: penjabaranKegiatan,
 						prioritas: "tinggi",
 						status_selesai: "selesai",
 						urutan: 1,
@@ -427,7 +452,7 @@ export async function POST(request) {
 						status: "approved",
 						approved_at: new Date(),
 						approved_by: loggedInUser.id,
-						catatan_supervisor: `[Auto-Approved Sistem: ${isIzin ? "Dinas Luar Kota" : `Cuti ${urgensiText}`} - Ref: ${refNo}]`
+						catatan_supervisor: catatanSupervisor
 					},
 					where: { id: existing.id }
 				});
@@ -443,8 +468,8 @@ export async function POST(request) {
 						table: "kegiatan_harian",
 						data: {
 							penilaian_id: existing.id,
-							judul_kegiatan: `Melaksanakan Cuti ${urgensiText}`,
-							penjabaran: `Cuti ${urgensiText} sesuai pengajuan resmi ${refCuti}`.trim(),
+							judul_kegiatan: judulKegiatan,
+							penjabaran: penjabaranKegiatan,
 							prioritas: "tinggi",
 							status_selesai: "selesai",
 							urutan: 1,

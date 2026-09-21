@@ -297,8 +297,9 @@ export async function POST(request, { params }) {
 			}
 
 			const isCuti = harian.sumber_absensi === "cuti";
+			const isIzinBypassed = harian.sumber_absensi === "izin" && harian.nilai_kondisi !== "izin_dinas_dalam";
 			const isDinasLuar = harian.nilai_kondisi === "izin_dinas_luar";
-			const isBypassed = isDinasLuar || isCuti;
+			const isBypassed = isCuti || isIzinBypassed;
 
 			// Validasi jam pulang berdasarkan jadwal shift (hanya jika bukan dinas luar kota dan bukan cuti)
 			if (!isBypassed) {
@@ -413,7 +414,7 @@ export async function POST(request, { params }) {
 
 			const autoApprovalCatatan = isCuti
 				? `[Auto-Approved Sistem: Cuti ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_cuti_no || "-"}]`
-				: `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${harian.ref_izin_no || "-"}]`;
+				: `[Auto-Approved Sistem: Izin ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_izin_no || "-"}]`;
 
 			await update({
 				table: "penilaian_harian",
@@ -469,8 +470,10 @@ export async function POST(request, { params }) {
 			let successMessage = "Penilaian berhasil dikirim untuk approval supervisor";
 			if (isCuti) {
 				successMessage = "Penilaian cuti berhasil disetujui otomatis";
-			} else if (isDinasLuar) {
-				successMessage = "Penilaian dinas luar kota berhasil disetujui otomatis";
+			} else if (isIzinBypassed) {
+				successMessage = isDinasLuar
+					? "Penilaian dinas luar kota berhasil disetujui otomatis"
+					: "Penilaian izin berhasil disetujui otomatis";
 			}
 
 			return NextResponse.json({

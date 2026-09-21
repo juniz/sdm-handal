@@ -466,8 +466,8 @@ export async function POST(request) {
 			}
 		});
 		const isCuti = resAbsen.sumber === "cuti";
-		const isDinasLuar = resAbsen.nilai_kondisi === "izin_dinas_luar";
-		const isBypassed = isCuti || isDinasLuar;
+		const isIzinBypassed = resAbsen.sumber === "izin" && resAbsen.nilai_kondisi !== "izin_dinas_dalam";
+		const isBypassed = isCuti || isIzinBypassed;
 		const skorAbsensi = param ? Number(param.nilai_skor) : 0;
 
 		const insertData = {
@@ -487,7 +487,7 @@ export async function POST(request) {
 			catatan_supervisor: isBypassed
 				? (isCuti
 					? `[Auto-Approved Sistem: Cuti ${(resAbsen.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${resAbsen.ref_no || "-"}]`
-					: `[Auto-Approved Sistem: Izin Dinas Luar Kota - Ref: ${resAbsen.ref_no || "-"}]`)
+					: `[Auto-Approved Sistem: Izin ${(resAbsen.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${resAbsen.ref_no || "-"}]`)
 				: null,
 			dibuat_oleh: pegawaiId
 		};
@@ -510,13 +510,16 @@ export async function POST(request) {
 					selesai_at: new Date()
 				}
 			});
-		} else if (isDinasLuar) {
+		} else if (isIzinBypassed) {
+			const isDinasLuar = resAbsen.nilai_kondisi === "izin_dinas_luar";
 			await insert({
 				table: "kegiatan_harian",
 				data: {
 					penilaian_id: result.insertId,
-					judul_kegiatan: "Melaksanakan Tugas / Perjalanan Dinas Luar Kota",
-					penjabaran: `Tugas dinas luar kota sesuai pengajuan izin resmi ${resAbsen.ref_no || ""}`.trim(),
+					judul_kegiatan: isDinasLuar
+						? "Melaksanakan Tugas / Perjalanan Dinas Luar Kota"
+						: `Melaksanakan Izin: ${(resAbsen.nilai_kondisi || "").replace(/_/g, " ")}`.trim(),
+					penjabaran: `Izin resmi sesuai pengajuan nomor ${resAbsen.ref_no || ""}`.trim(),
 					prioritas: "tinggi",
 					status_selesai: "selesai",
 					urutan: 1,
@@ -528,8 +531,10 @@ export async function POST(request) {
 		let responseMessage = "Draft penilaian harian berhasil dibuat";
 		if (isCuti) {
 			responseMessage = "Penilaian harian otomatis disetujui untuk cuti";
-		} else if (isDinasLuar) {
-			responseMessage = "Penilaian harian otomatis disetujui untuk dinas luar kota";
+		} else if (isIzinBypassed) {
+			responseMessage = resAbsen.nilai_kondisi === "izin_dinas_luar"
+				? "Penilaian harian otomatis disetujui untuk dinas luar kota"
+				: "Penilaian harian otomatis disetujui untuk izin";
 		}
 
 		return NextResponse.json({
