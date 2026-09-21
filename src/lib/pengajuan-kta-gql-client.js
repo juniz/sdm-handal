@@ -51,7 +51,14 @@ export async function gql(query, variables = {}, customToken = null) {
 
 	const json = await res.json();
 	if (json.errors && json.errors.length > 0) {
-		throw new Error(json.errors[0]?.message ?? "GraphQL error");
+		const firstErr = json.errors[0];
+		const extMsg =
+			firstErr.extensions?.originalError?.message ||
+			firstErr.extensions?.response?.message;
+		const detail = Array.isArray(extMsg)
+			? extMsg.join(", ")
+			: (extMsg || firstErr.message || "GraphQL error");
+		throw new Error(detail);
 	}
 	return json.data;
 }
