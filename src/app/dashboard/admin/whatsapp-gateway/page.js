@@ -40,8 +40,18 @@ export default function WhatsAppGatewayPage() {
       if (!isSilent) setLoading(true);
       const res = await fetch("/api/admin/whatsapp-gateway");
       const json = await res.json();
-      if (json.status === "success" && json.data) {
-        setGatewayData(json.data);
+      // Handle both raw and TransformInterceptor-wrapped responses
+      const statusObj =
+        json?.data?.data?.state !== undefined
+          ? json.data.data
+          : json?.data?.state !== undefined
+          ? json.data
+          : json?.state !== undefined
+          ? json
+          : null;
+
+      if (statusObj) {
+        setGatewayData(statusObj);
       }
     } catch (err) {
       if (!isSilent) {
@@ -81,11 +91,15 @@ export default function WhatsAppGatewayPage() {
         method: "POST",
       });
       const json = await res.json();
+      const message =
+        json?.data?.message || json?.message || "Inisialisasi client sedang diproses...";
+      const errorMsg = json?.data?.error || json?.error || json?.message;
+
       if (res.ok) {
-        toast.info(json.message || "Inisialisasi client sedang diproses...");
+        toast.info(message);
         fetchStatus(true);
       } else {
-        toast.error(json.message || json.error || "Gagal menginisialisasi WhatsApp client");
+        toast.error(errorMsg || "Gagal menginisialisasi WhatsApp client");
       }
     } catch (err) {
       toast.error("Terjadi kesalahan saat inisialisasi");
@@ -105,11 +119,14 @@ export default function WhatsAppGatewayPage() {
         method: "POST",
       });
       const json = await res.json();
+      const message = json?.data?.message || json?.message || "Sesi WhatsApp berhasil diputus.";
+      const errorMsg = json?.data?.error || json?.error || json?.message;
+
       if (res.ok) {
-        toast.success(json.message || "Sesi WhatsApp berhasil diputus.");
+        toast.success(message);
         fetchStatus(true);
       } else {
-        toast.error(json.message || json.error || "Gagal memutuskan sesi WhatsApp");
+        toast.error(errorMsg || "Gagal memutuskan sesi WhatsApp");
       }
     } catch (err) {
       toast.error("Terjadi kesalahan saat logout");
@@ -133,10 +150,13 @@ export default function WhatsAppGatewayPage() {
         body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
       });
       const json = await res.json();
+      const message = json?.data?.message || json?.message || "Pesan uji coba berhasil dikirim!";
+      const errorMsg = json?.data?.error || json?.error || json?.message;
+
       if (res.ok) {
-        toast.success("Pesan uji coba berhasil dikirim!");
+        toast.success(message);
       } else {
-        toast.error(json.error || json.message || "Gagal mengirim pesan uji coba");
+        toast.error(errorMsg || "Gagal mengirim pesan uji coba");
       }
     } catch (err) {
       toast.error("Terjadi kesalahan saat mengirim pesan uji coba");
