@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Settings, Database, Shield, AlertTriangle, Bell } from "lucide-react";
+import { Settings, Database, Shield, AlertTriangle, Bell, MessageSquare } from "lucide-react";
 
 export default function AdminSettingsPage() {
 	return (
@@ -16,6 +16,22 @@ export default function AdminSettingsPage() {
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<div className="bg-white p-6 rounded-lg shadow-sm border">
+					<div className="flex items-center gap-3 mb-4">
+						<MessageSquare className="w-8 h-8 text-emerald-600" />
+						<h3 className="text-lg font-medium text-slate-800">WhatsApp Gateway</h3>
+					</div>
+					<p className="text-slate-600 text-sm mb-4">
+						Status sesi WhatsApp client, scan QR code, dan uji coba pengiriman pesan
+					</p>
+					<Link
+						href="/dashboard/admin/whatsapp-gateway"
+						className="inline-block text-center w-full px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium transition-colors"
+					>
+						Kelola WhatsApp
+					</Link>
+				</div>
+
 				<div className="bg-white p-6 rounded-lg shadow-sm border">
 					<div className="flex items-center gap-3 mb-4">
 						<Bell className="w-8 h-8 text-sky-600" />
