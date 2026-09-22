@@ -53,17 +53,19 @@ export async function POST(request) {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
 
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
+
     let body = undefined;
     if (action === "send-test") {
       body = JSON.stringify(await request.json());
+      headers["Content-Type"] = "application/json";
     }
 
     const res = await fetch(`${BACKEND_URL}/api/v1/web/whatsapp-gateway/${action}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       body,
     });
 
