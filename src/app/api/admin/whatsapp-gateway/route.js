@@ -14,7 +14,7 @@ export async function GET(request) {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
 
-    const res = await fetch(`${BACKEND_URL}/web/whatsapp-gateway/status`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/web/whatsapp-gateway/status`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -58,7 +58,7 @@ export async function POST(request) {
       body = JSON.stringify(await request.json());
     }
 
-    const res = await fetch(`${BACKEND_URL}/web/whatsapp-gateway/${action}`, {
+    const res = await fetch(`${BACKEND_URL}/api/v1/web/whatsapp-gateway/${action}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

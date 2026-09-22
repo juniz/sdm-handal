@@ -85,7 +85,7 @@ export default function WhatsAppGatewayPage() {
         toast.info(json.message || "Inisialisasi client sedang diproses...");
         fetchStatus(true);
       } else {
-        toast.error(json.error || "Gagal menginisialisasi WhatsApp client");
+        toast.error(json.message || json.error || "Gagal menginisialisasi WhatsApp client");
       }
     } catch (err) {
       toast.error("Terjadi kesalahan saat inisialisasi");
@@ -109,7 +109,7 @@ export default function WhatsAppGatewayPage() {
         toast.success(json.message || "Sesi WhatsApp berhasil diputus.");
         fetchStatus(true);
       } else {
-        toast.error(json.error || "Gagal memutuskan sesi WhatsApp");
+        toast.error(json.message || json.error || "Gagal memutuskan sesi WhatsApp");
       }
     } catch (err) {
       toast.error("Terjadi kesalahan saat logout");
