@@ -14,7 +14,6 @@ function PDFViewerComponent({
 	onDocumentLoadError,
 	onPageChange,
 }) {
-	// Enable standard layout with sidebar tabs (thumbnails, outline/bookmarks) and search
 	const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
 	return (

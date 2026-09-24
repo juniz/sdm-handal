@@ -311,3 +311,24 @@
 		aspect-ratio: 1/1;
 	}
 }
+
+/* Mobile PDF reader page slider */
+input[type="range"].accent-\[\#0284C7\]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #0284C7;
+	border: 2px solid rgba(255,255,255,0.9);
+	box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+	cursor: pointer;
+}
+input[type="range"].accent-\[\#0284C7\]::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #0284C7;
+	border: 2px solid rgba(255,255,255,0.9);
+	box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+	cursor: pointer;
+}
