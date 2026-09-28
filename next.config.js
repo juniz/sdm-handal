@@ -111,7 +111,7 @@ const nextConfig = {
 					"style-src 'self' 'unsafe-inline' https://onesignal.com https://*.onesignal.com https://cdn.onesignal.com",
 					"img-src 'self' data: https:",
 					"font-src 'self'",
-					`connect-src 'self' https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001 https://onesignal.com https://*.onesignal.com https://*.os.tc${__impeccableLiveDev}`,
+					`connect-src 'self' https://itbhayangkara.id https://*.itbhayangkara.id http://localhost:3001 http://127.0.0.1:3001 https://onesignal.com https://*.onesignal.com https://*.os.tc${__impeccableLiveDev}`,
 					"object-src 'none'",
 					"base-uri 'self'",
 					"form-action 'self'",
