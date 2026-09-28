@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import moment from "moment-timezone";
 import {
@@ -16,12 +16,58 @@ import {
 	ListChecks,
 	TrendingUp,
 	Download,
+	Loader2,
+	X,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 
 // Load ApexCharts dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
+
+// Shared column widths for sensus export
+const SENSUS_WSCOLS = [
+	{ wch: 18 }, // Tgl Lapor
+	{ wch: 35 }, // Judul
+	{ wch: 20 }, // Departemen
+	{ wch: 18 }, // Tgl Selesai
+	{ wch: 15 }, // Status
+	{ wch: 15 }, // Durasi
+	{ wch: 25 }, // Kategori
+	{ wch: 15 }, // Selesai
+];
+
+/** Convert raw ticket array → sensus row array (same logic as useMemo processedData) */
+function buildSensusRows(rawTickets) {
+	return rawTickets
+		.filter((t) => t.submission_date_raw)
+		.map((ticket) => {
+			const jamLapor = moment(ticket.submission_date_raw);
+			const selesaiRaw = ticket.resolved_date_raw || ticket.closed_date_raw;
+			const jamSelesai = selesaiRaw ? moment(selesaiRaw) : null;
+			const jamMulai = ticket.assigned_date_raw ? moment(ticket.assigned_date_raw) : jamLapor;
+
+			let durasiMenit = "-";
+			if (jamSelesai) {
+				const durasi = jamSelesai.diff(jamMulai, "minutes");
+				durasiMenit = durasi >= 0 ? durasi : 0;
+			}
+
+			const isKriteria = ["Closed", "Resolved"].includes(ticket.current_status);
+
+			return {
+				"Tgl Lapor": `${jamLapor.format("DD/MM/YYYY")} ${jamLapor.format("HH:mm")}`,
+				"Judul Kendala": ticket.title || "-",
+				"Departemen": ticket.departemen_name || "-",
+				"Tgl Selesai": jamSelesai ? jamSelesai.format("DD/MM/YYYY HH:mm") : "-",
+				"Status": ticket.current_status || "-",
+				"Durasi (Menit)": durasiMenit,
+				"Kategori Masalah": ticket.category_name || "Lainnya",
+				"Selesai (N)": isKriteria ? "Ya" : "Tidak",
+			};
+		})
+		.sort((a, b) => moment(a["Tgl Lapor"], "DD/MM/YYYY HH:mm") - moment(b["Tgl Lapor"], "DD/MM/YYYY HH:mm"));
+}
 
 export default function QualityIndicatorReport({ tickets = [], filters = {}, setFilters = () => {} }) {
 	const handleMonthChange = (e) => {
@@ -41,6 +87,70 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 	const monthValue = filters.start_date
 		? moment(filters.start_date).format("YYYY-MM")
 		: moment().format("YYYY-MM");
+
+	// ── Multi-Month Export State ──────────────────────────────────────────
+	const [showMultiExportModal, setShowMultiExportModal] = useState(false);
+	const [selectedMonths, setSelectedMonths] = useState([]);
+	const [exportingMonths, setExportingMonths] = useState(false);
+	const [exportProgress, setExportProgress] = useState(""); // e.g. "Juli 2026..."
+
+	// Last 12 months list (most recent first), format "YYYY-MM"
+	const availableMonths = useMemo(() => {
+		const months = [];
+		for (let i = 0; i < 12; i++) {
+			months.push(moment().subtract(i, "months").format("YYYY-MM"));
+		}
+		return months;
+	}, []);
+
+	const toggleMonth = (m) =>
+		setSelectedMonths((prev) =>
+			prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]
+		);
+
+	const toggleSelectAll = () =>
+		setSelectedMonths((prev) =>
+			prev.length === availableMonths.length ? [] : [...availableMonths]
+		);
+
+	const handleMultiExport = async () => {
+		if (selectedMonths.length === 0) return;
+		setExportingMonths(true);
+
+		// Sort selected months chronologically
+		const sorted = [...selectedMonths].sort();
+
+		for (const monthStr of sorted) {
+			const start = moment(monthStr + "-01").format("YYYY-MM-DD");
+			const end = moment(start).endOf("month").format("YYYY-MM-DD");
+			const label = moment(monthStr + "-01").format("MMMM YYYY");
+
+			setExportProgress(label);
+
+			try {
+				const params = new URLSearchParams({ start_date: start, end_date: end, limit: "1000" });
+				const res = await fetch(`/api/ticket-assignment?${params}`);
+				const result = await res.json();
+
+				if (result.status === "success" && result.data?.length > 0) {
+					const rows = buildSensusRows(result.data);
+					const wb = XLSX.utils.book_new();
+					const ws = XLSX.utils.json_to_sheet(rows);
+					ws["!cols"] = SENSUS_WSCOLS;
+					XLSX.utils.book_append_sheet(wb, ws, "Sensus Harian");
+					XLSX.writeFile(wb, `sensus_harian_mutu_${monthStr.replace("-", "_")}.xlsx`);
+				}
+			} catch {
+				// skip month on error, continue
+			}
+		}
+
+		setExportingMonths(false);
+		setExportProgress("");
+		setShowMultiExportModal(false);
+		setSelectedMonths([]);
+	};
+
 	const { sensusData, formB, totalN, totalD, totalCapaian, failedTicketsCount, reportDateText } = useMemo(() => {
 		const processedData = tickets
 			.filter((t) => t.submission_date_raw)
@@ -49,8 +159,9 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 				let jamSelesai = null;
 				let jamMulai = ticket.assigned_date_raw ? moment(ticket.assigned_date_raw) : jamLapor;
 
-				if (ticket.resolved_date_raw) {
-					jamSelesai = moment(ticket.resolved_date_raw);
+				const selesaiRaw = ticket.resolved_date_raw || ticket.closed_date_raw;
+				if (selesaiRaw) {
+					jamSelesai = moment(selesaiRaw);
 				}
 
 				let durasiMenit = "-";
@@ -143,21 +254,10 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 		}));
 
 		const ws = XLSX.utils.json_to_sheet(data);
-
-		const wscols = [
-			{ wch: 18 }, // Tgl Lapor
-			{ wch: 35 }, // Judul
-			{ wch: 20 }, // Departemen
-			{ wch: 18 }, // Tgl Selesai
-			{ wch: 15 }, // Status
-			{ wch: 15 }, // Durasi
-			{ wch: 25 }, // Kategori
-			{ wch: 15 }, // Selesai
-		];
-		ws["!cols"] = wscols;
+		ws["!cols"] = SENSUS_WSCOLS;
 
 		XLSX.utils.book_append_sheet(wb, ws, "Sensus Harian");
-		XLSX.writeFile(wb, `sensus_harian_mutu_${moment().format("YYYYMMDD")}.xlsx`);
+		XLSX.writeFile(wb, `sensus_harian_mutu_${monthValue.replace("-", "_")}.xlsx`);
 	};
 
 	// Options for the Bar Chart
@@ -398,17 +498,121 @@ export default function QualityIndicatorReport({ tickets = [], filters = {}, set
 							</CardDescription>
 						</div>
 					</div>
-					<Button
-						variant="outline"
-						size="sm"
-						className="hidden sm:flex text-amber-700 hover:bg-amber-50 hover:text-amber-800 border-amber-200"
-						onClick={handleExportSensus}
-						disabled={sensusData.length === 0}
-					>
-						<Download className="w-4 h-4 mr-2" />
-						Export Excel
-					</Button>
+					<div className="hidden sm:flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							className="text-amber-700 hover:bg-amber-50 hover:text-amber-800 border-amber-200"
+							onClick={handleExportSensus}
+							disabled={sensusData.length === 0}
+						>
+							<Download className="w-4 h-4 mr-2" />
+							Export Bulan Ini
+						</Button>
+						<Button
+							variant="outline"
+							size="sm"
+							className="text-sky-700 hover:bg-sky-50 hover:text-sky-800 border-sky-200"
+							onClick={() => setShowMultiExportModal(true)}
+						>
+							<Download className="w-4 h-4 mr-2" />
+							Export Multi-Bulan
+						</Button>
+					</div>
 				</CardHeader>
+
+				{/* Multi-Month Export Modal */}
+				{showMultiExportModal && (
+					<div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+						<div className="bg-white rounded-xl shadow-xl w-full max-w-md border border-slate-200">
+							<div className="flex items-center justify-between p-4 border-b border-slate-100">
+								<div>
+									<h3 className="font-semibold text-slate-900 text-sm">Export Multi-Bulan</h3>
+									<p className="text-xs text-slate-500 mt-0.5">Pilih bulan yang ingin di-export (file terpisah per bulan)</p>
+								</div>
+								<button
+									onClick={() => { setShowMultiExportModal(false); setSelectedMonths([]); }}
+									disabled={exportingMonths}
+									className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-50"
+								>
+									<X className="h-4 w-4" />
+								</button>
+							</div>
+							<div className="p-4">
+								<div className="flex items-center justify-between mb-3">
+									<span className="text-xs font-medium text-slate-600">
+										{selectedMonths.length} bulan dipilih
+									</span>
+									<button
+										onClick={toggleSelectAll}
+										disabled={exportingMonths}
+										className="text-xs text-sky-600 hover:text-sky-700 font-medium disabled:opacity-50"
+									>
+										{selectedMonths.length === availableMonths.length ? "Batalkan Semua" : "Pilih Semua"}
+									</button>
+								</div>
+								<div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+									{availableMonths.map((m) => {
+										const label = moment(m + "-01").format("MMMM YYYY");
+										const checked = selectedMonths.includes(m);
+										return (
+											<label
+												key={m}
+												className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer border transition-colors ${
+													checked
+														? "bg-sky-50 border-sky-200 text-sky-800"
+														: "border-transparent hover:bg-slate-50 text-slate-700"
+												} ${exportingMonths ? "opacity-50 pointer-events-none" : ""}`}
+											>
+												<input
+													type="checkbox"
+													className="accent-sky-600 h-4 w-4 rounded"
+													checked={checked}
+													onChange={() => toggleMonth(m)}
+												/>
+												<span className="text-sm">{label}</span>
+											</label>
+										);
+									})}
+								</div>
+							</div>
+							<div className="flex items-center justify-between px-4 pb-4 pt-2 border-t border-slate-100">
+								{exportingMonths ? (
+									<span className="text-xs text-slate-500 flex items-center gap-1.5">
+										<Loader2 className="h-3.5 w-3.5 animate-spin" />
+										Mengunduh {exportProgress}...
+									</span>
+								) : (
+									<span className="text-xs text-slate-400">
+										{selectedMonths.length === 0 ? "Pilih minimal 1 bulan" : `${selectedMonths.length} file akan diunduh`}
+									</span>
+								)}
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => { setShowMultiExportModal(false); setSelectedMonths([]); }}
+										disabled={exportingMonths}
+									>
+										Batal
+									</Button>
+									<Button
+										size="sm"
+										className="bg-sky-600 hover:bg-sky-700 text-white"
+										onClick={handleMultiExport}
+										disabled={selectedMonths.length === 0 || exportingMonths}
+									>
+										{exportingMonths ? (
+											<><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Mengunduh...</>
+										) : (
+											<><Download className="h-3.5 w-3.5 mr-1.5" />Export</>
+										)}
+									</Button>
+								</div>
+							</div>
+						</div>
+					</div>
+				)}
 				<CardContent className="p-0">
 					<div className="overflow-x-auto max-h-[400px]">
 						<table className="w-full text-sm text-left">
