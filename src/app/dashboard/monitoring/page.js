@@ -12,7 +12,10 @@ import {
   PieChart,
   Cpu,
   HardDrive,
-  Database
+  Database,
+  History,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { getClientToken } from "@/lib/client-auth";
 import LogViewer from "@/components/development/LogViewer";
@@ -22,6 +25,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +92,11 @@ export default function MonitoringPage() {
   const [logFilter, setLogFilter] = useState("");
   const [auditFilter, setAuditFilter] = useState("");
   const [selectedCronJob, setSelectedCronJob] = useState(null);
+  const [selectedHistoryJob, setSelectedHistoryJob] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyMeta, setHistoryMeta] = useState({ total: 0, page: 1, limit: 10, totalPages: 1 });
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [expandedHistoryIdx, setExpandedHistoryIdx] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
   const humanizeCron = (expression) => {
@@ -189,6 +204,46 @@ export default function MonitoringPage() {
     } finally {
       setTriggeringJob(null);
     }
+  };
+
+  const fetchCronHistory = useCallback(async (jobName, page = 1) => {
+    if (!jobName) return;
+    setIsHistoryLoading(true);
+    setExpandedHistoryIdx(null);
+    const token = getClientToken();
+    try {
+      const res = await fetch(
+        `${BACKEND_URL}/api/v1/monitor/cron-jobs/${encodeURIComponent(jobName)}/history?page=${page}&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (res.ok) {
+        const json = await res.json();
+        setHistoryData(Array.isArray(json.data) ? json.data : []);
+        setHistoryMeta({
+          total: json.total ?? 0,
+          page: json.page ?? page,
+          limit: json.limit ?? 10,
+          totalPages: json.totalPages ?? 1,
+        });
+      } else {
+        showToast("Gagal memuat riwayat cron job", "error");
+      }
+    } catch (err) {
+      console.error("Failed to fetch cron history:", err);
+      showToast("Gagal memuat riwayat cron job: Terjadi kesalahan jaringan", "error");
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, []);
+
+  const openHistoryModal = (jobName) => {
+    setSelectedHistoryJob(jobName);
+    fetchCronHistory(jobName, 1);
   };
 
   const renderCronStatusBadge = (job) => {
@@ -1105,6 +1160,15 @@ export default function MonitoringPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                              className="h-7 text-xs border-slate-200 text-slate-700 hover:bg-slate-100 mr-1.5"
+                              onClick={() => openHistoryModal(job.name)}
+                            >
+                              <History className="h-3 w-3 mr-1 text-slate-500" />
+                              Riwayat
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               className="h-7 text-xs border-sky-200 text-sky-700 hover:bg-sky-50"
                               disabled={job.isRunning || triggeringJob === job.name}
                               onClick={() => handleTriggerCron(job.name)}
@@ -1380,6 +1444,200 @@ export default function MonitoringPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!selectedHistoryJob} onOpenChange={(open) => !open && setSelectedHistoryJob(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <History className="h-4 w-4 text-sky-600" />
+              Riwayat Eksekusi & Audit: <span className="font-mono text-sky-700">{selectedHistoryJob}</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Log eksekusi cron otomatis maupun pemicuan manual (Retensi 30 hari).
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between py-2 border-b border-slate-100">
+            <Badge variant="outline" className="text-xs font-normal text-slate-600">
+              Total: <span className="font-semibold text-slate-900 ml-1">{historyMeta.total}</span> eksekusi
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs text-slate-600 hover:bg-slate-50"
+              onClick={() => fetchCronHistory(selectedHistoryJob, historyMeta.page)}
+              disabled={isHistoryLoading}
+            >
+              <RefreshCcw className={`h-3 w-3 mr-1.5 ${isHistoryLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+
+          <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg">
+            <Table>
+              <TableHeader className="bg-slate-50 sticky top-0 z-10">
+                <TableRow>
+                  <TableHead className="text-xs font-semibold text-slate-600">Waktu Mulai</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600">Tipe Trigger</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600">Status</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600">Durasi</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600">Dipicu Oleh</TableHead>
+                  <TableHead className="text-xs font-semibold text-slate-600 text-right">Detail Hasil</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isHistoryLoading && historyData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-xs text-slate-400">
+                      <RefreshCcw className="h-4 w-4 animate-spin mx-auto mb-2 text-slate-400" />
+                      Memuat riwayat eksekusi...
+                    </TableCell>
+                  </TableRow>
+                ) : historyData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-xs text-slate-400 italic">
+                      Belum ada riwayat eksekusi tercatat di database.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  historyData.map((log, idx) => (
+                    <Fragment key={log.id || idx}>
+                      <TableRow
+                        className="hover:bg-slate-50 cursor-pointer"
+                        onClick={() => setExpandedHistoryIdx(expandedHistoryIdx === idx ? null : idx)}
+                      >
+                        <TableCell className="text-xs font-mono text-slate-600">
+                          {log.startedAt ? (
+                            <div>
+                              <div>{new Date(log.startedAt).toLocaleDateString("id-ID")}</div>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {new Date(log.startedAt).toLocaleTimeString("id-ID", { hour12: false })}
+                              </div>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {log.triggerType === "MANUAL_WEB" ? (
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-200 font-bold text-[10px]">
+                              MANUAL_WEB
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-sky-100 text-sky-800 border-sky-200 font-bold text-[10px]">
+                              SCHEDULER
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {log.status === "SUCCESS" ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-bold text-[10px]">
+                              SUKSES
+                            </Badge>
+                          ) : log.status === "FAILED" ? (
+                            <Badge className="bg-rose-100 text-rose-800 border-rose-200 font-bold text-[10px]">
+                              GAGAL
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-200 animate-pulse font-bold text-[10px]">
+                              BERJALAN
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs font-mono text-slate-600">
+                          {log.durationMs != null ? `${log.durationMs} ms` : "-"}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="font-medium text-slate-700">
+                            {log.triggeredBy || (log.triggerType === "SCHEDULER" ? "Sistem (Cron)" : "-")}
+                          </div>
+                          {log.ipAddress && (
+                            <div className="text-[10px] text-slate-400 font-mono">{log.ipAddress}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-xs" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[11px] px-2 text-slate-600 hover:text-slate-900"
+                            onClick={() => setExpandedHistoryIdx(expandedHistoryIdx === idx ? null : idx)}
+                          >
+                            {expandedHistoryIdx === idx ? (
+                              <>Tutup <ChevronUp className="h-3 w-3 ml-1" /></>
+                            ) : (
+                              <>Lihat <ChevronDown className="h-3 w-3 ml-1" /></>
+                            )}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+
+                      {expandedHistoryIdx === idx && (
+                        <TableRow className="bg-slate-50/70">
+                          <TableCell colSpan={6} className="p-3">
+                            <div className="space-y-2">
+                              {log.errorMessage && (
+                                <div>
+                                  <div className="text-[11px] font-semibold text-rose-700 mb-1">Pesan Error:</div>
+                                  <pre className="bg-rose-950/10 border border-rose-200 text-rose-800 p-2.5 rounded font-mono text-[11px] whitespace-pre-wrap max-h-[180px] overflow-y-auto">
+                                    {log.errorMessage}
+                                  </pre>
+                                </div>
+                              )}
+                              {log.resultSummary && (
+                                <div>
+                                  <div className="text-[11px] font-semibold text-slate-700 mb-1">Ringkasan Hasil (Result Summary):</div>
+                                  <pre className="bg-slate-900 text-emerald-300 p-2.5 rounded font-mono text-[11px] whitespace-pre-wrap max-h-[180px] overflow-y-auto">
+                                    {(() => {
+                                      try {
+                                        return JSON.stringify(JSON.parse(log.resultSummary), null, 2);
+                                      } catch {
+                                        return log.resultSummary;
+                                      }
+                                    })()}
+                                  </pre>
+                                </div>
+                              )}
+                              {!log.errorMessage && !log.resultSummary && (
+                                <div className="text-slate-400 italic text-xs">Tidak ada payload atau detail log tercatat.</div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-600">
+            <div>
+              Halaman {historyMeta.page} dari {historyMeta.totalPages || 1} (Total {historyMeta.total} eksekusi)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={historyMeta.page <= 1 || isHistoryLoading}
+                onClick={() => fetchCronHistory(selectedHistoryJob, historyMeta.page - 1)}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={historyMeta.page >= (historyMeta.totalPages || 1) || isHistoryLoading}
+                onClick={() => fetchCronHistory(selectedHistoryJob, historyMeta.page + 1)}
+              >
+                Berikutnya
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {toastMessage && (
         <div className={`fixed bottom-4 right-4 z-50 px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium border ${
