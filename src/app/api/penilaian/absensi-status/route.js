@@ -23,6 +23,16 @@ async function isAuthorizedForEmployee(loggedInUser, targetEmployeeId) {
 		return true;
 	}
 
+	const aclRows = await rawQuery(`
+		SELECT 1 FROM sdm_menu_acl acl
+		JOIN sdm_menu m ON acl.menu_id = m.id
+		WHERE acl.user_id = ?
+		  AND m.href = '/dashboard/penilaian-kinerja/riwayat-pengawasan'
+		  AND m.is_active = 1
+		LIMIT 1
+	`, [loggedInUser.id]);
+	if (aclRows && aclRows.length > 0) return true;
+
 	const personalMapping = await selectFirst({
 		table: "supervisor_mapping",
 		where: {

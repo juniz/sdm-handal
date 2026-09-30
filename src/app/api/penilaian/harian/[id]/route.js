@@ -549,13 +549,25 @@ export async function POST(request, { params }) {
 		const isAdmin = userDept === "IT" || userDept === "SDM";
 		const isAuthorizedSupervisor = Number(authorizedSupervisorId) === Number(loggedInUser.id);
 
+		// Check if user is auditor with riwayat-pengawasan ACL
+		let isAuditor = false;
+		const aclRows = await rawQuery(`
+			SELECT 1 FROM sdm_menu_acl acl
+			JOIN sdm_menu m ON acl.menu_id = m.id
+			WHERE acl.user_id = ?
+			  AND m.href = '/dashboard/penilaian-kinerja/riwayat-pengawasan'
+			  AND m.is_active = 1
+			LIMIT 1
+		`, [loggedInUser.id]);
+		if (aclRows && aclRows.length > 0) isAuditor = true;
+
 		// Prevent self-assessment approval unless admin
 		if (Number(harian.pegawai_id) === Number(loggedInUser.id) && !isAdmin) {
 			return NextResponse.json({ error: "Forbidden - Tidak dapat mengevaluasi diri sendiri" }, { status: 403 });
 		}
 
-		// Verify authorized supervisor or admin
-		if (!isAuthorizedSupervisor && !isAdmin) {
+		// Verify authorized supervisor or admin or auditor
+		if (!isAuthorizedSupervisor && !isAdmin && !isAuditor) {
 			return NextResponse.json({ error: "Forbidden - Anda bukan supervisor yang sah atau administrator untuk pegawai ini" }, { status: 403 });
 		}
 
