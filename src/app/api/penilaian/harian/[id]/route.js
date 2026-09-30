@@ -5,6 +5,7 @@ import { selectFirst, select, insert, update, delete_, rawQuery } from "@/lib/db
 import moment from "moment-timezone";
 import { getPenilaianInputLimitDays } from "@/lib/penilaian-config";
 import { sendPushNotification } from "@/lib/onesignal";
+import { resolveAbsensi, getScoreForKondisi, calculateSkorTotal } from "@/lib/penilaian-helper";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -147,7 +148,13 @@ export async function PUT(request, { params }) {
 
 		if (sumber_absensi !== undefined) updateData.sumber_absensi = sumber_absensi;
 		if (nilai_kondisi !== undefined) updateData.nilai_kondisi = nilai_kondisi;
-		if (skor_absensi !== undefined) updateData.skor_absensi = skor_absensi !== null ? Number(skor_absensi) : null;
+		if (skor_absensi !== undefined) {
+			const absVal = skor_absensi !== null ? Number(skor_absensi) : null;
+			updateData.skor_absensi = absVal;
+			if (absVal !== null && Number(harian.skor_kegiatan || 0) > 0) {
+				updateData.skor_total = calculateSkorTotal(harian.skor_kegiatan, absVal, 60);
+			}
+		}
 
 		await update({
 			table: "penilaian_harian",
@@ -404,23 +411,43 @@ export async function POST(request, { params }) {
 			// Get bobot parameter
 			const paramKegiatan = paramsList.find(p => p.kode === "KGT_PRODUKTIF");
 			const bobotKegiatan = paramKegiatan ? Number(paramKegiatan.bobot_persen) : 60;
-			const bobotAbsensi = 100 - bobotKegiatan;
 
-			const skorAbsensi = isBypassed ? 100 : Number(harian.skor_absensi);
+			// Re-resolve attendance securely server-side on submit
+			let finalSumberAbsensi = harian.sumber_absensi;
+			let finalNilaiKondisi = harian.nilai_kondisi;
+			let finalSkorAbsensi = isBypassed ? 100 : Number(harian.skor_absensi || 0);
+
+			if (!isBypassed) {
+				const pegawaiRow = await selectFirst({
+					table: "pegawai",
+					where: { id: harian.pegawai_id },
+					select: ["nik"]
+				});
+				const nikPegawai = pegawaiRow?.nik || "";
+				const evalDateStr = moment(harian.tanggal).format("YYYY-MM-DD");
+				const resAbsen = await resolveAbsensi(harian.pegawai_id, nikPegawai, evalDateStr, Boolean(harian.is_tambahan));
+
+				finalSumberAbsensi = resAbsen.sumber;
+				finalNilaiKondisi = resAbsen.nilai_kondisi;
+				finalSkorAbsensi = await getScoreForKondisi(resAbsen.nilai_kondisi);
+			}
+
 			const skorTotal = isBypassed 
 				? 100 
-				: (skorKegiatan * bobotKegiatan / 100) + (skorAbsensi * bobotAbsensi / 100);
+				: calculateSkorTotal(skorKegiatan, finalSkorAbsensi, bobotKegiatan);
 			const newStatus = isBypassed ? "approved" : "submitted";
 
 			const autoApprovalCatatan = isCuti
-				? `[Auto-Approved Sistem: Cuti ${(harian.nilai_kondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_cuti_no || "-"}]`
-				: `[Auto-Approved Sistem: Izin ${(harian.nilai_kondisi || "").replace(/^izin_/, "").replace(/_/g, " ")} - Ref: ${harian.ref_izin_no || "-"}]`;
+				? `[Auto-Approved Sistem: Cuti ${(finalNilaiKondisi || "").replace(/_/g, " ")} - Ref: ${harian.ref_cuti_no || "-"}]`
+				: `[Auto-Approved Sistem: Izin ${(finalNilaiKondisi || "").replace(/^izin_/, "").replace(/_/g, " ")} - Ref: ${harian.ref_izin_no || "-"}]`;
 
 			await update({
 				table: "penilaian_harian",
 				data: {
+					sumber_absensi: finalSumberAbsensi,
+					nilai_kondisi: finalNilaiKondisi,
 					skor_kegiatan: skorKegiatan,
-					skor_absensi: skorAbsensi,
+					skor_absensi: finalSkorAbsensi,
 					skor_total: skorTotal,
 					status: newStatus,
 					approved_at: isBypassed ? new Date() : null,
@@ -481,6 +508,7 @@ export async function POST(request, { params }) {
 				message: successMessage,
 				data: {
 					skor_kegiatan: skorKegiatan,
+					skor_absensi: finalSkorAbsensi,
 					skor_total: skorTotal,
 					status: newStatus
 				}
@@ -545,10 +573,17 @@ export async function POST(request, { params }) {
 				}
 			}
 
+			// Defense-in-depth: Ensure skor_total is mathematically consistent before approval
+			const isBypassedLeave = harian.sumber_absensi === "cuti" || (harian.sumber_absensi === "izin" && harian.nilai_kondisi !== "izin_dinas_dalam");
+			const expectedTotal = isBypassedLeave 
+				? 100 
+				: calculateSkorTotal(harian.skor_kegiatan, harian.skor_absensi, 60);
+
 			await update({
 				table: "penilaian_harian",
 				data: {
 					status: "approved",
+					skor_total: expectedTotal,
 					catatan_supervisor: catatan_supervisor || null,
 					approved_by: loggedInUser.id,
 					approved_at: new Date()
