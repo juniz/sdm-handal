@@ -223,27 +223,27 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
             no: { halign: "center", cellWidth: 10 },
             nama: { cellWidth: 38 },
             tgl_kontrak: { halign: "center", cellWidth: 22 },
-            pangkat: { halign: "center", cellWidth: 15 },
-            nip: { halign: "center", cellWidth: 15 },
-            jabatan: { cellWidth: 25 },
-            jumlah: { halign: "right", cellWidth: 24 },
-            bpjs_kes: { halign: "right", cellWidth: 22 },
-            bpjs_tk: { halign: "right", cellWidth: 22 },
-            total: { halign: "right", cellWidth: 24 },
-            ttd1: { halign: "left", cellWidth: 30 },
-            ttd2: { halign: "left", cellWidth: 30 }
-        } : {
-            no: { halign: "center", cellWidth: 12 },
-            nama: { cellWidth: 45 },
-            pangkat: { halign: "center", cellWidth: 16 },
-            nip: { halign: "center", cellWidth: 16 },
-            jabatan: { cellWidth: 28 },
+            pangkat: { halign: "center", cellWidth: 12 },
+            nip: { halign: "center", cellWidth: 12 },
+            jabatan: { cellWidth: 27 },
             jumlah: { halign: "right", cellWidth: 26 },
             bpjs_kes: { halign: "right", cellWidth: 24 },
             bpjs_tk: { halign: "right", cellWidth: 24 },
             total: { halign: "right", cellWidth: 26 },
-            ttd1: { halign: "left", cellWidth: 30 },
-            ttd2: { halign: "left", cellWidth: 30 }
+            ttd1: { halign: "left", cellWidth: 28 },
+            ttd2: { halign: "left", cellWidth: 28 }
+        } : {
+            no: { halign: "center", cellWidth: 12 },
+            nama: { cellWidth: 43 },
+            pangkat: { halign: "center", cellWidth: 14 },
+            nip: { halign: "center", cellWidth: 14 },
+            jabatan: { cellWidth: 28 },
+            jumlah: { halign: "right", cellWidth: 28 },
+            bpjs_kes: { halign: "right", cellWidth: 26 },
+            bpjs_tk: { halign: "right", cellWidth: 26 },
+            total: { halign: "right", cellWidth: 28 },
+            ttd1: { halign: "left", cellWidth: 29 },
+            ttd2: { halign: "left", cellWidth: 29 }
         };
 
         // Column indices for totals
@@ -349,7 +349,8 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                     lineColor: [0, 0, 0],
                     fontSize: 8,
                     valign: "middle",
-                    cellPadding: 2
+                    cellPadding: 2,
+                    minCellHeight: 10
                 },
                 columnStyles: columnStyles,
                 willDrawCell: (data) => {
@@ -360,7 +361,9 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
 
                         if (data.column.index === 0) {
                             data.cell.styles.halign = "left";
-                            data.cell.styles.cellPadding = { left: 5, top: 2 };
+                            data.cell.styles.fontSize = 8;
+                            data.cell.styles.valign = "middle";
+                            data.cell.styles.cellPadding = { left: 5, top: 2, bottom: 2 };
                             
                             if (isTotalLastPage) {
                                 data.cell.text = ["TOTAL"];
@@ -370,6 +373,12 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                         }
 
                         if (totalsToUse) {
+                            if (data.column.index >= jumlahColIdx && data.column.index <= totalColIdx) {
+                                data.cell.styles.halign = "right";
+                                data.cell.styles.fontSize = 7.5;
+                                data.cell.styles.valign = "middle";
+                                data.cell.styles.cellPadding = { right: 2, top: 2, bottom: 2 };
+                            }
                             if (data.column.index === jumlahColIdx) data.cell.text = [`Rp ${formatNumber(totalsToUse.gaji)}`];
                             if (data.column.index === bpjsKesColIdx) data.cell.text = [`Rp ${formatNumber(totalsToUse.bpjsKes)}`];
                             if (data.column.index === bpjsTkColIdx) data.cell.text = [`Rp ${formatNumber(totalsToUse.bpjsTk)}`];
@@ -537,18 +546,22 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                 showFoot: 'everyPage',
                 showHead: 'firstPage',
                 foot: [[
-                    { content: "JUMLAH DIPINDAHKAN", colSpan: groupByContract ? 6 : 5, styles: { halign: "left", fontStyle: "bold", cellPadding: { left: 5, top: 2 } } },
-                    { content: "", styles: { halign: "right", fontStyle: "bold" } },
-                    { content: "", styles: { halign: "right", fontStyle: "bold" } },
-                    { content: "", styles: { halign: "right", fontStyle: "bold" } },
-                    { content: "", styles: { halign: "right", fontStyle: "bold" } },
+                    { content: "JUMLAH DIPINDAHKAN", colSpan: groupByContract ? 6 : 5, styles: { halign: "left", fontStyle: "bold", fontSize: 8, cellPadding: { left: 5, top: 2, bottom: 2 } } },
+                    { content: "", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5 } },
+                    { content: "", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5 } },
+                    { content: "", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5 } },
+                    { content: "", styles: { halign: "right", fontStyle: "bold", fontSize: 7.5 } },
                     { content: "", colSpan: 2 }
                 ]],
                 footStyles: {
                     fillColor: [255, 255, 255],
                     textColor: [0, 0, 0],
                     lineWidth: 0.1,
-                    lineColor: [0, 0, 0]
+                    lineColor: [0, 0, 0],
+                    fontSize: 7.5,
+                    fontStyle: "bold",
+                    valign: "middle",
+                    cellPadding: { top: 2, bottom: 2, left: 1, right: 2 }
                 },
                 margin: { top: 40, bottom: 15, left: 10, right: 10 },
                 pageBreak: "auto",
