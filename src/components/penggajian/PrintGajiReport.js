@@ -563,18 +563,18 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                     valign: "middle",
                     cellPadding: { top: 2, bottom: 2, left: 1, right: 2 }
                 },
-                margin: { top: 40, bottom: 15, left: 10, right: 10 },
+                margin: { top: 40, bottom: 52, left: 10, right: 10 },
                 pageBreak: "auto",
                 rowPageBreak: "avoid"
             });
 
             // Add Footer signatures for this group after table
-            const finalY = pdf.lastAutoTable.finalY + 10;
+            const finalY = pdf.lastAutoTable.finalY + 6;
             const pageHeight = pdf.internal.pageSize.height;
             const pageWidth = pdf.internal.pageSize.width;
 
             let currentY = finalY;
-            if (currentY + 50 > pageHeight) {
+            if (currentY + 45 > pageHeight) {
                 pdf.addPage();
                 currentY = 20;
             }
