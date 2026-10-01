@@ -11,6 +11,8 @@ import AuditTable from "./components/AuditTable";
 import AuditDetailDrawer from "./components/AuditDetailDrawer";
 import AuditActivityModal from "./components/AuditActivityModal";
 import AuditPrintLayout from "./components/AuditPrintLayout";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { toast } from "sonner";
 
 const MONTHS = [
 	{ value: "01", label: "Januari" },
@@ -78,6 +80,18 @@ export default function RiwayatPenilaianPengawasanPage() {
 	const [selectedDayMeta, setSelectedDayMeta] = useState({ shift: "", isWorkDay: false });
 	const [activityLoading, setActivityLoading] = useState(false);
 	const [activities, setActivities] = useState([]);
+
+	// Auto-approve state & dialog
+	const [isAutoApproving, setIsAutoApproving] = useState(false);
+	const [confirmDialog, setConfirmDialog] = useState({
+		isOpen: false,
+		title: "",
+		description: "",
+		confirmText: "Ya, Setujui Semua",
+		cancelText: "Batal",
+		variant: "primary",
+		onConfirm: () => {},
+	});
 
 	// Fetch Departments & Status Kerja Options
 	const fetchDepartments = async () => {
@@ -275,6 +289,52 @@ export default function RiwayatPenilaianPengawasanPage() {
 				window.print();
 			}, 100);
 		}
+	};
+
+	// Auto-Approve Bulk Handlers
+	const doAutoApprove = async () => {
+		setIsAutoApproving(true);
+		setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+		try {
+			const res = await fetch("/api/penilaian/auto-approve", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					bulan: Number(month),
+					tahun: Number(year),
+					departemen,
+				}),
+			});
+			const result = await res.json();
+			if (!res.ok || result.success === false) {
+				throw new Error(result.error || result.message || "Gagal melakukan auto-approve");
+			}
+			toast.success(result.message || "Auto-approve berhasil diproses");
+			await loadRekapData();
+		} catch (err) {
+			console.error("Auto-approve error:", err);
+			toast.error(err.message || "Terjadi kesalahan saat auto-approve");
+		} finally {
+			setIsAutoApproving(false);
+		}
+	};
+
+	const handleAutoApproveClick = () => {
+		const monthLabel = MONTHS.find((m) => m.value === month)?.label || month;
+		const deptLabel =
+			departemen === "ALL"
+				? "Semua Departemen"
+				: departemenList.find((d) => d.nama === departemen)?.nama || departemen;
+
+		setConfirmDialog({
+			isOpen: true,
+			title: `Auto-Approve Penilaian Kinerja Bulan ${monthLabel} ${year}`,
+			description: `Sistem akan secara otomatis menyetujui seluruh penilaian kinerja berstatus Draft (pegawai) dan Pending/Submitted (supervisor) untuk periode ${monthLabel} ${year} (Departemen: ${deptLabel}). Aksi ini tidak dapat dibatalkan. Lanjutkan?`,
+			confirmText: "Ya, Setujui Semua",
+			cancelText: "Batal",
+			variant: "primary",
+			onConfirm: () => doAutoApprove(),
+		});
 	};
 
 	// Employee traversal navigation in drawer
@@ -500,6 +560,8 @@ export default function RiwayatPenilaianPengawasanPage() {
 				}}
 				onExportCsv={handleExportCsv}
 				onPrintReport={handlePrintReport}
+				onAutoApproveClick={handleAutoApproveClick}
+				isAutoApproving={isAutoApproving}
 				departemenList={departemenList}
 				sttsKerjaList={sttsKerjaList}
 				MONTHS={MONTHS}
@@ -587,6 +649,12 @@ export default function RiwayatPenilaianPengawasanPage() {
 				MONTHS={MONTHS}
 				sortField={sortField}
 				sortDirection={sortDirection}
+			/>
+
+			{/* Auto-Approve Confirmation Dialog */}
+			<ConfirmationDialog
+				{...confirmDialog}
+				onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
 			/>
 		</div>
 	);

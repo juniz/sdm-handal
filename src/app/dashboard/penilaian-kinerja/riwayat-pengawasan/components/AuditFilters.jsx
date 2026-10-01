@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Filter, Search, X, Download, AlertTriangle, Printer } from "lucide-react";
+import { Filter, Search, X, Download, AlertTriangle, Printer, CheckCheck, Loader2 } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
 const DEFAULT_MONTHS = [
@@ -39,6 +39,8 @@ export default function AuditFilters({
 	setOnlyAnomali,
 	onExportCsv,
 	onPrintReport,
+	onAutoApproveClick,
+	isAutoApproving = false,
 	departemenList = [],
 	sttsKerjaList = [],
 	MONTHS = DEFAULT_MONTHS,
@@ -109,6 +111,22 @@ export default function AuditFilters({
 						</select>
 					</div>
 					<div className="flex items-center gap-2">
+						{onAutoApproveClick && (
+							<button
+								type="button"
+								onClick={onAutoApproveClick}
+								disabled={isAutoApproving}
+								className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-lg text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 transition-all min-h-[36px] sm:min-h-0"
+								title="Auto Approve seluruh status draft & pending supervisor di bulan terpilih"
+							>
+								{isAutoApproving ? (
+									<Loader2 className="w-3.5 h-3.5 animate-spin" />
+								) : (
+									<CheckCheck className="w-3.5 h-3.5 text-white" />
+								)}
+								<span>Auto-Approve Bulan Ini</span>
+							</button>
+						)}
 						{onPrintReport && (
 							<button
 								type="button"
