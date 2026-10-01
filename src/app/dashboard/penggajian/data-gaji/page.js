@@ -260,7 +260,7 @@ export default function DataGajiPage() {
                         ) : (
                             <Printer className="h-4 w-4 text-indigo-500" />
                         )}
-                        Print per Kelompok Kontrak
+                        Print Kelompok Kontrak (&lt; 2018 / &ge; 2018)
                     </Button>
                     <Button
                         variant="outline"

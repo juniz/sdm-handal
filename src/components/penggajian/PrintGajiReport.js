@@ -126,6 +126,23 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
             return d.toLocaleDateString("id-ID", { month: "long", year: "numeric" }).toUpperCase();
         };
 
+        // Classify contract group based on 2018 cutoff
+        const classifyContractGroup = (dateStr) => {
+            if (!dateStr || dateStr === "0000-00-00") {
+                return { key: "NO_CONTRACT", label: "BELUM ADA TMT KONTRAK" };
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                return { key: "NO_CONTRACT", label: "BELUM ADA TMT KONTRAK" };
+            }
+            const year = d.getFullYear();
+            if (year < 2018) {
+                return { key: "BELOW_2018", label: "DI BAWAH TAHUN 2018" };
+            } else {
+                return { key: "2018_AND_ABOVE", label: "TAHUN 2018 KE ATAS" };
+            }
+        };
+
         const formatTanggalShort = (dateStr) => {
             if (!dateStr || dateStr === "0000-00-00") return "-";
             const d = new Date(dateStr);
@@ -236,28 +253,25 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
         const totalColIdx = groupByContract ? 9 : 8;
         const normalHeaderColCount = groupByContract ? 10 : 9;
 
-        // Determine groups by Month & Year of contract
+        // Determine groups by contract year (< 2018 and >= 2018)
         let groupsToRender = [];
         if (groupByContract) {
-            const groupsMap = new Map();
+            const groupsDef = {
+                BELOW_2018: { key: "BELOW_2018", label: "DI BAWAH TAHUN 2018", items: [] },
+                "2018_AND_ABOVE": { key: "2018_AND_ABOVE", label: "TAHUN 2018 KE ATAS", items: [] },
+                NO_CONTRACT: { key: "NO_CONTRACT", label: "BELUM ADA TMT KONTRAK", items: [] }
+            };
+
             result.data.forEach(item => {
-                let key = "NO_KONTRAK";
-                if (item.mulai_kontrak && item.mulai_kontrak !== "0000-00-00") {
-                    const d = new Date(item.mulai_kontrak);
-                    if (!isNaN(d.getTime())) {
-                        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-                    }
-                }
-                if (!groupsMap.has(key)) {
-                    groupsMap.set(key, {
-                        key,
-                        label: formatBulanTahunLabel(item.mulai_kontrak),
-                        items: []
-                    });
-                }
-                groupsMap.get(key).items.push(item);
+                const groupInfo = classifyContractGroup(item.mulai_kontrak);
+                groupsDef[groupInfo.key].items.push(item);
             });
-            groupsToRender = Array.from(groupsMap.values());
+
+            groupsToRender = [
+                groupsDef.BELOW_2018,
+                groupsDef["2018_AND_ABOVE"],
+                groupsDef.NO_CONTRACT
+            ].filter(g => g.items.length > 0);
         } else {
             groupsToRender = [{ key: "ALL", label: null, items: result.data }];
         }
