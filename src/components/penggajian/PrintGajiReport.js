@@ -157,7 +157,7 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
         const columns = groupByContract ? [
             { header: "NO.", dataKey: "no" },
             { header: "NAMA", dataKey: "nama" },
-            { header: "TGL KONTRAK", dataKey: "tgl_kontrak" },
+            { header: "TGL\nKONTRAK", dataKey: "tgl_kontrak" },
             { header: "PANGKAT", dataKey: "pangkat" },
             { header: "NIP", dataKey: "nip" },
             { header: "JABATAN", dataKey: "jabatan" },
@@ -185,7 +185,7 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
             [
                 { content: "NO.", rowSpan: 2 },
                 { content: "NAMA", rowSpan: 2 },
-                { content: "TGL KONTRAK", rowSpan: 2 },
+                { content: "TGL\nKONTRAK", rowSpan: 2 },
                 { content: "PANGKAT", rowSpan: 2 },
                 { content: "NIP", rowSpan: 2 },
                 { content: "JABATAN", rowSpan: 2 },
@@ -221,17 +221,17 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
         // Column styles (A4 Landscape = 277mm)
         const columnStyles = groupByContract ? {
             no: { halign: "center", cellWidth: 10 },
-            nama: { cellWidth: 38 },
+            nama: { cellWidth: 37 },
             tgl_kontrak: { halign: "center", cellWidth: 22 },
-            pangkat: { halign: "center", cellWidth: 12 },
+            pangkat: { halign: "center", cellWidth: 15 },
             nip: { halign: "center", cellWidth: 12 },
-            jabatan: { cellWidth: 27 },
+            jabatan: { cellWidth: 26 },
             jumlah: { halign: "right", cellWidth: 26 },
             bpjs_kes: { halign: "right", cellWidth: 24 },
             bpjs_tk: { halign: "right", cellWidth: 24 },
             total: { halign: "right", cellWidth: 26 },
-            ttd1: { halign: "left", cellWidth: 28 },
-            ttd2: { halign: "left", cellWidth: 28 }
+            ttd1: { halign: "left", cellWidth: 27.5 },
+            ttd2: { halign: "left", cellWidth: 27.5 }
         } : {
             no: { halign: "center", cellWidth: 12 },
             nama: { cellWidth: 43 },
@@ -341,7 +341,7 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                     valign: "middle",
                     lineWidth: 0.1,
                     lineColor: [0, 0, 0],
-                    fontSize: 8
+                    fontSize: 7.5
                 },
                 bodyStyles: {
                     textColor: [0, 0, 0],
@@ -478,7 +478,7 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                         });
                         const tableWidth = currentX - marginLeft;
                         
-                        pdf.setFontSize(8);
+                        pdf.setFontSize(7.5);
                         pdf.setFont("helvetica", "bold");
                         pdf.setDrawColor(0);
                         pdf.setLineWidth(0.1);
