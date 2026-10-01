@@ -223,8 +223,8 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
             no: { halign: "center", cellWidth: 10 },
             nama: { cellWidth: 37 },
             tgl_kontrak: { halign: "center", cellWidth: 22 },
-            pangkat: { halign: "center", cellWidth: 15 },
-            nip: { halign: "center", cellWidth: 12 },
+            pangkat: { halign: "center", cellWidth: 16 },
+            nip: { halign: "center", cellWidth: 11 },
             jabatan: { cellWidth: 26 },
             jumlah: { halign: "right", cellWidth: 26 },
             bpjs_kes: { halign: "right", cellWidth: 24 },
@@ -341,7 +341,8 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
                     valign: "middle",
                     lineWidth: 0.1,
                     lineColor: [0, 0, 0],
-                    fontSize: 7.5
+                    fontSize: 7.5,
+                    cellPadding: { top: 2, bottom: 2, left: 1, right: 1 }
                 },
                 bodyStyles: {
                     textColor: [0, 0, 0],
