@@ -35,6 +35,7 @@ export default function AuditPrintLayout({
 				"hari_approved",
 				"hari_approved_bonus",
 				"hari_pending",
+				"hari_revisi",
 				"hari_draft",
 				"hari_kosong",
 				"gap_hari",
@@ -124,6 +125,7 @@ export default function AuditPrintLayout({
 						<th className="border border-slate-400 px-1 py-1.5 text-center">Wajib</th>
 						<th className="border border-slate-400 px-1 py-1.5 text-center bg-emerald-50">Apprv</th>
 						<th className="border border-slate-400 px-1 py-1.5 text-center">Pend</th>
+						<th className="border border-slate-400 px-1 py-1.5 text-center">Revisi</th>
 						<th className="border border-slate-400 px-1 py-1.5 text-center">Draft</th>
 						<th className="border border-slate-400 px-1 py-1.5 text-center bg-rose-50">Kosong</th>
 						<th className="border border-slate-400 px-1 py-1.5 text-center bg-rose-50">Gap</th>
@@ -156,6 +158,9 @@ export default function AuditPrintLayout({
 							</td>
 							<td className="border border-slate-400 px-1 py-1 text-center font-mono">
 								{row.hari_pending ?? 0}
+							</td>
+							<td className="border border-slate-400 px-1 py-1 text-center font-mono">
+								{row.hari_revisi ?? 0}
 							</td>
 							<td className="border border-slate-400 px-1 py-1 text-center font-mono">
 								{row.hari_draft ?? 0}

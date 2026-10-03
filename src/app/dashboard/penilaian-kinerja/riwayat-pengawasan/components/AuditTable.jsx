@@ -80,6 +80,7 @@ export default function AuditTable({
 									<option value="rata_skor_total">Rata Skor</option>
 									<option value="total_hari_jadwal">Wajib Kerja</option>
 									<option value="hari_approved">Disetujui</option>
+									<option value="hari_revisi">Revisi</option>
 									<option value="status_rekap">Status Rekap</option>
 								</select>
 							</div>
@@ -111,6 +112,7 @@ export default function AuditTable({
 								const totalJadwal = Number(row.total_hari_jadwal || 0);
 								const hariApproved = Number(row.hari_approved || 0);
 								const hariPending = Number(row.hari_pending || 0);
+								const hariRevisi = Number(row.hari_revisi || 0);
 								const hariDraft = Number(row.hari_draft || 0);
 								const hariKosong = Number(row.hari_kosong || 0);
 								const gapHari = Number(row.gap_hari || 0);
@@ -220,12 +222,17 @@ export default function AuditTable({
 											</div>
 										</div>
 
-										{/* Additional Flags (Pending / Draft / Kosong) */}
-										{(hariPending > 0 || hariDraft > 0 || hariKosong > 0) && (
+										{/* Additional Flags (Pending / Revisi / Draft / Kosong) */}
+										{(hariPending > 0 || hariRevisi > 0 || hariDraft > 0 || hariKosong > 0) && (
 											<div className="flex items-center justify-start gap-2 flex-wrap text-[11px] font-mono">
 												{hariPending > 0 && (
 													<span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/80 font-bold">
 														Pending: {hariPending}
+													</span>
+												)}
+												{hariRevisi > 0 && (
+													<span className="px-2 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-200/80 font-bold">
+														Revisi: {hariRevisi}
 													</span>
 												)}
 												{hariDraft > 0 && (
@@ -343,10 +350,22 @@ export default function AuditTable({
 									</th>
 									<th
 										scope="col"
+										onClick={() => handleSort("hari_revisi")}
+										aria-sort={sortField === "hari_revisi" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
+										title="Hari Evaluasi Berstatus Perlu Revisi"
+									>
+										<div className="flex items-center justify-center gap-1">
+											<span>Revisi</span>
+											{renderSortIcon("hari_revisi")}
+										</div>
+									</th>
+									<th
+										scope="col"
 										onClick={() => handleSort("hari_draft")}
 										aria-sort={sortField === "hari_draft" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
 										className="py-3.5 px-4 text-center whitespace-nowrap align-middle cursor-pointer hover:bg-slate-100/90 transition-colors group/th"
-										title="Hari Evaluasi Masih Status Draft / Revisi"
+										title="Hari Evaluasi Masih Status Draft"
 									>
 										<div className="flex items-center justify-center gap-1">
 											<span>Draft</span>
@@ -410,6 +429,7 @@ export default function AuditTable({
 									const totalJadwal = Number(row.total_hari_jadwal || 0);
 									const hariApproved = Number(row.hari_approved || 0);
 									const hariPending = Number(row.hari_pending || 0);
+									const hariRevisi = Number(row.hari_revisi || 0);
 									const hariDraft = Number(row.hari_draft || 0);
 									const hariKosong = Number(row.hari_kosong || 0);
 									const gapHari = Number(row.gap_hari || 0);
@@ -471,6 +491,17 @@ export default function AuditTable({
 												{hariPending > 0 ? (
 													<span className="inline-block px-2 py-0.5 text-xs font-bold text-amber-800 bg-amber-50 rounded border border-amber-200/80 font-mono">
 														{hariPending}
+													</span>
+												) : (
+													<span className="text-slate-300 font-mono">-</span>
+												)}
+											</td>
+
+											{/* Revisi */}
+											<td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+												{hariRevisi > 0 ? (
+													<span className="inline-block px-2 py-0.5 text-xs font-bold text-orange-800 bg-orange-50 rounded border border-orange-200/80 font-mono">
+														{hariRevisi}
 													</span>
 												) : (
 													<span className="text-slate-300 font-mono">-</span>
