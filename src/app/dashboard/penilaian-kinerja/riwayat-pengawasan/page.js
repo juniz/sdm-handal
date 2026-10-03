@@ -40,7 +40,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 	const [searchNama, setSearchNama] = useState("");
 	const [page, setPage] = useState(1);
 	const [limit, setLimit] = useState(10);
-	const [onlyAnomali, setOnlyAnomali] = useState(false);
+	const [statusFilter, setStatusFilter] = useState("ALL");
 	const [sortField, setSortField] = useState("nama");
 	const [sortDirection, setSortDirection] = useState("asc");
 
@@ -142,7 +142,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 				limit: limit.toString(),
 				sort_by: sortField,
 				sort_order: sortDirection,
-				only_anomali: onlyAnomali ? "true" : "false",
+				status_filter: statusFilter,
 			});
 			const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
 			if (!res.ok) {
@@ -159,7 +159,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [month, year, departemen, sttsKerja, searchNama, page, limit, sortField, sortDirection, onlyAnomali]);
+	}, [month, year, departemen, sttsKerja, searchNama, page, limit, sortField, sortDirection, statusFilter]);
 
 	useEffect(() => {
 		const timer = setTimeout(() => {
@@ -188,7 +188,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 		setSearchNama("");
 		setPage(1);
 		setLimit(10);
-		setOnlyAnomali(false);
+		setStatusFilter("ALL");
 		setSortField("nama");
 		setSortDirection("asc");
 	};
@@ -206,7 +206,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 				limit: "10000",
 				sort_by: sortField,
 				sort_order: sortDirection,
-				only_anomali: onlyAnomali ? "true" : "false",
+				status_filter: statusFilter,
 			});
 			const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
 			if (!res.ok) throw new Error("Gagal mengambil data untuk ekspor");
@@ -270,7 +270,7 @@ export default function RiwayatPenilaianPengawasanPage() {
 				limit: "10000",
 				sort_by: sortField,
 				sort_order: sortDirection,
-				only_anomali: onlyAnomali ? "true" : "false",
+				status_filter: statusFilter,
 			});
 			const res = await fetch(`/api/penilaian/rekap-pengawasan?${params}`);
 			if (res.ok) {
@@ -553,9 +553,9 @@ export default function RiwayatPenilaianPengawasanPage() {
 					setLimit(val);
 					setPage(1);
 				}}
-				onlyAnomali={onlyAnomali}
-				setOnlyAnomali={(val) => {
-					setOnlyAnomali(val);
+				statusFilter={statusFilter}
+				setStatusFilter={(val) => {
+					setStatusFilter(val);
 					setPage(1);
 				}}
 				onExportCsv={handleExportCsv}

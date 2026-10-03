@@ -22,6 +22,15 @@ const DEFAULT_MONTHS = [
 const DEFAULT_YEARS = ["2024", "2025", "2026", "2027"];
 const PAGE_LIMITS = [10, 25, 50, 100];
 
+const STATUS_OPTIONS = [
+	{ id: "ALL", label: "Semua Pegawai", icon: null, activeClass: "bg-slate-900 text-white shadow-xs" },
+	{ id: "ANOMALI", label: "Perlu Audit (Gap > 0)", icon: AlertTriangle, activeClass: "bg-rose-600 text-white shadow-xs" },
+	{ id: "PENDING", label: "Ada Pending", icon: null, activeClass: "bg-amber-600 text-white shadow-xs" },
+	{ id: "REVISI", label: "Ada Revisi", icon: null, activeClass: "bg-orange-600 text-white shadow-xs" },
+	{ id: "DRAFT", label: "Ada Draft", icon: null, activeClass: "bg-slate-700 text-white shadow-xs" },
+	{ id: "UNFINISHED", label: "Belum Selesai (Semua)", icon: null, activeClass: "bg-indigo-600 text-white shadow-xs" },
+];
+
 export default function AuditFilters({
 	month,
 	setMonth,
@@ -35,8 +44,8 @@ export default function AuditFilters({
 	setSearchNama,
 	limit = 10,
 	setLimit,
-	onlyAnomali = false,
-	setOnlyAnomali,
+	statusFilter = "ALL",
+	setStatusFilter,
 	onExportCsv,
 	onPrintReport,
 	onAutoApproveClick,
@@ -56,7 +65,7 @@ export default function AuditFilters({
 	];
 	return (
 		<div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-sm space-y-4 print:hidden transition-shadow duration-200 hover:shadow-md">
-			{/* Top Bar: Title, Anomaly Filter Chips, and Export Button */}
+			{/* Top Bar: Title, Status Filter Pills, and Export Button */}
 			<div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-3">
 				<div className="flex items-center gap-3 flex-wrap">
 					<div className="flex items-center gap-2">
@@ -66,31 +75,28 @@ export default function AuditFilters({
 						</span>
 					</div>
 
-					{/* Quick Preset Chips */}
-					<div className="flex items-center gap-1.5 ml-0 sm:ml-2">
-						<button
-							type="button"
-							onClick={() => setOnlyAnomali && setOnlyAnomali(false)}
-							className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-								!onlyAnomali
-									? "bg-slate-900 text-white shadow-xs"
-									: "bg-slate-100 text-slate-600 hover:bg-slate-200"
-							}`}
-						>
-							Semua Pegawai
-						</button>
-						<button
-							type="button"
-							onClick={() => setOnlyAnomali && setOnlyAnomali(true)}
-							className={`px-2.5 py-1 text-xs font-semibold rounded-lg inline-flex items-center gap-1 transition-all cursor-pointer ${
-								onlyAnomali
-									? "bg-rose-600 text-white shadow-xs"
-									: "bg-rose-50 text-rose-800 border border-rose-200/80 hover:bg-rose-100"
-							}`}
-						>
-							<AlertTriangle className="w-3 h-3" />
-							Perlu Audit (Gap &gt; 0)
-						</button>
+					{/* Status Filter Pills */}
+					<div className="flex items-center gap-1.5 ml-0 sm:ml-2 flex-wrap">
+						{STATUS_OPTIONS.map((opt) => {
+							const Icon = opt.icon;
+							const isActive = statusFilter === opt.id;
+							return (
+								<button
+									key={opt.id}
+									type="button"
+									onClick={() => setStatusFilter && setStatusFilter(opt.id)}
+									title={opt.label}
+									className={`px-2.5 py-1 text-xs font-semibold rounded-lg inline-flex items-center gap-1 transition-all cursor-pointer ${
+										isActive
+											? opt.activeClass
+											: "bg-slate-100 text-slate-600 hover:bg-slate-200"
+									}`}
+								>
+									{Icon && <Icon className="w-3 h-3" />}
+									<span>{opt.label}</span>
+								</button>
+							);
+						})}
 					</div>
 				</div>
 
