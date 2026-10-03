@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import moment from "moment";
-import { ShieldCheck, X, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import "moment/locale/id";
+import {
+	ShieldCheck,
+	X,
+	Loader2,
+	ChevronLeft,
+	ChevronRight,
+	CheckCircle2,
+	AlertCircle,
+	ArrowRight,
+} from "lucide-react";
 import AuditCalendarGrid from "./AuditCalendarGrid";
 
 const DEFAULT_MONTHS = [
@@ -43,6 +53,15 @@ export default function AuditDetailDrawer({
 	MONTHS = DEFAULT_MONTHS,
 	YEARS = DEFAULT_YEARS,
 }) {
+	const [activeTab, setActiveTab] = useState("calendar"); // "calendar" | "actionable"
+
+	// Reset tab on drawer close
+	useEffect(() => {
+		if (!isOpen) {
+			setActiveTab("calendar");
+		}
+	}, [isOpen]);
+
 	// Escape key dismissal
 	useEffect(() => {
 		if (!isOpen) return;
@@ -141,6 +160,10 @@ export default function AuditDetailDrawer({
 						approvedEvals.length
 			  )
 			: 0;
+
+	const unfinishedEvaluations = panelEvaluations
+		.filter((e) => ["submitted", "revisi", "draft"].includes(e.status))
+		.sort((a, b) => moment(a.tanggal).diff(moment(b.tanggal)));
 
 	const formattedSelectedDate = selectedDateStr
 		? moment(selectedDateStr).format("DD MMMM YYYY")
@@ -340,26 +363,225 @@ export default function AuditDetailDrawer({
 								</div>
 							</div>
 
-							{/* Calendar Grid Section */}
-							<div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
-								<div className="flex justify-between items-center border-b border-slate-100 pb-2">
-									<h4 className="font-bold text-slate-900 text-xs md:text-sm font-figtree">
-										Kalender Kegiatan Harian
-									</h4>
-									<span className="text-[10px] text-slate-500 font-medium">
-										Klik tanggal untuk membuka modal rincian kegiatan
+							{/* Segmented Tab Navigation */}
+							<div className="flex items-center gap-2 border-b border-slate-200 px-1 pt-1 pb-0 bg-transparent">
+								<button
+									type="button"
+									onClick={() => setActiveTab("calendar")}
+									className={`pb-3 text-xs font-bold font-figtree border-b-2 transition-all cursor-pointer ${
+										activeTab === "calendar"
+											? "border-sky-600 text-sky-700"
+											: "border-transparent text-slate-500 hover:text-slate-700"
+									}`}
+								>
+									Kalender Bulanan
+								</button>
+								<button
+									type="button"
+									onClick={() => setActiveTab("actionable")}
+									className={`pb-3 text-xs font-bold font-figtree border-b-2 inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+										activeTab === "actionable"
+											? "border-sky-600 text-sky-700"
+											: "border-transparent text-slate-500 hover:text-slate-700"
+									}`}
+								>
+									<span>Perlu Tindakan</span>
+									<span
+										className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+											unfinishedEvaluations.length > 0
+												? "bg-amber-100 text-amber-800"
+												: "bg-slate-200 text-slate-600"
+										}`}
+									>
+										{unfinishedEvaluations.length}
 									</span>
-								</div>
-								<AuditCalendarGrid
-									panelYear={panelYear}
-									panelMonth={panelMonth}
-									panelSchedule={panelSchedule}
-									panelIsTambahanMap={panelIsTambahanMap}
-									panelEvaluations={panelEvaluations}
-									selectedDateStr={selectedDateStr}
-									onSelectDay={onSelectDay}
-								/>
+								</button>
 							</div>
+
+							{activeTab === "calendar" ? (
+								/* Calendar Grid Section */
+								<div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+									<div className="flex justify-between items-center border-b border-slate-100 pb-2">
+										<h4 className="font-bold text-slate-900 text-xs md:text-sm font-figtree">
+											Kalender Kegiatan Harian
+										</h4>
+										<span className="text-[10px] text-slate-500 font-medium">
+											Klik tanggal untuk membuka modal rincian kegiatan
+										</span>
+									</div>
+									<AuditCalendarGrid
+										panelYear={panelYear}
+										panelMonth={panelMonth}
+										panelSchedule={panelSchedule}
+										panelIsTambahanMap={panelIsTambahanMap}
+										panelEvaluations={panelEvaluations}
+										selectedDateStr={selectedDateStr}
+										onSelectDay={onSelectDay}
+									/>
+								</div>
+							) : (
+								/* Actionable Evaluations Section */
+								<div className="space-y-3">
+									{unfinishedEvaluations.length === 0 ? (
+										<div className="bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-3 shadow-xs">
+											<div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+												<CheckCircle2 className="w-6 h-6" />
+											</div>
+											<div className="space-y-1">
+												<h4 className="font-bold text-slate-800 text-sm font-figtree">
+													Semua Evaluasi Selesai
+												</h4>
+												<p className="text-xs text-slate-500 max-w-sm mx-auto">
+													Semua evaluasi telah selesai disetujui atau tidak ada draft/revisi/pending pada periode ini.
+												</p>
+											</div>
+										</div>
+									) : (
+										unfinishedEvaluations.map((ev) => {
+											const dateStr = moment(ev.tanggal).format("YYYY-MM-DD");
+											const formattedDate = moment(ev.tanggal)
+												.locale("id")
+												.format("dddd, D MMMM YYYY");
+											const dayNum = moment(ev.tanggal).date();
+											const shiftFromSched = panelSchedule
+												? panelSchedule[`h${dayNum}`] || ""
+												: "";
+											const shift = ev.shift_jadwal || shiftFromSched || "";
+											const shiftStr = String(shift).trim();
+											const shiftUpper = shiftStr.toUpperCase();
+
+											const isDinasLuar =
+												shiftUpper === "D" ||
+												shiftUpper === "DL" ||
+												shiftUpper.includes("DINAS") ||
+												ev.sumber_absensi === "izin_dinas" ||
+												ev.sumber_absensi === "izin" ||
+												ev.nilai_kondisi === "izin_dinas_luar" ||
+												ev.nilai_kondisi === "izin_dinas" ||
+												(ev.nilai_kondisi &&
+													String(ev.nilai_kondisi).toLowerCase().includes("dinas")) ||
+												(ev.catatan_supervisor &&
+													String(ev.catatan_supervisor).toLowerCase().includes("dinas")) ||
+												ev.shift_jadwal === "D" ||
+												(ev.shift_jadwal &&
+													String(ev.shift_jadwal).toUpperCase().includes("DINAS"));
+
+											const isCuti =
+												!isDinasLuar &&
+												(shiftUpper === "C" ||
+													shiftUpper === "CT" ||
+													shiftUpper.startsWith("CUTI") ||
+													ev.sumber_absensi === "cuti" ||
+													(ev.nilai_kondisi &&
+														String(ev.nilai_kondisi).startsWith("cuti_")) ||
+													ev.nilai_kondisi === "sakit" ||
+													(ev.catatan_supervisor &&
+														String(ev.catatan_supervisor).toLowerCase().includes("cuti")) ||
+													ev.shift_jadwal === "C" ||
+													(ev.shift_jadwal &&
+														String(ev.shift_jadwal).toUpperCase().startsWith("CUTI")));
+
+											const isOff =
+												shiftStr === "" || ["OFF", "LIBUR", "-", "0"].includes(shiftUpper);
+											const isWorkDay = !isOff && !isCuti;
+											const shiftDisplay = isCuti ? "C" : isDinasLuar ? "D" : shift;
+
+											let statusBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+											let statusLabel = "DRAFT";
+
+											if (ev.status === "submitted") {
+												statusBadgeClass = "bg-amber-50 text-amber-800 border-amber-200";
+												statusLabel = "PENDING";
+											} else if (ev.status === "revisi") {
+												statusBadgeClass = "bg-orange-50 text-orange-800 border-orange-200";
+												statusLabel = "REVISI";
+											}
+
+											return (
+												<div
+													key={ev.id || dateStr}
+													className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs hover:border-slate-300 transition-all space-y-3"
+												>
+													<div className="flex items-center justify-between gap-2 flex-wrap">
+														<div className="flex items-center gap-2">
+															<span className="text-xs font-bold text-slate-800 font-figtree">
+																{formattedDate}
+															</span>
+															{isCuti ? (
+																<span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-800 rounded font-mono">
+																	Cuti (C)
+																</span>
+															) : isDinasLuar ? (
+																<span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-100 text-yellow-900 rounded font-mono">
+																	Dinas (D)
+																</span>
+															) : shift ? (
+																<span className="px-1.5 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-700 rounded font-mono">
+																	Shift {shift}
+																</span>
+															) : null}
+														</div>
+
+														<div className="flex items-center gap-2">
+															<span
+																className={`px-2 py-0.5 text-[10px] font-bold rounded-md uppercase font-mono border ${statusBadgeClass}`}
+															>
+																{statusLabel}
+															</span>
+														</div>
+													</div>
+
+													<div className="flex items-center justify-between gap-4 text-xs text-slate-600 flex-wrap">
+														<div className="flex items-center gap-4">
+															<span>
+																Skor Sementara:{" "}
+																<strong className="text-slate-900 font-mono font-bold">
+																	{ev.skor_total != null ? Math.round(ev.skor_total) : "-"}
+																</strong>
+															</span>
+															{ev.nilai_kondisi && (
+																<span>
+																	Kondisi:{" "}
+																	<strong className="text-slate-900 font-medium capitalize">
+																		{String(ev.nilai_kondisi).replace(/_/g, " ")}
+																	</strong>
+																</span>
+															)}
+														</div>
+
+														<button
+															type="button"
+															onClick={() => {
+																if (onSelectDay) {
+																	onSelectDay(dateStr, ev, shiftDisplay, isWorkDay);
+																}
+															}}
+															className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors cursor-pointer ml-auto"
+														>
+															<span>Inspeksi / Tindak</span>
+															<ArrowRight className="w-3.5 h-3.5" />
+														</button>
+													</div>
+
+													{ev.catatan_supervisor && (
+														<div className="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2">
+															<AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+															<div className="space-y-0.5">
+																<span className="font-bold text-amber-950 block font-figtree">
+																	Catatan Supervisor:
+																</span>
+																<p className="text-amber-900 leading-relaxed font-sans">
+																	{ev.catatan_supervisor}
+																</p>
+															</div>
+														</div>
+													)}
+												</div>
+											);
+										})
+									)}
+								</div>
+							)}
 						</>
 					)}
 				</div>
