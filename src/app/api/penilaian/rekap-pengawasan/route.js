@@ -54,6 +54,7 @@ export async function GET(request) {
 		const sortBy = searchParams.get("sort_by") || searchParams.get("sortBy") || "nama";
 		const sortOrder = searchParams.get("sort_order") || searchParams.get("sortOrder") || "asc";
 		const onlyAnomali = searchParams.get("only_anomali") === "true" || searchParams.get("onlyAnomali") === "true";
+		const statusFilter = searchParams.get("status_filter") || searchParams.get("statusFilter") || "ALL";
 
 		if (!bulan || !tahun) {
 			return NextResponse.json({ error: "Bulan dan tahun diperlukan" }, { status: 400 });
@@ -71,6 +72,7 @@ export async function GET(request) {
 				$sortBy: String
 				$sortOrder: String
 				$onlyAnomali: Boolean
+				$statusFilter: String
 			) {
 				rekapPengawasanList(
 					bulan: $bulan
@@ -83,6 +85,7 @@ export async function GET(request) {
 					sortBy: $sortBy
 					sortOrder: $sortOrder
 					onlyAnomali: $onlyAnomali
+					statusFilter: $statusFilter
 				) {
 					data {
 						id
@@ -97,6 +100,7 @@ export async function GET(request) {
 						hari_approved
 						hari_approved_bonus
 						hari_pending
+						hari_revisi
 						hari_draft
 						hari_kosong
 						gap_hari
@@ -131,6 +135,7 @@ export async function GET(request) {
 			sortBy,
 			sortOrder,
 			onlyAnomali,
+			statusFilter,
 		};
 
 		const data = await fetchGraphQL(query, variables, token);
