@@ -25,12 +25,12 @@
 - Consumes: Standard React component rendered in `src/app/dashboard/layout.js`.
 - Produces: Persistent bottom dock navigation rendered with `z-40`.
 
-- [ ] **Step 1: Check existing z-index in BottomNavigation.js**
+- [x] **Step 1: Check existing z-index in BottomNavigation.js**
 
 Run: `grep -n "z-50" src/components/BottomNavigation.js`
 Expected: Line 52 shows `<div className="fixed bottom-6 left-4 right-4 md:hidden z-50 print:hidden">`
 
-- [ ] **Step 2: Update z-index to `z-40`**
+- [x] **Step 2: Update z-index to `z-40`**
 
 In `src/components/BottomNavigation.js`:
 ```jsx
@@ -41,12 +41,12 @@ In `src/components/BottomNavigation.js`:
 <div className="fixed bottom-6 left-4 right-4 md:hidden z-40 print:hidden">
 ```
 
-- [ ] **Step 3: Verify the change in BottomNavigation.js**
+- [x] **Step 3: Verify the change in BottomNavigation.js**
 
 Run: `git diff src/components/BottomNavigation.js`
 Expected: Diff shows `- z-50` and `+ z-40`.
 
-- [ ] **Step 4: Commit Task 1**
+- [x] **Step 4: Commit Task 1**
 
 ```bash
 git add src/components/BottomNavigation.js
@@ -64,7 +64,7 @@ git commit -m "style(nav): lower mobile bottom dock z-index to z-40"
 - Consumes: Props `{ isOpen, onClose, onSave, request, masterData, isLoading }` from `src/app/dashboard/development/page.js`.
 - Produces: Modal with `z-[60]` overlay, responsive `h-full sm:h-auto` card, flex column layout, and `z-[70]` discard alert.
 
-- [ ] **Step 1: Update Modal Overlay and Container Classes**
+- [x] **Step 1: Update Modal Overlay and Container Classes**
 
 In `src/components/development/RequestModal.js`:
 Change outer backdrop from `p-4 z-50` to `p-0 sm:p-4 z-[60]`:
@@ -94,7 +94,7 @@ Change outer backdrop from `p-4 z-50` to `p-0 sm:p-4 z-[60]`:
 	<div className="bg-white w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-lg overflow-hidden shadow-2xl flex flex-col">
 ```
 
-- [ ] **Step 2: Update Header and Form Body Structure**
+- [x] **Step 2: Update Header and Form Body Structure**
 
 In `src/components/development/RequestModal.js`:
 Make header `shrink-0` with responsive padding, and make form `flex-1 min-h-0 overflow-y-auto`:
@@ -154,7 +154,7 @@ Make header `shrink-0` with responsive padding, and make form `flex-1 min-h-0 ov
 	<div className="p-4 sm:p-6 space-y-6">
 ```
 
-- [ ] **Step 3: Update Footer and Discard Dialog Z-Index**
+- [x] **Step 3: Update Footer and Discard Dialog Z-Index**
 
 In `src/components/development/RequestModal.js`:
 Make footer `shrink-0` with safe area padding, and elevate discard modal to `z-[70]`:
@@ -181,12 +181,12 @@ And for Discard Confirmation Modal:
 		className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
 ```
 
-- [ ] **Step 4: Verify Diff in RequestModal.js**
+- [x] **Step 4: Verify Diff in RequestModal.js**
 
 Run: `git diff src/components/development/RequestModal.js`
 Expected: Diff shows responsive flex classes, `z-[60]`, `z-[70]`, and removal of `max-h-[calc(90vh-180px)]`.
 
-- [ ] **Step 5: Commit Task 2**
+- [x] **Step 5: Commit Task 2**
 
 ```bash
 git add src/components/development/RequestModal.js
@@ -201,7 +201,7 @@ git commit -m "fix(development): make request modal responsive full-screen on mo
 - Verify: `src/components/BottomNavigation.js`
 - Verify: `src/components/development/RequestModal.js`
 
-- [ ] **Step 1: Check z-index stacking hierarchy across files**
+- [x] **Step 1: Check z-index stacking hierarchy across files**
 
 Run:
 ```bash
@@ -211,7 +211,7 @@ Expected:
 `BottomNavigation.js`: `z-40`
 `RequestModal.js`: `z-[60]`, `z-[70]`
 
-- [ ] **Step 2: Verify git status is clean**
+- [x] **Step 2: Verify git status is clean**
 
 Run: `git status`
 Expected: Working tree clean.
