@@ -228,7 +228,7 @@ export default function RequestModal({
 
 	return (
 		<div
-			className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+			className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-0 sm:p-4"
 			onClick={(e) => {
 				if (e.target === e.currentTarget) handleAttemptClose();
 			}}
@@ -236,12 +236,12 @@ export default function RequestModal({
 			aria-modal="true"
 			aria-labelledby="request-modal-title"
 		>
-			<div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+			<div className="bg-white w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl sm:rounded-lg overflow-hidden shadow-2xl flex flex-col">
 				{/* Header */}
-				<div className="flex items-center justify-between p-6 border-b border-gray-200">
+				<div className="flex items-center justify-between px-4 py-3.5 sm:p-6 border-b border-gray-200 bg-white shrink-0">
 					<h2
 						id="request-modal-title"
-						className="text-xl font-semibold text-gray-900"
+						className="text-lg sm:text-xl font-semibold text-gray-900"
 					>
 						{isEditing
 							? "Edit Pengajuan Pengembangan"
@@ -249,20 +249,20 @@ export default function RequestModal({
 					</h2>
 					<button
 						onClick={handleAttemptClose}
-						className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+						className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
 						disabled={isSubmitting}
 						aria-label="Tutup formulir"
 					>
-						<X className="w-6 h-6" />
+						<X className="w-5 h-5 sm:w-6 sm:h-6" />
 					</button>
 				</div>
 
 				{/* Form */}
 				<form
 					onSubmit={handleSubmit}
-					className="overflow-y-auto max-h-[calc(90vh-180px)]"
+					className="flex-1 min-h-0 overflow-y-auto"
 				>
-					<div className="p-6 space-y-6">
+					<div className="p-4 sm:p-6 space-y-6">
 						{/* Basic Information */}
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 							{/* Module Type */}
@@ -558,7 +558,7 @@ export default function RequestModal({
 				</form>
 
 				{/* Footer */}
-				<div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+				<div className="flex items-center justify-end gap-3 px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-200 bg-gray-50 shrink-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:pb-4">
 					<button
 						type="button"
 						onClick={handleAttemptClose}
@@ -591,7 +591,7 @@ export default function RequestModal({
 			{/* Discard Confirmation Modal */}
 			{showConfirmClose && (
 				<div
-					className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"
+					className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4"
 					onClick={(e) => e.stopPropagation()}
 					role="alertdialog"
 					aria-modal="true"
