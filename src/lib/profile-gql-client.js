@@ -60,6 +60,7 @@ export async function fetchProfileDetail() {
       sdmProfile {
         id
         username
+        nik
         nama
         departemen
         departemen_name
@@ -239,6 +240,7 @@ export async function fetchPrintCvData() {
         pegawai {
           id
           username
+          nik
           nama
           departemen
           departemen_name

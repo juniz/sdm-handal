@@ -72,7 +72,7 @@ export const printCVReport = async () => {
 		autoTable(pdf, {
 			startY: 32,
 			body: [
-				["NIP", pegawai.nik || "-"],
+				["NIP", pegawai.nik || pegawai.username || "-"],
 				["NAMA", pegawai.nama || "-"],
 				["JENIS KELAMIN", pegawai.jk || "-"],
 				["JABATAN", pegawai.jbtn || "-"],

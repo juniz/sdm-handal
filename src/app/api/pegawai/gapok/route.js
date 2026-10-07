@@ -14,6 +14,7 @@ export async function GET(request) {
 		const { searchParams } = new URL(request.url);
 		const search = searchParams.get("search");
 		const dep_id = searchParams.get("dep_id");
+		const unset_only = searchParams.get("unset_only");
 		const page = parseInt(searchParams.get("page") || "1");
 		const limit = parseInt(searchParams.get("limit") || "50");
 		const offset = (page - 1) * limit;
@@ -31,6 +32,10 @@ export async function GET(request) {
 			params.push(`%${search}%`, `%${search}%`);
 		}
 
+		if (unset_only === "true") {
+			whereClause += " AND (p.gapok IS NULL OR p.gapok = 0)";
+		}
+
 		// Count total data
 		const countResult = await rawQuery(`
 			SELECT COUNT(*) as total 
@@ -40,6 +45,14 @@ export async function GET(request) {
 		
 		const total = countResult[0].total;
 		const totalPages = Math.ceil(total / limit);
+
+		// Global unset count for pre-generation audit
+		const unsetAuditResult = await rawQuery(`
+			SELECT COUNT(*) as unset_count
+			FROM pegawai
+			WHERE stts_aktif = 'AKTIF' AND (gapok IS NULL OR gapok = 0)
+		`);
+		const unsetTotal = unsetAuditResult[0]?.unset_count || 0;
 
 		// Add limit and offset
 		params.push(limit, offset);
@@ -68,6 +81,9 @@ export async function GET(request) {
 				limit,
 				total,
 				totalPages
+			},
+			meta: {
+				unset_total: unsetTotal
 			}
 		});
 
