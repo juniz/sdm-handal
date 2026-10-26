@@ -1,14 +1,44 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
+import { hasBrotliEncoding } from "@/lib/security/node2shell-guard";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 export async function middleware(request) {
-	console.log("Middleware running for path:", request.nextUrl.pathname);
+	// Mitigate CVE-2026-111497 (Node2Shell): block inbound Brotli-compressed requests
+	if (hasBrotliEncoding(request.headers.get("content-encoding"))) {
+		return NextResponse.json(
+			{
+				statusCode: 415,
+				error: "Unsupported Media Type",
+				message:
+					"Content-Encoding 'br' is disabled due to security policy (CVE-2026-111497).",
+			},
+			{ status: 415 }
+		);
+	}
 
-	// Skip middleware untuk API routes saja
-	if (request.nextUrl.pathname.startsWith("/api/")) {
+	const { pathname } = request.nextUrl;
+
+	// Handle foto presensi dengan headers anti-cache (consolidated from root middleware.js)
+	if (pathname.startsWith("/photos/")) {
+		const response = NextResponse.next();
+		response.headers.set(
+			"Cache-Control",
+			"no-store, no-cache, must-revalidate, proxy-revalidate"
+		);
+		response.headers.set("Pragma", "no-cache");
+		response.headers.set("Expires", "0");
+		response.headers.set("X-Content-Type-Options", "nosniff");
+		response.headers.set("X-Photo-Middleware", "active");
+		return response;
+	}
+
+	console.log("Middleware running for path:", pathname);
+
+	// Skip auth middleware untuk API routes saja
+	if (pathname.startsWith("/api/")) {
 		console.log("Skipping middleware for api route");
 		return NextResponse.next();
 	}
@@ -141,5 +171,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-	matcher: ["/", "/dashboard/:path*"],
+	matcher: ["/", "/dashboard/:path*", "/api/:path*", "/photos/:path*"],
 };

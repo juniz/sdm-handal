@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
 	isVulnerableBrotli,
 	assertSafeBrotliRuntime,
@@ -7,6 +10,9 @@ import {
 	sanitizeAcceptEncoding,
 	installSafeFetchWrapper,
 } from "../../src/lib/security/node2shell-guard.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, "../..");
 
 test("isVulnerableBrotli detects vulnerable Brotli versions (1.0.3-1.0.9, 1.1.0, 1.2.0)", () => {
 	assert.equal(isVulnerableBrotli("1.2.0"), true);
@@ -110,3 +116,31 @@ test("installSafeFetchWrapper wraps globalThis.fetch idempotently and strips br"
 		globalThis.fetch = originalFetch;
 	}
 });
+
+test("src/instrumentation.js registers node2shell runtime check and safe fetch wrapper", () => {
+	const instrumentationPath = path.join(rootDir, "src/instrumentation.js");
+	assert.equal(fs.existsSync(instrumentationPath), true);
+	const content = fs.readFileSync(instrumentationPath, "utf8");
+	assert.match(content, /export async function register\(/);
+	assert.match(content, /assertSafeBrotliRuntime\(/);
+	assert.match(content, /installSafeFetchWrapper\(/);
+});
+
+test("src/middleware.js blocks Content-Encoding: br with 415, handles /photos/ anti-cache, and root middleware.js is removed", () => {
+	const rootMiddlewarePath = path.join(rootDir, "middleware.js");
+	assert.equal(
+		fs.existsSync(rootMiddlewarePath),
+		false,
+		"Duplicate root middleware.js should be removed"
+	);
+
+	const srcMiddlewarePath = path.join(rootDir, "src/middleware.js");
+	const content = fs.readFileSync(srcMiddlewarePath, "utf8");
+	assert.match(content, /hasBrotliEncoding\(/);
+	assert.match(content, /status:\s*415/);
+	assert.match(content, /CVE-2026-111497/);
+	assert.match(content, /X-Photo-Middleware/);
+	assert.match(content, /\/api\/:path\*/);
+	assert.match(content, /\/photos\/:path\*/);
+});
+
