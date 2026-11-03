@@ -2,7 +2,25 @@ import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
 import { rawQuery } from "@/lib/db-helper";
 
+const DEPRECATION_HEADERS = {
+	Deprecation: "true",
+	"X-Deprecation-Notice": "Migrated to NestJS GraphQL backend (mutation generateGaji)",
+};
+
+const jsonResponse = (data, init = {}) =>
+	NextResponse.json(data, {
+		...init,
+		headers: {
+			...DEPRECATION_HEADERS,
+			...init.headers,
+		},
+	});
+
 /**
+ * @deprecated
+ * Migrated to NestJS GraphQL backend: GajiModule (mutation generateGaji).
+ * This REST API route is deprecated and kept only for backward compatibility.
+ *
  * @route POST /api/gaji/generate
  * @description Generate data gaji pegawai berdasarkan gaji pokok (gapok) saat ini
  * @body { periode_bulan, periode_tahun }
@@ -12,7 +30,7 @@ export async function POST(request) {
         // Cek auth
         const user = await getUser();
         if (!user) {
-            return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+            return jsonResponse({ message: "Unauthorized" }, { status: 401 });
         }
 
         const body = await request.json();
@@ -20,7 +38,7 @@ export async function POST(request) {
 
         // Validasi input
         if (!periode_bulan || !periode_tahun) {
-            return NextResponse.json(
+            return jsonResponse(
                 { status: "error", message: "Periode bulan dan tahun harus diisi" },
                 { status: 400 }
             );
@@ -51,14 +69,14 @@ export async function POST(request) {
             user.username // Asumsi username adalah NIK atau identifier user
         ]);
 
-        return NextResponse.json({
+        return jsonResponse({
             status: "success",
             message: `Gaji periode ${periode_bulan}-${periode_tahun} berhasil digenerate`
         });
 
     } catch (error) {
         console.error("[API] Error generating gaji:", error);
-        return NextResponse.json(
+        return jsonResponse(
             { 
                 status: "error", 
                 message: "Gagal generate gaji",
