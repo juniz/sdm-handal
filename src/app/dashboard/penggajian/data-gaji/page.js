@@ -45,11 +45,13 @@ import {
     X,
     AlertCircle,
     FileX2,
-    FilterX
+    FilterX,
+    Tag
 } from "lucide-react";
 import { toast } from "sonner";
 import { printGajiReport } from "@/components/penggajian/PrintGajiReport";
 import PenggajianSettingsModal from "@/components/penggajian/PenggajianSettingsModal";
+import MappingJenisModal from "@/components/penggajian/MappingJenisModal";
 
 // Format currency
 const formatCurrency = (value) => {
@@ -91,6 +93,7 @@ export default function DataGajiPage() {
     const [departemenList, setDepartemenList] = useState([]);
     const [printing, setPrinting] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [isMappingModalOpen, setIsMappingModalOpen] = useState(false);
     const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
     const [printGroupByContract, setPrintGroupByContract] = useState(false);
 
@@ -297,6 +300,15 @@ export default function DataGajiPage() {
                             <Printer className="h-4 w-4 text-blue-600" aria-hidden="true" />
                         )}
                         Cetak Laporan
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsMappingModalOpen(true)}
+                        className="gap-2 text-slate-700 border-slate-200 hover:bg-slate-50"
+                    >
+                        <Tag className="h-4 w-4 text-blue-600" aria-hidden="true" />
+                        Mapping Jenis
                     </Button>
                     <Button
                         variant="outline"
@@ -770,6 +782,11 @@ export default function DataGajiPage() {
             <PenggajianSettingsModal 
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
+            />
+
+            <MappingJenisModal
+                isOpen={isMappingModalOpen}
+                onClose={() => setIsMappingModalOpen(false)}
             />
         </div>
     );

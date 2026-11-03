@@ -3,7 +3,8 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserRound, KeyRound, ShieldCheck, ActivitySquare } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Script from "next/script";
 import {
 	setClientToken,
 	getClientToken,
@@ -20,6 +21,44 @@ export default function LoginPage() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
+	const [turnstileToken, setTurnstileToken] = useState("");
+	const turnstileContainerRef = useRef(null);
+	const turnstileWidgetIdRef = useRef(null);
+
+	const renderTurnstile = () => {
+		if (typeof window === "undefined" || !window.turnstile || !turnstileContainerRef.current) {
+			return;
+		}
+
+		const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+
+		if (turnstileWidgetIdRef.current !== null) {
+			return;
+		}
+
+		try {
+			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+				sitekey: siteKey,
+				callback: (token) => setTurnstileToken(token),
+				"expired-callback": () => setTurnstileToken(""),
+				"error-callback": () => setTurnstileToken(""),
+				theme: "light",
+			});
+		} catch (err) {
+			console.warn("Turnstile render error:", err);
+		}
+	};
+
+	const resetTurnstile = () => {
+		if (typeof window !== "undefined" && window.turnstile && turnstileWidgetIdRef.current !== null) {
+			try {
+				window.turnstile.reset(turnstileWidgetIdRef.current);
+			} catch (err) {
+				console.warn("Turnstile reset error:", err);
+			}
+		}
+		setTurnstileToken("");
+	};
 
 	// Delay rendering of animation classes to avoid hydration mismatch, and auth checks
 	useEffect(() => {
@@ -65,8 +104,42 @@ export default function LoginPage() {
 		checkExistingAuth();
 	}, []);
 
+	useEffect(() => {
+		if (mounted && typeof window !== "undefined" && window.turnstile) {
+			renderTurnstile();
+		}
+	}, [mounted]);
+
+	useEffect(() => {
+		return () => {
+			if (typeof window !== "undefined" && window.turnstile && turnstileWidgetIdRef.current !== null) {
+				try {
+					window.turnstile.remove(turnstileWidgetIdRef.current);
+				} catch (err) {
+					console.warn("Turnstile cleanup error:", err);
+				}
+				turnstileWidgetIdRef.current = null;
+			}
+		};
+	}, []);
+
+	const handleNipChange = (e) => {
+		const raw = e.target.value;
+		const sanitized = raw.replace(/[<>'";\x00-\x1F\x7F]/g, "").slice(0, 50);
+		setFormData((prev) => ({ ...prev, nip: sanitized }));
+	};
+
+	const handlePasswordChange = (e) => {
+		const raw = e.target.value;
+		const capped = raw.slice(0, 200);
+		setFormData((prev) => ({ ...prev, password: capped }));
+	};
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		if (!formData.nip || !formData.password || !turnstileToken) {
+			return;
+		}
 		setLoading(true);
 		setError("");
 
@@ -74,12 +147,17 @@ export default function LoginPage() {
 			const response = await fetch("/api/auth/login", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(formData),
+				body: JSON.stringify({
+					nip: formData.nip,
+					password: formData.password,
+					turnstileToken,
+				}),
 			});
 
 			const data = await response.json();
 
 			if (!response.ok) {
+				resetTurnstile();
 				throw new Error(data.message || "Login gagal");
 			}
 
@@ -89,6 +167,7 @@ export default function LoginPage() {
 
 			window.location.href = "/dashboard";
 		} catch (error) {
+			resetTurnstile();
 			setError(error.message);
 		} finally {
 			setLoading(false);
@@ -98,7 +177,13 @@ export default function LoginPage() {
 	if (!mounted) return null; // Avoid layout shifting during auth check
 
 	return (
-		<div className="min-h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden text-slate-800">
+		<>
+			<Script
+				src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+				strategy="afterInteractive"
+				onLoad={renderTurnstile}
+			/>
+			<div className="min-h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden text-slate-800">
 			
 			{/* Left Side: Form Area (45%) */}
 			<div className="w-full md:w-[45%] lg:w-[40%] flex flex-col justify-center px-8 md:px-16 lg:px-20 py-12 md:py-16 relative z-10 bg-white">
@@ -146,7 +231,8 @@ export default function LoginPage() {
 										type="text"
 										placeholder="Masukkan NIP"
 										value={formData.nip}
-										onChange={(e) => setFormData({ ...formData, nip: e.target.value })}
+										onChange={handleNipChange}
+										maxLength={50}
 										className="pl-12 h-14 bg-slate-50 border-slate-200 text-base focus:bg-white focus:border-[#0093dd] focus:ring-[#0093dd]/20 transition-all rounded-xl"
 										disabled={loading}
 									/>
@@ -164,7 +250,8 @@ export default function LoginPage() {
 										type="password"
 										placeholder="Masukkan password"
 										value={formData.password}
-										onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+										onChange={handlePasswordChange}
+										maxLength={200}
 										className="pl-12 h-14 bg-slate-50 border-slate-200 text-base focus:bg-white focus:border-[#0093dd] focus:ring-[#0093dd]/20 transition-all rounded-xl"
 										disabled={loading}
 									/>
@@ -173,10 +260,15 @@ export default function LoginPage() {
 							</div>
 						</div>
 
+						{/* Turnstile Widget */}
+						<div className="flex justify-center my-2">
+							<div ref={turnstileContainerRef} />
+						</div>
+
 						<Button
 							type="submit"
 							className="w-full h-14 text-base font-semibold bg-[#0093dd] hover:bg-[#0082c4] text-white rounded-xl transition-all duration-300 shadow-lg shadow-[#0093dd]/20 hover:shadow-[#0093dd]/40 hover:-translate-y-0.5 active:translate-y-0"
-							disabled={loading}
+							disabled={loading || !formData.nip || !formData.password || !turnstileToken}
 						>
 							{loading ? (
 								<div className="flex items-center justify-center gap-2">
@@ -251,5 +343,6 @@ export default function LoginPage() {
 				</div>
 			</div>
 		</div>
+		</>
 	);
 }

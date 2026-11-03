@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  sdm-app:
+    container_name: sdm-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sdm-app:latest
+    restart: unless-stopped
+    ports:
+      # Bind loopback: reverse-proxied by aaPanel Nginx
+      - "127.0.0.1:${APP_PORT:-3002}:3000"
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - TZ=Asia/Jakarta
+    volumes:
+      - ./uploads:/app/uploads
+      - ./public/photos:/app/public/photos
+      - ./public/uploads:/app/public/uploads
+      - ./logs:/app/logs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sdm-network
+    healthcheck:
+      test: ["CMD-SHELL", "node -e 'require(\"http\").get(\"http://127.0.0.1:3000/api/health\", (r) => {if (r.statusCode !== 200) process.exit(1);})'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  sdm-network:
+    driver: bridge

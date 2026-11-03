@@ -35,7 +35,7 @@ export async function GET(request) {
             queryParams.push(departemen);
         }
 
-        // Query dengan LEFT JOIN ke gaji_validasi untuk ambil tanda tangan
+        // Query dengan LEFT JOIN ke gaji_validasi dan mapping kategori jenis
         const dataQuery = `
             SELECT 
                 gp.id,
@@ -48,9 +48,14 @@ export async function GET(request) {
                 gp.periode_tahun,
                 gp.jenis,
                 gv.tanda_tangan,
-                gv.signed_at
+                gv.signed_at,
+                gpm.kategori_id,
+                gkj.nama as kategori_jenis,
+                COALESCE(gkj.urutan, 9999) as kategori_urutan
             FROM gaji_pegawai gp
             JOIN pegawai p ON gp.nik = p.nik
+            LEFT JOIN gaji_pegawai_mapping gpm ON gp.nik = gpm.nik
+            LEFT JOIN gaji_kategori_jenis gkj ON gpm.kategori_id = gkj.id
             LEFT JOIN gaji_validasi gv ON (
                 gv.gaji_id = gp.id 
                 OR (

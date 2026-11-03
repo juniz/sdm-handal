@@ -24,17 +24,40 @@ export async function GET(request) {
         
         const offset = (page - 1) * limit;
 
+        // Auto-sync final rekap_bulanan ke gaji_pegawai jika ada data final yang belum masuk
+        try {
+            await rawQuery(`
+                INSERT INTO gaji_pegawai (nik, periode_tahun, periode_bulan, jenis, gaji, uploaded_by)
+                SELECT 
+                    p.nik, 
+                    rb.tahun AS periode_tahun, 
+                    rb.bulan AS periode_bulan, 
+                    'Jasa' AS jenis, 
+                    rb.nominal_jasa_final AS gaji, 
+                    COALESCE(admin.nik, p.nik) AS uploaded_by
+                FROM rekap_bulanan rb
+                JOIN pegawai p ON rb.pegawai_id = p.id
+                LEFT JOIN pegawai admin ON admin.id = rb.locked_by
+                WHERE rb.status_rekap = 'final'
+                ON DUPLICATE KEY UPDATE 
+                    gaji = VALUES(gaji),
+                    updated_at = NOW()
+            `);
+        } catch (syncErr) {
+            console.error("[API] Error syncing final rekap to gaji_pegawai:", syncErr);
+        }
+
         // Base query conditions
         let whereClause = "WHERE 1=1";
         whereClause += " AND p.stts_kerja <> 'POL' AND p.stts_kerja <> 'PNS'";
         const params = [];
 
-        if (bulan) {
+        if (bulan && bulan !== "all") {
             whereClause += " AND gp.periode_bulan = ?";
             params.push(bulan);
         }
 
-        if (tahun) {
+        if (tahun && tahun !== "all") {
             whereClause += " AND gp.periode_tahun = ?";
             params.push(tahun);
         }

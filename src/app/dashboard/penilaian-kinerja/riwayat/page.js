@@ -92,19 +92,23 @@ export default function RiwayatPenilaianPage() {
 	for (let d = 1; d <= daysInMonth; d++) {
 		const dateStr = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 		const isFuture = moment(dateStr).isAfter(moment(), "day");
+		const evaluation = evaluations.find(e => {
+			if (!e?.tanggal) return false;
+			const raw = String(e.tanggal);
+			if (raw.startsWith(dateStr)) return true;
+			return moment(e.tanggal).format("YYYY-MM-DD") === dateStr;
+		});
 		const shift = schedule ? (schedule[`h${d}`] || "") : "";
-		const isWorkDay = shift !== "";
-		const isTambahan = isTambahanMap[`h${d}`] || false;
-		
-		// Find matching evaluation
-		const evaluation = evaluations.find(e => moment(e.tanggal).format("YYYY-MM-DD") === dateStr);
+		const effectiveShift = shift || evaluation?.shift_jadwal || "";
+		const isTambahan = isTambahanMap[`h${d}`] || Boolean(evaluation?.is_tambahan);
+		const isWorkDay = !isTambahan && (effectiveShift !== "" || Boolean(evaluation));
 		
 		daysList.push({
 			day: d,
 			dateStr,
 			isFuture,
 			isWorkDay,
-			shift,
+			shift: effectiveShift,
 			isTambahan,
 			evaluation
 		});
@@ -240,34 +244,7 @@ export default function RiwayatPenilaianPage() {
 									let statusBadge = null;
 									let isClickable = false;
 
-									if (!dayItem.isWorkDay) {
-										boxBgClass = "bg-slate-50/70 text-slate-400";
-										borderClass = "border-slate-200";
-										textClass = "text-slate-400";
-										statusBadge = (
-											<span className="text-[7px] md:text-[9px] font-bold text-slate-400 font-mono">
-												OFF
-											</span>
-										);
-									} else if (!dayItem.evaluation) {
-										if (dayItem.isFuture) {
-											boxBgClass = "bg-white text-slate-300";
-											borderClass = "border-slate-200 border-dashed";
-											textClass = "text-slate-300";
-											statusBadge = (
-												<span className="text-[8px] md:text-[9px] font-bold text-slate-300 font-mono">-</span>
-											);
-										} else {
-											boxBgClass = "bg-rose-50/30 text-rose-800";
-											borderClass = "border-rose-200";
-											textClass = "text-rose-800";
-											statusBadge = (
-												<span className="px-1 py-0.5 text-[7px] md:text-[9px] font-extrabold bg-rose-100 text-rose-700 rounded uppercase tracking-wider font-mono">
-													KOSONG
-												</span>
-											);
-										}
-									} else {
+									if (dayItem.evaluation) {
 										const status = dayItem.evaluation.status;
 										isClickable = true;
 										if (status === "approved") {
@@ -316,6 +293,33 @@ export default function RiwayatPenilaianPage() {
 												</div>
 											);
 										}
+									} else if (!dayItem.isWorkDay) {
+										boxBgClass = "bg-slate-50/70 text-slate-400";
+										borderClass = "border-slate-200";
+										textClass = "text-slate-400";
+										statusBadge = (
+											<span className="text-[7px] md:text-[9px] font-bold text-slate-400 font-mono">
+												OFF
+											</span>
+										);
+									} else {
+										if (dayItem.isFuture) {
+											boxBgClass = "bg-white text-slate-300";
+											borderClass = "border-slate-200 border-dashed";
+											textClass = "text-slate-300";
+											statusBadge = (
+												<span className="text-[8px] md:text-[9px] font-bold text-slate-300 font-mono">-</span>
+											);
+										} else {
+											boxBgClass = "bg-rose-50/30 text-rose-800";
+											borderClass = "border-rose-200";
+											textClass = "text-rose-800";
+											statusBadge = (
+												<span className="px-1 py-0.5 text-[7px] md:text-[9px] font-extrabold bg-rose-100 text-rose-700 rounded uppercase tracking-wider font-mono">
+													KOSONG
+												</span>
+											);
+										}
 									}
 
 									return (
@@ -332,7 +336,7 @@ export default function RiwayatPenilaianPage() {
 												<span className={`text-[10px] md:text-sm font-extrabold font-figtree ${textClass}`}>
 													{dayItem.day}
 												</span>
-												{dayItem.isWorkDay && (
+												{(dayItem.isWorkDay || dayItem.shift) && (
 													<span className="text-[6px] md:text-[9px] font-bold text-slate-400 uppercase font-mono tracking-tighter md:tracking-normal">
 														{dayItem.shift}
 													</span>

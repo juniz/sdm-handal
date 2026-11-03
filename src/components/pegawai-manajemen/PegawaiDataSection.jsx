@@ -62,12 +62,24 @@ import PencapaianFormDialog from "./PencapaianFormDialog";
 import RumusRemunerasiDialog from "./RumusRemunerasiDialog";
 import DebugPersentaseDialog from "./DebugPersentaseDialog";
 
+const formatDateIndo = (dateStr) => {
+	if (!dateStr || (typeof dateStr === "string" && dateStr.startsWith("0000-00-00"))) return "-";
+	const d = new Date(dateStr);
+	if (isNaN(d.getTime())) return "-";
+	return d.toLocaleDateString("id-ID", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+	});
+};
+
 export default function PegawaiDataSection() {
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [departemen, setDepartemen] = useState("all");
 	const [sttsAktif, setSttsAktif] = useState("AKTIF");
+	const [jenisPegawai, setJenisPegawai] = useState("all");
 	const [page, setPage] = useState(1);
 	const [pagination, setPagination] = useState({
 		page: 1,
@@ -114,6 +126,8 @@ export default function PegawaiDataSection() {
 			if (departemen && departemen !== "all")
 				params.set("departemen", departemen);
 			if (sttsAktif && sttsAktif !== "all") params.set("stts_aktif", sttsAktif);
+			if (jenisPegawai && jenisPegawai !== "all")
+				params.set("jenis_pegawai", jenisPegawai);
 			params.set("page", page);
 			params.set("limit", "20");
 
@@ -136,7 +150,7 @@ export default function PegawaiDataSection() {
 		} finally {
 			setLoading(false);
 		}
-	}, [search, departemen, sttsAktif, page]);
+	}, [search, departemen, sttsAktif, jenisPegawai, page]);
 
 	const fetchRefs = useCallback(async () => {
 		const token = getClientToken();
@@ -224,7 +238,18 @@ export default function PegawaiDataSection() {
 			{/* KPI Cards Section */}
 			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 				{/* Card 1: Total Pegawai Aktif */}
-				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+				<Card
+					onClick={() => {
+						setJenisPegawai("all");
+						setSttsAktif("AKTIF");
+						setPage(1);
+					}}
+					className={`bg-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer ${
+						jenisPegawai === "all" && sttsAktif === "AKTIF"
+							? "border-emerald-500 ring-2 ring-emerald-500/20"
+							: "border-slate-200/80"
+					}`}
+				>
 					<div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
 					<CardContent className="p-5 flex items-center justify-between">
 						<div className="space-y-1">
@@ -239,7 +264,17 @@ export default function PegawaiDataSection() {
 				</Card>
 
 				{/* Card 2: Pegawai POLRI */}
-				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+				<Card
+					onClick={() => {
+						setJenisPegawai((prev) => (prev === "POLRI" ? "all" : "POLRI"));
+						setPage(1);
+					}}
+					className={`bg-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer ${
+						jenisPegawai === "POLRI"
+							? "border-[#0093dd] ring-2 ring-[#0093dd]/20"
+							: "border-slate-200/80"
+					}`}
+				>
 					<div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
 					<CardContent className="p-5 flex items-center justify-between">
 						<div className="space-y-1">
@@ -254,7 +289,17 @@ export default function PegawaiDataSection() {
 				</Card>
 
 				{/* Card 3: Pegawai PNS */}
-				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+				<Card
+					onClick={() => {
+						setJenisPegawai((prev) => (prev === "PNS" ? "all" : "PNS"));
+						setPage(1);
+					}}
+					className={`bg-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer ${
+						jenisPegawai === "PNS"
+							? "border-amber-500 ring-2 ring-amber-500/20"
+							: "border-slate-200/80"
+					}`}
+				>
 					<div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
 					<CardContent className="p-5 flex items-center justify-between">
 						<div className="space-y-1">
@@ -269,7 +314,19 @@ export default function PegawaiDataSection() {
 				</Card>
 
 				{/* Card 4: Pegawai Non-PNS/Polri */}
-				<Card className="bg-white border-slate-200/80 shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md">
+				<Card
+					onClick={() => {
+						setJenisPegawai((prev) =>
+							prev === "NON_PNS_POLRI" ? "all" : "NON_PNS_POLRI",
+						);
+						setPage(1);
+					}}
+					className={`bg-white shadow-sm relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer ${
+						jenisPegawai === "NON_PNS_POLRI"
+							? "border-purple-500 ring-2 ring-purple-500/20"
+							: "border-slate-200/80"
+					}`}
+				>
 					<div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none -mr-4 -mt-4"></div>
 					<CardContent className="p-5 flex items-center justify-between">
 						<div className="space-y-1">
@@ -328,6 +385,23 @@ export default function PegawaiDataSection() {
 						/>
 					</div>
 					<div className="flex flex-col sm:flex-row gap-3">
+						<Select
+							value={jenisPegawai}
+							onValueChange={(v) => {
+								setJenisPegawai(v);
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="w-full sm:w-[180px] h-10 bg-slate-50/50 border-slate-200">
+								<SelectValue placeholder="Jenis Pegawai" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Semua Jenis</SelectItem>
+								<SelectItem value="POLRI">Pegawai POLRI</SelectItem>
+								<SelectItem value="PNS">Pegawai PNS</SelectItem>
+								<SelectItem value="NON_PNS_POLRI">Non-PNS & POLRI</SelectItem>
+							</SelectContent>
+						</Select>
 						<Select
 							value={departemen}
 							onValueChange={(v) => {
@@ -412,6 +486,7 @@ export default function PegawaiDataSection() {
 											</div>
 										</TableHead> */}
 										<TableHead>Status Kerja</TableHead>
+										<TableHead>Mulai Kontrak</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead className="text-right">Aksi</TableHead>
 									</TableRow>
@@ -437,6 +512,9 @@ export default function PegawaiDataSection() {
 											</TableCell> */}
 											<TableCell>
 												{p.nama_stts_kerja || p.stts_kerja || "-"}
+											</TableCell>
+											<TableCell className="whitespace-nowrap text-slate-600 text-sm">
+												{formatDateIndo(p.mulai_kontrak)}
 											</TableCell>
 											<TableCell>
 												<Badge
@@ -543,6 +621,14 @@ export default function PegawaiDataSection() {
 											</div>
 											<div className="font-medium">
 												{p.nama_stts_kerja || p.stts_kerja || "-"}
+											</div>
+										</div>
+										<div className="col-span-2 sm:col-span-1">
+											<div className="text-xs text-gray-500 mb-0.5">
+												Mulai Kontrak
+											</div>
+											<div className="font-medium">
+												{formatDateIndo(p.mulai_kontrak)}
 											</div>
 										</div>
 									</div>

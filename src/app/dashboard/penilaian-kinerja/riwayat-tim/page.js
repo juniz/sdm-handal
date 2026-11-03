@@ -285,11 +285,17 @@ export default function RiwayatPenilaianTimPage() {
 		for (let d = 1; d <= daysInMonth; d++) {
 			const dateStr = `${panelYear}-${String(panelMonth).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 			const isFuture = moment(dateStr).isAfter(moment(), "day");
+			const evaluation = panelEvaluations.find(e => {
+				if (!e?.tanggal) return false;
+				const raw = String(e.tanggal);
+				if (raw.startsWith(dateStr)) return true;
+				return moment(e.tanggal).format("YYYY-MM-DD") === dateStr;
+			});
 			const shift = panelSchedule ? (panelSchedule[`h${d}`] || "") : "";
-			const isWorkDay = shift !== "";
-			const isTambahan = panelIsTambahanMap ? (panelIsTambahanMap[`h${d}`] || false) : false;
-			const evaluation = panelEvaluations.find(e => moment(e.tanggal).format("YYYY-MM-DD") === dateStr);
-			list.push({ day: d, dateStr, isFuture, isWorkDay, shift, isTambahan, evaluation });
+			const effectiveShift = shift || evaluation?.shift_jadwal || "";
+			const isTambahan = panelIsTambahanMap ? Boolean(panelIsTambahanMap[`h${d}`]) : Boolean(evaluation?.is_tambahan);
+			const isWorkDay = !isTambahan && (effectiveShift !== "" || Boolean(evaluation));
+			list.push({ day: d, dateStr, isFuture, isWorkDay, shift: effectiveShift, isTambahan, evaluation });
 		}
 		return list;
 	}, [panelMonth, panelYear, panelSchedule, panelIsTambahanMap, panelEvaluations]);
@@ -949,18 +955,7 @@ export default function RiwayatPenilaianTimPage() {
 													let badge = null;
 													let isClickable = false;
 
-													if (!dayItem.isWorkDay) {
-														boxClass = "bg-slate-50 text-slate-400 border-slate-200/80";
-														badge = <span className="text-[10px] font-bold text-slate-400 font-mono">OFF</span>;
-													} else if (!dayItem.evaluation) {
-														if (dayItem.isFuture) {
-															boxClass = "bg-white text-slate-300 border-slate-200 border-dashed";
-															badge = <span className="text-[10px] font-bold text-slate-300 font-mono">-</span>;
-														} else {
-															boxClass = "bg-rose-50/50 text-rose-800 border-rose-200";
-															badge = <span className="px-1.5 py-0.5 text-[9px] font-bold bg-rose-100 text-rose-700 rounded font-figtree">KOSONG</span>;
-														}
-													} else {
+													if (dayItem.evaluation) {
 														isClickable = true;
 														const status = dayItem.evaluation.status;
 														if (status === "approved") {
@@ -1005,6 +1000,17 @@ export default function RiwayatPenilaianTimPage() {
 																</div>
 															);
 														}
+													} else if (!dayItem.isWorkDay) {
+														boxClass = "bg-slate-50 text-slate-400 border-slate-200/80";
+														badge = <span className="text-[10px] font-bold text-slate-400 font-mono">OFF</span>;
+													} else {
+														if (dayItem.isFuture) {
+															boxClass = "bg-white text-slate-300 border-slate-200 border-dashed";
+															badge = <span className="text-[10px] font-bold text-slate-300 font-mono">-</span>;
+														} else {
+															boxClass = "bg-rose-50/50 text-rose-800 border-rose-200";
+															badge = <span className="px-1.5 py-0.5 text-[9px] font-bold bg-rose-100 text-rose-700 rounded font-figtree">KOSONG</span>;
+														}
 													}
 
 													return (
@@ -1017,7 +1023,7 @@ export default function RiwayatPenilaianTimPage() {
 														>
 															<div className="flex justify-between items-center w-full leading-none">
 																<span className="text-xs md:text-sm font-bold font-figtree">{dayItem.day}</span>
-																{dayItem.isWorkDay && (
+																{(dayItem.isWorkDay || dayItem.shift) && (
 																	<span className="text-[10px] font-semibold text-slate-500 font-mono">{dayItem.shift}</span>
 																)}
 															</div>
@@ -1105,17 +1111,7 @@ export default function RiwayatPenilaianTimPage() {
 																	)}
 																</td>
 																<td className="py-2.5 px-3 text-center">
-																	{!item.isWorkDay ? (
-																		<span className="text-slate-400 font-bold">OFF</span>
-																	) : !item.evaluation ? (
-																		item.isFuture ? (
-																			<span className="text-slate-400">-</span>
-																		) : (
-																			<span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200">
-																				KOSONG
-																			</span>
-																		)
-																	) : (
+																	{item.evaluation ? (
 																		<span className={`px-2 py-0.5 rounded font-bold uppercase font-figtree ${
 																			item.evaluation.status === "approved"
 																				? "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -1124,6 +1120,14 @@ export default function RiwayatPenilaianTimPage() {
 																				: "bg-rose-50 text-rose-700 border border-rose-200"
 																		}`}>
 																			{item.evaluation.status}
+																		</span>
+																	) : !item.isWorkDay ? (
+																		<span className="text-slate-400 font-bold">OFF</span>
+																	) : item.isFuture ? (
+																		<span className="text-slate-400">-</span>
+																	) : (
+																		<span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold border border-rose-200">
+																			KOSONG
 																		</span>
 																	)}
 																</td>

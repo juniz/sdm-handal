@@ -253,24 +253,50 @@ export const printGajiReport = async (bulan, tahun, jenis = "Gaji", departemen =
         const totalColIdx = groupByContract ? 9 : 8;
         const normalHeaderColCount = groupByContract ? 10 : 9;
 
-        // Determine groups by contract year (< 2018 and >= 2018)
+        // Determine groups by contract year (< 2018 and >= 2018, with >= 2018 split by category)
         let groupsToRender = [];
         if (groupByContract) {
-            const groupsDef = {
-                BELOW_2018: { key: "BELOW_2018", label: "DI BAWAH TAHUN 2018", items: [] },
-                "2018_AND_ABOVE": { key: "2018_AND_ABOVE", label: "TAHUN 2018 KE ATAS", items: [] },
-                NO_CONTRACT: { key: "NO_CONTRACT", label: "BELUM ADA TMT KONTRAK", items: [] }
-            };
+            const below2018Group = { key: "BELOW_2018", label: "DI BAWAH TAHUN 2018", items: [] };
+            const noContractGroup = { key: "NO_CONTRACT", label: "BELUM ADA TMT KONTRAK", items: [] };
+            const above2018CategoriesMap = {}; // key -> { key, label, urutan, items }
 
             result.data.forEach(item => {
                 const groupInfo = classifyContractGroup(item.mulai_kontrak);
-                groupsDef[groupInfo.key].items.push(item);
+                if (groupInfo.key === "BELOW_2018") {
+                    below2018Group.items.push(item);
+                } else if (groupInfo.key === "NO_CONTRACT") {
+                    noContractGroup.items.push(item);
+                } else {
+                    // 2018_AND_ABOVE: Pecah berdasarkan kategori jenis
+                    const katNama = item.kategori_jenis ? item.kategori_jenis.toString().trim() : null;
+                    const katId = item.kategori_id || "UNMAPPED";
+                    const katUrutan = item.kategori_urutan ?? 9999;
+                    const catKey = `2018_${katId}`;
+
+                    if (!above2018CategoriesMap[catKey]) {
+                        above2018CategoriesMap[catKey] = {
+                            key: catKey,
+                            label: katNama
+                                ? `TAHUN 2018 KE ATAS - ${katNama.toUpperCase()}`
+                                : "TAHUN 2018 KE ATAS (BELUM DIMAPPING)",
+                            urutan: katNama ? katUrutan : 999999,
+                            items: []
+                        };
+                    }
+                    above2018CategoriesMap[catKey].items.push(item);
+                }
+            });
+
+            // Urutkan grup kategori 2018 ke atas berdasarkan urutan kategori
+            const sortedAbove2018Groups = Object.values(above2018CategoriesMap).sort((a, b) => {
+                if (a.urutan !== b.urutan) return a.urutan - b.urutan;
+                return a.label.localeCompare(b.label);
             });
 
             groupsToRender = [
-                groupsDef.BELOW_2018,
-                groupsDef["2018_AND_ABOVE"],
-                groupsDef.NO_CONTRACT
+                below2018Group,
+                ...sortedAbove2018Groups,
+                noContractGroup
             ].filter(g => g.items.length > 0);
         } else {
             groupsToRender = [{ key: "ALL", label: null, items: result.data }];

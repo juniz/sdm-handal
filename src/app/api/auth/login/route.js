@@ -2,18 +2,73 @@ import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
 import { cookies } from "next/headers";
 import { createToken, setServerCookie } from "@/lib/auth";
+import {
+	validateLoginInput,
+	checkRateLimit,
+	recordFailedAttempt,
+	clearRateLimit,
+	safeComparePassword,
+	verifyTurnstileToken,
+} from "@/lib/login-security";
 
 export async function POST(request) {
 	try {
-		const { nip, password } = await request.json();
-		console.log("Login attempt for NIP:", nip);
+		// Extract client IP (handle proxy / reverse proxy headers)
+		const forwardedFor = request.headers.get("x-forwarded-for");
+		const realIp = request.headers.get("x-real-ip");
+		const clientIp = forwardedFor
+			? forwardedFor.split(",")[0].trim()
+			: realIp?.trim() || "127.0.0.1";
 
-		// Validasi input
-		if (!nip || !password) {
-			console.log("Missing credentials");
+		// Safely parse JSON payload
+		let body;
+		try {
+			body = await request.json();
+		} catch {
 			return NextResponse.json(
-				{ message: "NIP dan password harus diisi" },
+				{ message: "Format payload JSON tidak valid" },
 				{ status: 400 }
+			);
+		}
+
+		// Input validation & sanitization (SQLi/XSS/Length check)
+		const validationResult = validateLoginInput(body);
+		if (!validationResult.valid) {
+			return NextResponse.json(
+				{ message: validationResult.error },
+				{ status: 400 }
+			);
+		}
+
+		const { nip, password } = validationResult;
+
+		// Rate limit check before querying database
+		const rateLimit = checkRateLimit(clientIp, nip);
+		if (!rateLimit.allowed) {
+			const retryAfterSeconds = rateLimit.retryAfterSeconds || 60;
+			return NextResponse.json(
+				{
+					message: `Terlalu banyak percobaan login gagal. Silakan coba lagi dalam ${Math.ceil(retryAfterSeconds / 60)} menit.`,
+				},
+				{
+					status: 429,
+					headers: {
+						"Retry-After": String(retryAfterSeconds),
+					},
+				}
+			);
+		}
+
+		// Cloudflare Turnstile token verification
+		const turnstileToken = body.turnstileToken || body.captchaToken;
+		const turnstileResult = await verifyTurnstileToken(turnstileToken, clientIp);
+		if (!turnstileResult.success) {
+			return NextResponse.json(
+				{
+					message:
+						turnstileResult.message || "Verifikasi keamanan (Turnstile) gagal",
+				},
+				{ status: 403 }
 			);
 		}
 
@@ -42,10 +97,8 @@ export async function POST(request) {
 			[AES_USER_KEY, AES_PASSWORD_KEY, AES_USER_KEY, nip, AES_USER_KEY]
 		);
 
-		console.log("Query result:", users ? "User found" : "User not found");
-
 		if (!users || users.length === 0) {
-			console.log("Invalid credentials - user not found");
+			recordFailedAttempt(clientIp, nip);
 			return NextResponse.json(
 				{ message: "NIP atau password salah" },
 				{ status: 401 }
@@ -54,21 +107,23 @@ export async function POST(request) {
 
 		const user = users[0];
 
-		// Convert Buffer to string for comparison
-		const decryptedPassword = user.password.toString();
-
-		if (decryptedPassword !== password) {
-			console.log("Invalid credentials - wrong password");
+		// Timing-safe password comparison
+		const isPasswordValid = safeComparePassword(user.password, password);
+		if (!isPasswordValid) {
+			recordFailedAttempt(clientIp, nip);
 			return NextResponse.json(
 				{ message: "NIP atau password salah" },
 				{ status: 401 }
 			);
 		}
 
+		// Clear rate limiting counter upon successful authentication
+		clearRateLimit(clientIp, nip);
+
 		// Create JWT token dengan payload
 		const tokenPayload = {
 			id: user.id,
-			username: user.username.toString(),
+			username: user.username ? user.username.toString() : "",
 			nama: user.nama,
 			departemen: user.cap,
 			tmp_lahir: user.tmp_lahir,
@@ -77,26 +132,19 @@ export async function POST(request) {
 			photo: user.photo,
 		};
 
-		console.log("Creating token with payload:", {
-			...tokenPayload,
-			password: "[REDACTED]",
-		});
-
 		const token = await createToken(tokenPayload);
 		const cookieStore = await cookies();
 		setServerCookie(cookieStore, token);
 
-		// Hapus password dari response
+		// Hapus password dari memory user object sebelum response
 		delete user.password;
-
-		console.log("Login successful for user:", user.username.toString());
 
 		return NextResponse.json({
 			message: "Login berhasil",
 			token,
 			user: {
 				id: user.id,
-				username: user.username.toString(),
+				username: user.username ? user.username.toString() : "",
 				nama: user.nama,
 				departemen: user.cap,
 				tmp_lahir: user.tmp_lahir,

@@ -14,6 +14,7 @@ export async function GET(request) {
 		const search = searchParams.get("search") || "";
 		const departemen = searchParams.get("departemen") || "";
 		const stts_aktif = searchParams.get("stts_aktif") || "";
+		const jenis_pegawai = searchParams.get("jenis_pegawai") || "";
 		const page = parseInt(searchParams.get("page") || "1");
 		const limit = parseInt(searchParams.get("limit") || "20");
 		const offset = (page - 1) * limit;
@@ -32,6 +33,14 @@ export async function GET(request) {
 		if (stts_aktif) {
 			whereClause += " AND p.stts_aktif = ?";
 			params.push(stts_aktif);
+		}
+		if (jenis_pegawai === "POLRI") {
+			whereClause += " AND p.stts_kerja = 'POL'";
+		} else if (jenis_pegawai === "PNS") {
+			whereClause += " AND p.stts_kerja = 'PNS'";
+		} else if (jenis_pegawai === "NON_PNS_POLRI") {
+			whereClause +=
+				" AND (p.stts_kerja NOT IN ('POL', 'PNS') OR p.stts_kerja IS NULL)";
 		}
 
 		const countResult = await rawQuery(
