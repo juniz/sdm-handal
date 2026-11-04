@@ -22,11 +22,8 @@ export default function LoginPage() {
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
 	const [turnstileToken, setTurnstileToken] = useState("");
-	const resolveProdKey = (k) => {
-		const isDummy = !k || /^[123]x00000/.test(k);
-		if (process.env.NODE_ENV === "production" && isDummy) return "0x4AAAAAABnQ7KZ335kF5jw7";
-		return k || "1x00000000000000000000AA";
-	};
+	const PROD_SITE_KEY = "0x4AAAAAABnQ7KZ335kF5jw7";
+	const resolveProdKey = (k) => (!k || typeof k !== "string" || /^[123]x00000/.test(k) ? PROD_SITE_KEY : k);
 	const [siteKey, setSiteKey] = useState(() => resolveProdKey(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
 	const turnstileContainerRef = useRef(null);
 	const turnstileWidgetIdRef = useRef(null);

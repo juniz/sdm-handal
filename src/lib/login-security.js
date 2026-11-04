@@ -273,7 +273,7 @@ export function verifyTurnstileToken(token, remoteIp) {
 			const params = new URLSearchParams();
 			params.append("secret", secretKey);
 			params.append("response", token.trim());
-			if (remoteIp) {
+			if (remoteIp && remoteIp !== "127.0.0.1" && remoteIp !== "::1") {
 				params.append("remoteip", remoteIp);
 			}
 

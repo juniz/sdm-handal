@@ -8,10 +8,7 @@ export async function GET() {
 		process.env.TURNSTILE_SITE_KEY ||
 		"";
 	const isDummy = !rawKey || /^[123]x00000/.test(rawKey);
-	const siteKey =
-		process.env.NODE_ENV === "production" && isDummy
-			? "0x4AAAAAABnQ7KZ335kF5jw7"
-			: rawKey || "1x00000000000000000000AA";
+	const siteKey = isDummy ? "0x4AAAAAABnQ7KZ335kF5jw7" : rawKey;
 
 	return NextResponse.json({ siteKey });
 }
