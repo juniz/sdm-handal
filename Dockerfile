@@ -5,18 +5,17 @@ WORKDIR /app
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=production
 
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAABnQ7KZ335kF5jw7
 ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
 COPY package*.json ./
 
-RUN npm install --legacy-peer-deps
+RUN npm install --include=dev --legacy-peer-deps
 
 COPY . .
 
-RUN npm run build
+RUN NODE_ENV=production npm run build
 RUN npm prune --omit=dev --legacy-peer-deps
 
 # Stage 2: Runner
