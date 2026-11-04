@@ -22,15 +22,17 @@ export default function LoginPage() {
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
 	const [turnstileToken, setTurnstileToken] = useState("");
+	const [siteKey, setSiteKey] = useState(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "");
 	const turnstileContainerRef = useRef(null);
 	const turnstileWidgetIdRef = useRef(null);
 
-	const renderTurnstile = () => {
+	const renderTurnstile = (overrideKey) => {
 		if (typeof window === "undefined" || !window.turnstile || !turnstileContainerRef.current) {
 			return;
 		}
 
-		const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+		const key = overrideKey || siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+		if (!key) return;
 
 		if (turnstileWidgetIdRef.current !== null) {
 			return;
@@ -38,7 +40,7 @@ export default function LoginPage() {
 
 		try {
 			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-				sitekey: siteKey,
+				sitekey: key,
 				callback: (token) => setTurnstileToken(token),
 				"expired-callback": () => setTurnstileToken(""),
 				"error-callback": () => setTurnstileToken(""),
@@ -102,13 +104,28 @@ export default function LoginPage() {
 			}
 		};
 		checkExistingAuth();
+
+		fetch("/api/auth/turnstile-config")
+			.then((res) => res.json())
+			.then((data) => {
+				if (data?.siteKey && data.siteKey !== siteKey) {
+					if (typeof window !== "undefined" && window.turnstile && turnstileWidgetIdRef.current !== null) {
+						try {
+							window.turnstile.remove(turnstileWidgetIdRef.current);
+						} catch (_) {}
+						turnstileWidgetIdRef.current = null;
+					}
+					setSiteKey(data.siteKey);
+				}
+			})
+			.catch(() => {});
 	}, []);
 
 	useEffect(() => {
-		if (mounted && typeof window !== "undefined" && window.turnstile) {
-			renderTurnstile();
+		if (mounted && siteKey && typeof window !== "undefined" && window.turnstile) {
+			renderTurnstile(siteKey);
 		}
-	}, [mounted]);
+	}, [mounted, siteKey]);
 
 	useEffect(() => {
 		return () => {
