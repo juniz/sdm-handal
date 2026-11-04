@@ -266,11 +266,7 @@ export function verifyTurnstileToken(token, remoteIp) {
 			if (isDev) {
 				secretKey = CLOUDFLARE_ALWAYS_PASS_SECRET;
 			} else {
-				return {
-					success: false,
-					message:
-						"TURNSTILE_SECRET_KEY belum dikonfigurasi di environment server",
-				};
+				secretKey = "0x4AAAAAABnQ7Mh24wgD8ppozboUU--HKlg";
 			}
 		}
 

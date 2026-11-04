@@ -22,7 +22,10 @@ export default function LoginPage() {
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
 	const [turnstileToken, setTurnstileToken] = useState("");
-	const [siteKey, setSiteKey] = useState(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "");
+	const [siteKey, setSiteKey] = useState(
+		process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+		(process.env.NODE_ENV === "production" ? "0x4AAAAAABnQ7KZ335kF5jw7" : "1x00000000000000000000AA")
+	);
 	const turnstileContainerRef = useRef(null);
 	const turnstileWidgetIdRef = useRef(null);
 
@@ -31,7 +34,13 @@ export default function LoginPage() {
 			return;
 		}
 
-		const key = overrideKey || siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+		const validOverride = typeof overrideKey === "string" && overrideKey ? overrideKey : null;
+		const key =
+			validOverride ||
+			siteKey ||
+			process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
+			(process.env.NODE_ENV === "production" ? "0x4AAAAAABnQ7KZ335kF5jw7" : "1x00000000000000000000AA");
+
 		if (!key) return;
 
 		if (turnstileWidgetIdRef.current !== null) {
@@ -198,7 +207,7 @@ export default function LoginPage() {
 			<Script
 				src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
 				strategy="afterInteractive"
-				onLoad={renderTurnstile}
+				onLoad={() => renderTurnstile()}
 			/>
 			<div className="min-h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden text-slate-800">
 			
