@@ -42,16 +42,26 @@ export default function LoginPage() {
 			return;
 		}
 
-		try {
-			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-				sitekey: key,
-				callback: (token) => setTurnstileToken(token),
-				"expired-callback": () => setTurnstileToken(""),
-				"error-callback": () => setTurnstileToken(""),
-				theme: "light",
-			});
-		} catch (err) {
-			console.warn("Turnstile render error:", err);
+		const doRender = () => {
+			if (!turnstileContainerRef.current || turnstileWidgetIdRef.current !== null) return;
+			try {
+				turnstileContainerRef.current.innerHTML = "";
+				turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+					sitekey: key,
+					callback: (token) => setTurnstileToken(token),
+					"expired-callback": () => setTurnstileToken(""),
+					"error-callback": () => setTurnstileToken(""),
+					theme: "light",
+				});
+			} catch (err) {
+				console.warn("Turnstile render error:", err);
+			}
+		};
+
+		if (typeof window.turnstile.ready === "function") {
+			window.turnstile.ready(doRender);
+		} else {
+			doRender();
 		}
 	};
 
@@ -126,9 +136,33 @@ export default function LoginPage() {
 	}, []);
 
 	useEffect(() => {
-		if (mounted && siteKey && typeof window !== "undefined" && window.turnstile) {
-			renderTurnstile(siteKey);
-		}
+		if (!mounted) return;
+
+		let cancelled = false;
+		const tryRender = () => {
+			if (cancelled || turnstileWidgetIdRef.current !== null) return;
+			if (typeof window !== "undefined" && window.turnstile && turnstileContainerRef.current) {
+				renderTurnstile(siteKey);
+			}
+		};
+
+		tryRender();
+
+		const interval = setInterval(() => {
+			if (turnstileWidgetIdRef.current !== null || cancelled) {
+				clearInterval(interval);
+			} else {
+				tryRender();
+			}
+		}, 150);
+
+		const timeout = setTimeout(() => clearInterval(interval), 5000);
+
+		return () => {
+			cancelled = true;
+			clearInterval(interval);
+			clearTimeout(timeout);
+		};
 	}, [mounted, siteKey]);
 
 	useEffect(() => {
@@ -282,7 +316,7 @@ export default function LoginPage() {
 						</div>
 
 						{/* Turnstile Widget */}
-						<div className="flex justify-center my-2">
+						<div className="flex justify-center my-2 min-h-[65px]">
 							<div ref={turnstileContainerRef} />
 						</div>
 
