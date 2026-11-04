@@ -1,9 +1,6 @@
 import Cookies from "js-cookie";
 import moment from "moment";
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
+import { GQL_ENDPOINT } from "./gql-endpoint";
 
 // Helper untuk memformat data unfinished attendance ke format yang dikenali oleh page UI
 function formatUnfinishedResult(result) {

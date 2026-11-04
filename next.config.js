@@ -213,12 +213,16 @@ const nextConfig = {
 			},
 		];
 	},
-	// Rewrites untuk menangani foto presensi
+	// Rewrites untuk menangani foto presensi dan proxy internal ke NestJS GraphQL backend
 	async rewrites() {
 		return [
 			{
 				source: "/api/photos/:path*",
 				destination: "/photos/:path*", // Redirect ke static files
+			},
+			{
+				source: "/graphql",
+				destination: `${process.env.INTERNAL_BACKEND_URL || "http://127.0.0.1:3001"}/graphql`,
 			},
 		];
 	},

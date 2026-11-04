@@ -1,8 +1,5 @@
 import Cookies from "js-cookie";
-
-const BACKEND_URL =
-	process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-const GQL_ENDPOINT = `${BACKEND_URL}/graphql`;
+import { GQL_ENDPOINT } from "./gql-endpoint";
 
 export async function getAuthToken(request = null) {
 	let token = null;
