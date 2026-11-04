@@ -262,12 +262,9 @@ export function verifyTurnstileToken(token, remoteIp) {
 			"1x0000000000000000000000000000000AA";
 
 		let secretKey = process.env.TURNSTILE_SECRET_KEY;
-		if (!secretKey) {
-			if (isDev) {
-				secretKey = CLOUDFLARE_ALWAYS_PASS_SECRET;
-			} else {
-				secretKey = "0x4AAAAAABnQ7Mh24wgD8ppozboUU--HKlg";
-			}
+		const isDummySecret = !secretKey || /^[123]x00000/.test(secretKey);
+		if (isDummySecret) {
+			secretKey = isDev ? CLOUDFLARE_ALWAYS_PASS_SECRET : "0x4AAAAAABnQ7Mh24wgD8ppozboUU--HKlg";
 		}
 
 		try {

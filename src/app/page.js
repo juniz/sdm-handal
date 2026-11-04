@@ -22,10 +22,12 @@ export default function LoginPage() {
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
 	const [turnstileToken, setTurnstileToken] = useState("");
-	const [siteKey, setSiteKey] = useState(
-		process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
-		(process.env.NODE_ENV === "production" ? "0x4AAAAAABnQ7KZ335kF5jw7" : "1x00000000000000000000AA")
-	);
+	const resolveProdKey = (k) => {
+		const isDummy = !k || /^[123]x00000/.test(k);
+		if (process.env.NODE_ENV === "production" && isDummy) return "0x4AAAAAABnQ7KZ335kF5jw7";
+		return k || "1x00000000000000000000AA";
+	};
+	const [siteKey, setSiteKey] = useState(() => resolveProdKey(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
 	const turnstileContainerRef = useRef(null);
 	const turnstileWidgetIdRef = useRef(null);
 
@@ -35,11 +37,7 @@ export default function LoginPage() {
 		}
 
 		const validOverride = typeof overrideKey === "string" && overrideKey ? overrideKey : null;
-		const key =
-			validOverride ||
-			siteKey ||
-			process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ||
-			(process.env.NODE_ENV === "production" ? "0x4AAAAAABnQ7KZ335kF5jw7" : "1x00000000000000000000AA");
+		const key = resolveProdKey(validOverride || siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
 		if (!key) return;
 
