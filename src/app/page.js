@@ -58,11 +58,7 @@ export default function LoginPage() {
 			}
 		};
 
-		if (typeof window.turnstile.ready === "function") {
-			window.turnstile.ready(doRender);
-		} else {
-			doRender();
-		}
+		doRender();
 	};
 
 	const resetTurnstile = () => {
