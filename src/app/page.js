@@ -22,9 +22,11 @@ export default function LoginPage() {
 	const [error, setError] = useState("");
 	const [mounted, setMounted] = useState(false);
 	const [turnstileToken, setTurnstileToken] = useState("");
+	const [turnstileError, setTurnstileError] = useState(false);
 	const PROD_SITE_KEY = "0x4AAAAAABnQ7KZ335kF5jw7";
-	const resolveProdKey = (k) => (!k || typeof k !== "string" || /^[123]x00000/.test(k) ? PROD_SITE_KEY : k);
-	const [siteKey, setSiteKey] = useState(() => resolveProdKey(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY));
+	const FALLBACK_DEV_KEY = "1x00000000000000000000AA";
+	const resolveProdKey = (k) => (!k || typeof k !== "string" || k === FALLBACK_DEV_KEY || /^[123]x00000/.test(k) ? PROD_SITE_KEY : k);
+	const [siteKey, setSiteKey] = useState(() => resolveProdKey(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || FALLBACK_DEV_KEY));
 	const turnstileContainerRef = useRef(null);
 	const turnstileWidgetIdRef = useRef(null);
 
@@ -32,36 +34,43 @@ export default function LoginPage() {
 		if (typeof window === "undefined" || !window.turnstile || !turnstileContainerRef.current) {
 			return;
 		}
-
-		const validOverride = typeof overrideKey === "string" && overrideKey ? overrideKey : null;
-		const key = resolveProdKey(validOverride || siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
-
-		if (!key) return;
-
 		if (turnstileWidgetIdRef.current !== null) {
 			return;
 		}
 
-		const doRender = () => {
-			if (!turnstileContainerRef.current || turnstileWidgetIdRef.current !== null) return;
-			try {
-				turnstileContainerRef.current.innerHTML = "";
-				turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
-					sitekey: key,
-					callback: (token) => setTurnstileToken(token),
-					"expired-callback": () => setTurnstileToken(""),
-					"error-callback": () => setTurnstileToken(""),
-					theme: "light",
-				});
-			} catch (err) {
-				console.warn("Turnstile render error:", err);
-			}
-		};
+		const validOverride = typeof overrideKey === "string" && overrideKey ? overrideKey : null;
+		const key = resolveProdKey(validOverride || siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+		if (!key) return;
 
-		doRender();
+		try {
+			// shortcut: disable auto-retry so failed PoW/CSP never loops in background on low-RAM PCs
+			turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+				sitekey: key,
+				retry: "never",
+				"refresh-expired": "manual",
+				callback: (token) => {
+					setTurnstileError(false);
+					setTurnstileToken(token);
+				},
+				"expired-callback": () => {
+					setTurnstileToken("");
+					setTurnstileError(true);
+				},
+				"error-callback": () => {
+					setTurnstileToken("");
+					setTurnstileError(true);
+					return false;
+				},
+				theme: "light",
+			});
+		} catch (err) {
+			console.warn("Turnstile render error:", err);
+		}
 	};
 
 	const resetTurnstile = () => {
+		setTurnstileError(false);
+		setTurnstileToken("");
 		if (typeof window !== "undefined" && window.turnstile && turnstileWidgetIdRef.current !== null) {
 			try {
 				window.turnstile.reset(turnstileWidgetIdRef.current);
@@ -69,7 +78,6 @@ export default function LoginPage() {
 				console.warn("Turnstile reset error:", err);
 			}
 		}
-		setTurnstileToken("");
 	};
 
 	// Delay rendering of animation classes to avoid hydration mismatch, and auth checks
@@ -133,32 +141,7 @@ export default function LoginPage() {
 
 	useEffect(() => {
 		if (!mounted) return;
-
-		let cancelled = false;
-		const tryRender = () => {
-			if (cancelled || turnstileWidgetIdRef.current !== null) return;
-			if (typeof window !== "undefined" && window.turnstile && turnstileContainerRef.current) {
-				renderTurnstile(siteKey);
-			}
-		};
-
-		tryRender();
-
-		const interval = setInterval(() => {
-			if (turnstileWidgetIdRef.current !== null || cancelled) {
-				clearInterval(interval);
-			} else {
-				tryRender();
-			}
-		}, 150);
-
-		const timeout = setTimeout(() => clearInterval(interval), 5000);
-
-		return () => {
-			cancelled = true;
-			clearInterval(interval);
-			clearTimeout(timeout);
-		};
+		renderTurnstile(siteKey);
 	}, [mounted, siteKey]);
 
 	useEffect(() => {
@@ -232,7 +215,7 @@ export default function LoginPage() {
 			<Script
 				src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
 				strategy="afterInteractive"
-				onLoad={() => renderTurnstile()}
+				onLoad={renderTurnstile}
 			/>
 			<div className="min-h-screen w-full flex flex-col md:flex-row bg-white overflow-hidden text-slate-800">
 			
@@ -312,8 +295,17 @@ export default function LoginPage() {
 						</div>
 
 						{/* Turnstile Widget */}
-						<div className="flex justify-center my-2 min-h-[65px]">
+						<div className="flex flex-col items-center justify-center my-2 min-h-[65px] gap-2">
 							<div ref={turnstileContainerRef} />
+							{turnstileError && (
+								<button
+									type="button"
+									onClick={resetTurnstile}
+									className="text-xs font-medium text-[#0093dd] hover:underline"
+								>
+									Muat ulang verifikasi keamanan
+								</button>
+							)}
 						</div>
 
 						<Button
@@ -345,17 +337,17 @@ export default function LoginPage() {
 				
 				{/* Background Gradients & Soft Shapes */}
 				<div className="absolute inset-0 bg-gradient-to-br from-[#0093dd]/[0.03] to-[#0093dd]/[0.08]" />
-				<div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#0093dd] rounded-full mix-blend-multiply filter blur-[120px] opacity-20 animate-pulse" style={{animationDuration: '10s'}} />
-				<div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#48cae4] rounded-full mix-blend-multiply filter blur-[100px] opacity-20 animate-pulse" style={{animationDuration: '8s', animationDelay: '2s'}} />
+				<div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#0093dd]/10 rounded-full blur-3xl pointer-events-none" />
+				<div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#48cae4]/10 rounded-full blur-3xl pointer-events-none" />
 				
 				{/* Floating Elements (Subtle Grid) */}
 				<div className="absolute inset-0 bg-[linear-gradient(rgba(0,147,221,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,147,221,0.03)_1px,transparent_1px)] bg-[size:32px_32px]" />
 
 				{/* Center Floating Card Focus Context */}
-				<div className="relative z-10 w-full max-w-lg backdrop-blur-xl bg-white/60 border border-white p-10 lg:p-14 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,147,221,0.1)] animate-in fade-in zoom-in-95 duration-1000 delay-150">
+				<div className="relative z-10 w-full max-w-lg bg-white/95 border border-white p-10 lg:p-14 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,147,221,0.1)]">
 					
 					{/* Feature Badges Container */}
-					<div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce" style={{animationDuration: '3s'}}>
+					<div className="absolute -top-6 -right-6 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3">
 						<div className="bg-[#0093dd]/10 p-2.5 rounded-xl text-[#0093dd]">
 							<ShieldCheck size={24} strokeWidth={2} />
 						</div>
@@ -365,14 +357,14 @@ export default function LoginPage() {
 						</div>
 					</div>
 
-					<div className="absolute -bottom-8 -left-8 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3 animate-bounce" style={{animationDuration: '4s', animationDelay: '1s'}}>
+					<div className="absolute -bottom-8 -left-8 bg-white p-4 rounded-2xl shadow-xl border border-slate-100 flex items-center gap-3">
 						<div className="bg-[#0093dd]/10 p-2.5 rounded-xl text-[#0093dd]">
 							<ActivitySquare size={24} strokeWidth={2} />
 						</div>
 						<div className="pr-2">
 							<p className="text-xs text-slate-500 font-medium">Status Server</p>
 							<p className="text-sm font-bold text-emerald-600 flex items-center gap-1.5">
-								<span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+								<span className="w-2 h-2 rounded-full bg-emerald-500"></span>
 								Online
 							</p>
 						</div>

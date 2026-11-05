@@ -124,4 +124,26 @@ assert(
 );
 console.log("  [PASS] Form submission, payload, error reset, and button disabling verified");
 
+// Test 9: Anti-RAM spike checks (no infinite retry, no interval polling, no heavy blur animations, CSP data:/wss: allowed)
+assert(
+	pageSource.includes('retry: "never"'),
+	"Turnstile retry: 'never' missing"
+);
+assert(
+	!pageSource.includes("setInterval("),
+	"Polling setInterval should be removed from page.js"
+);
+assert(
+	!pageSource.includes("backdrop-blur") && !pageSource.includes("animate-bounce"),
+	"Heavy continuous GPU blur/bounce animations should be removed from page.js"
+);
+const nextConfigSource = fs.readFileSync("next.config.js", "utf8");
+assert(
+	nextConfigSource.includes("wss://challenges.cloudflare.com") &&
+	nextConfigSource.includes("connect-src 'self' data: blob:") &&
+	nextConfigSource.includes("worker-src 'self' blob:"),
+	"CSP missing data:/blob:/wss://challenges.cloudflare.com or worker-src for Turnstile"
+);
+console.log("  [PASS] Anti-RAM-spike guards (retry: 'never', no polling, static blur, CSP data:/blob:/wss:) verified");
+
 console.log("\n=== All Login Page Turnstile tests passed! ===");
