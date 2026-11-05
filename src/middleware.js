@@ -5,6 +5,16 @@ import { hasBrotliEncoding } from "@/lib/security/node2shell-guard";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
+function withNoCache(response) {
+	response.headers.set(
+		"Cache-Control",
+		"no-store, no-cache, must-revalidate, proxy-revalidate"
+	);
+	response.headers.set("Pragma", "no-cache");
+	response.headers.set("Expires", "0");
+	return response;
+}
+
 export async function middleware(request) {
 	// Mitigate CVE-2026-111497 (Node2Shell): block inbound Brotli-compressed requests
 	if (hasBrotliEncoding(request.headers.get("content-encoding"))) {
@@ -89,13 +99,13 @@ export async function middleware(request) {
 				// Jika token tidak valid, bersihkan cookie dan biarkan akses halaman login
 				if (tokenValue && !isValidToken) {
 					console.log("Clearing invalid token cookie");
-					const response = NextResponse.next();
+					const response = withNoCache(NextResponse.next());
 					response.cookies.delete("auth_token");
 					return response;
 				}
 				// Jika belum login, biarkan akses halaman login
 				console.log("User not logged in, allowing access to login page");
-				return NextResponse.next();
+				return withNoCache(NextResponse.next());
 			}
 		}
 
@@ -149,7 +159,7 @@ export async function middleware(request) {
 		}
 
 		console.log("Token valid, proceeding to next middleware");
-		return NextResponse.next();
+		return withNoCache(NextResponse.next());
 	} catch (error) {
 		console.error("Error in middleware:", error);
 
