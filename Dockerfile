@@ -18,7 +18,7 @@ RUN npm install --include=dev --legacy-peer-deps
 
 COPY . .
 
-RUN NODE_ENV=production npm run build
+RUN NODE_ENV=production npm run build && rm -f .env .env.*
 RUN npm prune --omit=dev --legacy-peer-deps
 
 # Stage 2: Runner
